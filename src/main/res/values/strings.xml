@@ -1,4 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">KeePass Share</string>
+    <string name="setup_header">
+        Enter your KeePass database unlocking information</string>
+    <string name="setup_instructions">To
+        start using <i>KeePass Share</i> enter the paths to your KeePass
+        database and keyfile, if set. You will also need to
+        save your database password.
+        All information is <b>securely encrypted</b> using two
+        secret keys, one stored in the cloud using your <i>Google Drive</i>
+        storage and another saved locally. Your password is never accessible
+        without having both keys present. A hacker that steals your Google
+        Drive key will be unable to access your password that is saved
+        on-device, and someone that is able to steal your device data will be
+        unable to decrypt your master password without the secret key saved
+        in Google Drive.
+    </string>
+    <string name="connect_instructions">Get started with
+        binding <i>KeePass Share</i>
+        to <i>Google Drive</i> by pressing the <b>Connect</b> button. This
+        will initialize your secret key in the cloud if it has not already
+        been setup. You will be prompted to grant access for storing private
+        application data.
+    </string>
+    <string name="overview"><i>KeePass Share</i> is an easy way to make
+        your passwords immediately available no matter which application
+        you are running. Request access to passwords by choosing
+        to <b>Share</b> with <i>KeePass Share</i> from the application you are
+        currently running. A notification or dialog will appear to let you
+        select usernames and passwords and allow exporting them to the
+        clipboard.
+    </string>
 </resources>
