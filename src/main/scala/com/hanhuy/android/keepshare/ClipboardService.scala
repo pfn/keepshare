@@ -70,6 +70,15 @@ class ClipboardService extends Service {
       .setContentTitle(title)
       .setSmallIcon(R.drawable.ic_lock)
       .setTicker(getString(R.string.credentials_available))
+
+    val b = if (!jellybeanAndNewer) {
+      // TODO show additional notification for older devices
+      builder.setContentIntent(PendingIntent.getBroadcast(this,
+        3, userIntent, PendingIntent.FLAG_UPDATE_CURRENT))
+    } else {
+      builder
+    }
+
     handler.postDelayed(finishRunnable, settings.get(Settings.TIMEOUT) *1000)
     val filter = new IntentFilter
     filter.addAction(ACTION_COPY_USERNAME)
@@ -77,7 +86,7 @@ class ClipboardService extends Service {
     filter.addAction(ACTION_CLEAR)
     registerReceiver(receiver, filter)
 
-    startForeground(1, builder.build)
+    startForeground(1, b.build)
 
     Service.START_STICKY
   }
