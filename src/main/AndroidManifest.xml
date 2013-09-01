@@ -19,13 +19,23 @@
             android:name=".Application"
             android:label="@string/app_name"
             android:icon="@drawable/ic_launcher">
-        <activity android:name="MainActivity"
+        <activity android:name=".MainActivity"
                   android:theme="@android:style/Theme.DeviceDefault.Light"
                   android:windowSoftInputMode="adjustResize"
                   android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".ShareActivity"
+                  android:theme="@android:style/Theme.DeviceDefault.Light.Dialog"
+                  android:windowSoftInputMode="adjustResize"
+                  android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <data android:mimeType="text/plain" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
     </application>

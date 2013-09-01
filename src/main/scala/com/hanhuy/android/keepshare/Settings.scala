@@ -1,13 +1,10 @@
 package com.hanhuy.android.keepshare
 
-import android.app.Activity
 import android.content.Context
-import android.content.SharedPreferences
-import android.os.Bundle
 import android.preference.PreferenceManager
-import android.preference.PreferenceFragment
 
 object Setting {
+  def keys = settings.values
   private var settings = Map.empty[String,Setting[_]]
   def unapply(key: String): Option[Setting[_]] = settings get key
   def apply[A](key: String, default: A) = new Setting(key, default, None)
@@ -15,12 +12,17 @@ object Setting {
     null.asInstanceOf[A], Some(res))
 }
 class Setting[A](val key: String, val default: A, val defaultRes: Option[Int]) {
-  Setting.settings = Setting.settings + ((key, this))
+  Setting.settings = Setting.settings + (key -> this)
 }
 
 object Settings {
   val GOOGLE_USER = Setting[String]("google_account", null)
   val CLOUD_KEY_HASH = Setting[String]("cloud_key_hash", null)
+  val LOCAL_KEY = Setting[String]("local_key", null)
+  val VERIFY_DATA = Setting[String]("verify_data", null)
+  val DATABASE_FILE = Setting[String]("database_file", null)
+  val KEYFILE_PATH = Setting[String]("key_file", null)
+  val PASSWORD = Setting[String]("password", null)
 
   def apply(c: Context) = {
     new Settings(c.getApplicationContext)
@@ -59,5 +61,9 @@ class Settings(val context: Context) {
       throw new IllegalArgumentException("Unknown type: " + m.erasure)
     }
     editor.commit()
+  }
+
+  def clear() {
+    Setting.keys foreach { k => p.edit.remove(k.key).commit() }
   }
 }

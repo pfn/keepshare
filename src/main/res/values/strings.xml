@@ -31,4 +31,24 @@
         select usernames and passwords and allow exporting them to the
         clipboard.
     </string>
+    <string name="clear_user_data">Clear user data</string>
+    <string name="filename_hint">filename...</string>
+    <string name="browse">Browse</string>
+    <string name="password">Password</string>
+    <string name="password_hint">database password...</string>
+    <string name="key_file">Key file</string>
+    <string name="connect">Connect</string>
+    <string name="database">Database</string>
+    <string name="save">Save</string>
+    <string name="settings_saved">Database connection successful!</string>
+    <string name="keepass_no_respond">KeePass provider did not respond</string>
+    <string name="keyfile_no_exist">Key file does not exist!</string>
+    <string name="password_no_blank">Password cannot be blank</string>
+    <string name="database_no_exist">Database file does not exist!</string>
+    <string name="database_no_blank">Database cannot be blank</string>
+    <string name="decrypt_saved_failed">Failed to decrypt saved data :-(</string>
+    <string name="must_install_explorer">You must install a file explorer in order to browse</string>
+    <string name="setup_subtitle">: Setup</string>
+    <string name="ready_to_use">Ready to use!</string>
+    <string name="keepassdroid_not_installed">KeePassDroid is not installed</string>
 </resources>

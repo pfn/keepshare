@@ -1,135 +1,222 @@
 package com.hanhuy.android.keepshare
 
 import AndroidConversions._
-import RichLogger._
-
-import collection.JavaConversions._
 
 import android.app.Activity
 import android.os.Bundle
-import com.google.api.services.drive.{Drive, DriveScopes}
-import com.google.api.client.googleapis.extensions.android.gms.auth._
-import android.content.Intent
+import android.content.{ActivityNotFoundException, Intent}
 import android.accounts.AccountManager
-import android.view.View
-import com.google.api.client.extensions.android.http.AndroidHttp
-import com.google.api.client.json.gson.GsonFactory
-import com.google.api.services.drive.model.{ParentReference, File}
-import com.google.api.client.http.{GenericUrl, ByteArrayContent}
-import java.security.{MessageDigest, SecureRandom}
-import java.nio.ByteBuffer
+import android.view.{View, MenuItem, Menu}
+import android.widget.Toast
+import java.io.File
+import android.text.{Editable, TextWatcher}
+import com.keepassdroid.provider.Contract
 
-class MainActivity extends Activity with TypedViewHolder {
-  implicit val TAG = LogcatTag("MainActivity")
+object RequestCodes {
 
   val REQUEST_ACCOUNT_PICKER = 1
   val REQUEST_AUTHORIZATION  = 2
 
-  val EXTRA_STATE = "com.hanhuy.android.keepshare.extra.STATE"
-  val KEY_FILE = "keepass-share.key"
+  val BROWSE_DATABASE = 3
+  val BROWSE_KEYFILE  = 4
+  val REQUEST_SETUP   = 5
 
-  val STATE_SAVE = "save"
-  val STATE_LOAD = "load"
+}
+class MainActivity extends Activity with TypedViewHolder {
+  implicit val TAG = LogcatTag("MainActivity")
+  import KeyManager._
+  import RequestCodes._
 
-  lazy val sha1 = MessageDigest.getInstance("SHA1")
-  def sha1(b: Array[Byte]): String = {
-    sha1.digest(b).map { byte => "%02X" format (byte & 0xff) }.mkString
-  }
-
+  lazy val flipper = findView(TR.flipper)
   lazy val settings = Settings(this)
-  lazy val credential = GoogleAccountCredential.usingOAuth2(this,
-    Seq(DriveScopes.DRIVE_APPDATA))
-  lazy val drive = new Drive.Builder(AndroidHttp.newCompatibleTransport,
-    new GsonFactory, credential).build
+  lazy val keymanager = new KeyManager(this, settings)
 
-  def loadKey() {
-    async {
-      val req = drive.files.list
-      req.setQ("'appdata' in parents")
-      try {
-        val files = req.execute()
-        files.getItems find (_.getTitle == KEY_FILE) map {
-          file =>
-            val resp = drive.getRequestFactory.buildGetRequest(
-              new GenericUrl(file.getDownloadUrl)).execute
-            val buf = Array.ofDim[Byte](32)
-            val in = resp.getContent
-            val b = ByteBuffer.allocate(32)
-            Stream.continually(in.read(buf)).takeWhile(_ != -1) foreach { r =>
-              b.put(buf, 0, r)
-            }
-            b.flip()
-            if (b.remaining != 32)
-              throw new IllegalStateException(
-                "wrong buffer size: " + b.remaining)
-            b.get(buf)
-            val hash = settings.get(Settings.CLOUD_KEY_HASH)
-            if (sha1(buf) != hash) {
-              throw new IllegalStateException("cloud key has changed")
-            }
-            v("Read: " + b)
-        } getOrElse saveKey()
-        v(files.toString)
-        v("token: " + files.getNextPageToken)
-      } catch {
-        case e: UserRecoverableAuthIOException => requestAuthz(e, STATE_LOAD)
-      }
-    }
-  }
-  def saveKey() {
-    val random = new SecureRandom
-    val keybuf = Array.ofDim[Byte](32)
-    random.nextBytes(keybuf)
-    settings.set(Settings.CLOUD_KEY_HASH, sha1(keybuf))
-
-    val content = new ByteArrayContent("application/octet-stream", keybuf)
-    val f = new File
-    f.setTitle(KEY_FILE)
-    f.setParents(Seq(new ParentReference().setId("appdata")))
-    async {
-      try {
-        val r = drive.files.insert(f, content).execute()
-        UiBus.post {
-          findView(TR.new_setup_container).setVisibility(View.GONE)
-          findView(TR.setup_container).setVisibility(View.VISIBLE)
-        }
-      } catch {
-        case e: UserRecoverableAuthIOException => requestAuthz(e, STATE_SAVE)
-      }
-    }
-  }
-
-  private def requestAuthz(e: UserRecoverableAuthIOException, state: String) {
-    val i = e.getIntent
-    i.putExtra(EXTRA_STATE, state)
-    startActivityForResult(i, REQUEST_AUTHORIZATION)
-  }
   private def pickAccount() {
     settings.set(Settings.GOOGLE_USER, null)
     startActivityForResult(
-      credential.newChooseAccountIntent(), REQUEST_ACCOUNT_PICKER)
+      keymanager.newChooseAccountIntent, REQUEST_ACCOUNT_PICKER)
   }
+
+  override def onCreateOptionsMenu(menu: Menu) = {
+    super.onCreateOptionsMenu(menu)
+    getMenuInflater.inflate(R.menu.main, menu)
+    true
+  }
+
+  override def onOptionsItemSelected(item: MenuItem) = {
+    item.getItemId match {
+      case R.id.clear_user_data =>
+        settings.clear()
+        KeyManager.clear()
+        finish()
+        true
+      case _ => super.onOptionsItemSelected(item)
+    }
+  }
+
+  def error(error: String) {
+    val view = findView(TR.error_text)
+    view.setVisibility(View.VISIBLE)
+    view.setText(error)
+    findView(TR.save).setEnabled(false)
+  }
+  def error(err: Int): Unit = error(getString(err))
+  def success(msg: String) {
+    val view = findView(TR.success_text)
+    view.setVisibility(View.VISIBLE)
+    view.setText(msg)
+  }
+  def success(msg: Int): Unit = success(getString(msg))
 
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.main)
+    setTitle(getTitle + getString(R.string.setup_subtitle))
 
     val user = Option(settings.get(Settings.GOOGLE_USER))
-    val connectVis = if (user.isEmpty)
-      (View.VISIBLE,View.GONE) else (View.GONE,View.VISIBLE)
     val connect = findView(TR.connect)
-    findView(TR.new_setup_container).setVisibility(connectVis._1)
-    findView(TR.setup_container).setVisibility(connectVis._2)
+    if (user.isEmpty)
+      flipper.setDisplayedChild(1)
     findView(TR.save) onClick {
       finish()
     }
     connect onClick {
+      connect.setEnabled(false)
       pickAccount()
     }
 
+    val browseHandler = { v: View =>
+      val intent = new Intent(Intent.ACTION_GET_CONTENT)
+      intent.setType("file/*")
+
+      try {
+        startActivityForResult(intent, v.getId match {
+          case R.id.browse_database => BROWSE_DATABASE
+          case R.id.browse_keyfile => BROWSE_KEYFILE
+        })
+      } catch {
+        case e: ActivityNotFoundException =>
+          Toast.makeText(this,
+            R.string.must_install_explorer,
+            Toast.LENGTH_SHORT).show()
+      }
+    }
+    findView(TR.browse_database) onClick browseHandler
+    findView(TR.browse_keyfile) onClick browseHandler
+
+
+    val watcher = new TextWatcher {
+      def beforeTextChanged(p1: CharSequence, p2: Int, p3: Int, p4: Int) {}
+
+      def onTextChanged(p1: CharSequence, p2: Int, p3: Int, p4: Int) {
+        findView(TR.save).setEnabled(true)
+        findView(TR.error_text).setVisibility(View.GONE)
+        findView(TR.success_text).setVisibility(View.GONE)
+      }
+
+      def afterTextChanged(p1: Editable) {}
+    }
+    findView(TR.key_file_name).addTextChangedListener(watcher)
+    findView(TR.file_name).addTextChangedListener(watcher)
+    findView(TR.password).addTextChangedListener(watcher)
+    findView(TR.save) onClick { view: View =>
+      view.setEnabled(false)
+      val database = findView(TR.file_name).getText.toString
+
+      val keyfile = findView(TR.key_file_name).getText.toString
+      if (database.trim != "") {
+
+        val keyf = new File(keyfile.trim).getAbsoluteFile
+        if (keyfile.trim != "") {
+          if (!keyf.exists) {
+            error(R.string.keyfile_no_exist)
+          }
+        }
+        val password = findView(TR.password).getText.toString
+        if (password.trim == "") {
+          error(R.string.password_no_blank)
+        } else {
+
+          val db = new File(database.trim).getAbsoluteFile
+          if (!db.isFile) {
+            error(R.string.database_no_exist)
+          } else {
+            findView(TR.progress2).setVisibility(View.VISIBLE)
+            async {
+              val b = new Bundle
+              val keyfilepath = if (keyf.isFile) keyf.getAbsolutePath else ""
+              b.putString(Contract.EXTRA_DATABASE, db.getAbsolutePath)
+              b.putString(Contract.EXTRA_PASSWORD, password.trim)
+              b.putString(Contract.EXTRA_KEYFILE, keyfilepath)
+              try {
+                val result = getContentResolver.call(
+                  Contract.URI, Contract.METHOD_OPEN, null, b)
+                if (result != null && result.containsKey(Contract.EXTRA_ERROR)) {
+                  UiBus.post {  error(result.getString(Contract.EXTRA_ERROR)) }
+                } else if (result == null) {
+                  UiBus.post { error(R.string.keepass_no_respond) }
+                } else {
+                  val k = keymanager.localKey
+                  val encdb = KeyManager.encrypt(k, db.getAbsolutePath)
+                  val encpw = KeyManager.encrypt(k, password.trim)
+                  val enckeyf = KeyManager.encrypt(k, keyfilepath)
+                  val verifier = KeyManager.encrypt(k, KeyManager.VERIFIER)
+
+                  settings.set(Settings.VERIFY_DATA, verifier)
+                  settings.set(Settings.PASSWORD, encpw)
+                  settings.set(Settings.KEYFILE_PATH, enckeyf)
+                  settings.set(Settings.DATABASE_FILE, encdb)
+                  UiBus.post {
+                    success(R.string.settings_saved)
+                    setResult(Activity.RESULT_OK)
+                  }
+                }
+              } catch {
+                case e: IllegalArgumentException => UiBus.post {
+                  error(R.string.keepassdroid_not_installed)
+                }
+              }
+              UiBus.post { findView(TR.progress2).setVisibility(View.GONE) }
+            }
+          }
+        }
+      } else {
+        error(R.string.database_no_blank)
+      }
+    }
+
     user foreach { name =>
-      credential.setSelectedAccountName(name)
-      loadKey()
+      keymanager.accountName = name
+      async {
+        val k = keymanager.loadKey()
+        (Option(settings.get(Settings.DATABASE_FILE))
+          , Option(settings.get(Settings.PASSWORD))
+          , Option(settings.get(Settings.KEYFILE_PATH))
+          , Option(settings.get(Settings.VERIFY_DATA))) match {
+          case (Some(encdb), Some(encpw), Some(enckeyf), Some(encverifier)) =>
+            val k = keymanager.localKey
+            val verifier = KeyManager.decryptToString(k, encverifier)
+            if (KeyManager.VERIFIER == verifier) {
+              UiBus.post {
+                findView(TR.file_name).setText(
+                  KeyManager.decryptToString(k, encdb))
+                findView(TR.password).setText(
+                  KeyManager.decryptToString(k, encpw))
+                findView(TR.key_file_name).setText(
+                  KeyManager.decryptToString(k, enckeyf))
+                success(R.string.ready_to_use)
+                findView(TR.save).setEnabled(false)
+              }
+            } else {
+              Toast.makeText(this,
+                R.string.decrypt_saved_failed, Toast.LENGTH_SHORT).show()
+            }
+          case _ =>
+        }
+        if (k != null) UiBus.post {
+          findView(TR.progress2).setVisibility(View.GONE)
+        }
+      }
     }
   }
 
@@ -139,22 +226,37 @@ class MainActivity extends Activity with TypedViewHolder {
         if (result == Activity.RESULT_OK) {
           Option(data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)) foreach {
             n =>
-            credential.setSelectedAccountName(n)
+            keymanager.accountName = n
             settings.set(Settings.GOOGLE_USER, n)
-            saveKey()
+            findView(TR.progress).setVisibility(View.VISIBLE)
+            async {
+              val k = keymanager.loadKey()
+              if (k != null) UiBus.post {
+                flipper.setDisplayedChild(0)
+                findView(TR.save).setEnabled(true)
+                findView(TR.progress2).setVisibility(View.GONE)
+              }
+            }
           }
         } else finish()
       case REQUEST_AUTHORIZATION =>
         if (result == Activity.RESULT_OK) {
-          findView(TR.new_setup_container).setVisibility(View.GONE)
-          findView(TR.setup_container).setVisibility(View.VISIBLE)
+          flipper.setDisplayedChild(0)
           data.getStringExtra(EXTRA_STATE) match {
             case STATE_LOAD =>
-            case STATE_SAVE => saveKey()
+            case STATE_SAVE => async {
+              keymanager.createKey()
+            }
           }
         } else {
           pickAccount()
         }
+      case BROWSE_DATABASE =>
+        if (result == Activity.RESULT_OK)
+          findView(TR.file_name).setText(data.getData.getPath)
+      case BROWSE_KEYFILE =>
+        if (result == Activity.RESULT_OK)
+          findView(TR.key_file_name).setText(data.getData.getPath)
     }
   }
 }

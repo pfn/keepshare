@@ -43,10 +43,10 @@ object AndroidConversions {
       override def onNavigationItemSelected(pos: Int, id: Long) = f(pos, id)
     }
 
-  implicit def toViewOnClickListener1(f: () => Unit) =
+  implicit def toViewOnClickListener1[A](f: () => A) =
     new View.OnClickListener() { def onClick(v: View) = f() }
 
-  implicit def toViewOnClickListener(f: View => Unit) =
+  implicit def toViewOnClickListener[A](f: View => A) =
     new View.OnClickListener() { def onClick(v: View) = f(v) }
 
   implicit def toDialogInterfaceOnClickListener(
@@ -163,7 +163,8 @@ case class RichView(view: View) extends TypedViewHolder {
   def findView[A <: View](id: Int): A =
     view.findViewById(id).asInstanceOf[A]
 
-  def onClick(f: => Unit) = view.setOnClickListener { () => f }
+  def onClick[A](f: => A) = view.setOnClickListener { () => f }
+  def onClick[A](f: View => A) = view.setOnClickListener(f)
 }
 // can't be case class because of inheritance :-/
 class RichActivity(activity: Activity) extends RichContext(activity)
