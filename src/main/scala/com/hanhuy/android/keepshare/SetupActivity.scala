@@ -73,7 +73,7 @@ class SetupActivity extends Activity with TypedViewHolder {
 
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
-    setContentView(R.layout.main)
+    setContentView(R.layout.setup)
     setTitle(getTitle + getString(R.string.setup_subtitle))
 
     val user = Option(settings.get(Settings.GOOGLE_USER))
