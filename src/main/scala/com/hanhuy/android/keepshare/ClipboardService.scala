@@ -18,6 +18,7 @@ object ClipboardService {
 
   val ACTION_COPY_USERNAME = "com.hanhuy.android.keepshare.action.COPY_USERNAME"
   val ACTION_COPY_PASSWORD = "com.hanhuy.android.keepshare.action.COPY_PASSWORD"
+  val ACTION_CLEAR         = "com.hanhuy.android.keepshare.action.CLEAR"
 }
 class ClipboardService extends Service {
   import ClipboardService._
@@ -52,14 +53,19 @@ class ClipboardService extends Service {
     userIntent.putExtra(EXTRA_UUID, uuid)
     val passIntent = new Intent(ACTION_COPY_PASSWORD)
     passIntent.putExtra(EXTRA_UUID, uuid)
+    val clearIntent = new Intent(ACTION_CLEAR)
+    clearIntent.putExtra(EXTRA_UUID, uuid)
     val builder = new NotificationCompat.Builder(this)
       .addAction(R.drawable.ic_menu_friendslist,
         getString(R.string.copy_username),
         PendingIntent.getBroadcast(this, 0, userIntent,
           PendingIntent.FLAG_UPDATE_CURRENT))
       .addAction(R.drawable.ic_menu_login, getString(R.string.copy_password),
-        PendingIntent.getBroadcast(this, 0,
+        PendingIntent.getBroadcast(this, 1,
           passIntent, PendingIntent.FLAG_UPDATE_CURRENT))
+      .addAction(android.R.drawable.ic_menu_delete, getString(R.string.clear),
+        PendingIntent.getBroadcast(this, 2,
+          clearIntent, PendingIntent.FLAG_UPDATE_CURRENT))
       .setContentText(username)
       .setContentTitle(title)
       .setSmallIcon(R.drawable.ic_lock)
@@ -68,6 +74,7 @@ class ClipboardService extends Service {
     val filter = new IntentFilter
     filter.addAction(ACTION_COPY_USERNAME)
     filter.addAction(ACTION_COPY_PASSWORD)
+    filter.addAction(ACTION_CLEAR)
     registerReceiver(receiver, filter)
 
     startForeground(1, builder.build)
@@ -90,7 +97,12 @@ class ClipboardService extends Service {
         Toast.makeText(c, R.string.invalid_token, Toast.LENGTH_LONG).show()
       } else intent.getAction match {
         case ACTION_COPY_USERNAME => cm.setText(username)
+          Toast.makeText(c, R.string.copied_username, Toast.LENGTH_SHORT).show()
         case ACTION_COPY_PASSWORD => cm.setText(password)
+          Toast.makeText(c, R.string.copied_password, Toast.LENGTH_SHORT).show()
+        case ACTION_CLEAR =>
+          handler.removeCallbacks(finishRunnable)
+          finishRunnable.run()
         case _ =>
       }
     }

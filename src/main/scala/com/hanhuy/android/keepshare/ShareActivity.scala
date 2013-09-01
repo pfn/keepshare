@@ -125,22 +125,30 @@ class ShareActivity extends Activity with TypedViewHolder {
             }
             val list = findView(TR.list)
             list.setEmptyView(findView(TR.empty))
-            list.onItemClick { pos =>
+
+            val onClickHandler = { pos: Int =>
               val cursor = adapter.getItem(pos).asInstanceOf[Cursor]
               findView(TR.continu).setEnabled(true)
               findView(TR.continu).onClick {
-                val intent = new Intent(this, classOf[ClipboardService])
-                intent.putExtra(ClipboardService.EXTRA_TITLE,
-                  cursor.getString(cursor.getColumnIndex(Contract.TITLE)))
-                intent.putExtra(ClipboardService.EXTRA_USERNAME,
-                  cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
-                intent.putExtra(ClipboardService.EXTRA_PASSWORD,
-                  cursor.getString(cursor.getColumnIndex(Contract.PASSWORD)))
-                startService(intent)
-                finish()
-              }
+              val intent = new Intent(this, classOf[ClipboardService])
+              intent.putExtra(ClipboardService.EXTRA_TITLE,
+              cursor.getString(cursor.getColumnIndex(Contract.TITLE)))
+              intent.putExtra(ClipboardService.EXTRA_USERNAME,
+              cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
+              intent.putExtra(ClipboardService.EXTRA_PASSWORD,
+              cursor.getString(cursor.getColumnIndex(Contract.PASSWORD)))
+              startService(intent)
+              finish()
             }
+            }
+            list.onItemClick(onClickHandler)
             list.setAdapter(adapter)
+            if (adapter.getCount == 1) {
+              findView(TR.select_prompt).setVisibility(View.GONE)
+              list.setItemChecked(0, true)
+              onClickHandler(0)
+              findView(TR.continu).setEnabled(true)
+            }
           }
         }
       }

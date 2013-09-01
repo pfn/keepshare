@@ -56,11 +56,15 @@
     <string name="not_a_url">Not a URL</string>
     <string name="cancel">Cancel</string>
     <string name="continu">Continue</string>
-    <string name="copy_username">Copy Username</string>
-    <string name="copy_password">Copy Password</string>
+    <string name="copy_username">Username</string>
+    <string name="copy_password">Password</string>
     <string name="failed_verify">Failed to verify encrypted data, run setup!</string>
     <string name="failed_to_open">Failed to open database: </string>
     <string name="credentials_available">Credentials are available for copying</string>
     <string name="invalid_token">Invalid KeePass Share token; is this a hacking attempt?!</string>
     <string name="timeout">Timeout (secs)</string>
+    <string name="select_entry_prompt">Select an entry to continue:</string>
+    <string name="copied_username">Username copied to clipboard!</string>
+    <string name="copied_password">Password copied to clipboard!</string>
+    <string name="clear">Clear</string>
 </resources>

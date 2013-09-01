@@ -49,9 +49,17 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 >
+            <TextView android:id="@+id/select_prompt"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:layout_marginBottom="8dp"
+                      android:text="@string/select_entry_prompt"
+                      />
             <ListView android:id="@+id/list"
                       android:divider="@null"
                       android:choiceMode="singleChoice"
+                      android:layout_below="@+id/select_prompt"
+                      android:layout_alignWithParentIfMissing="true"
                       android:layout_above="@+id/continu"
                       android:layout_width="match_parent"
                       android:layout_height="match_parent"/>
