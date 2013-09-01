@@ -7,10 +7,11 @@ import android.os.Bundle
 import android.content.{ActivityNotFoundException, Intent}
 import android.accounts.AccountManager
 import android.view.{View, MenuItem, Menu}
-import android.widget.Toast
+import android.widget.{RadioGroup, CompoundButton, Toast}
 import java.io.File
 import android.text.{Editable, TextWatcher}
 import com.keepassdroid.provider.Contract
+import android.widget.RadioGroup.OnCheckedChangeListener
 
 object RequestCodes {
 
@@ -22,7 +23,7 @@ object RequestCodes {
   val REQUEST_SETUP   = 5
 
 }
-class MainActivity extends Activity with TypedViewHolder {
+class SetupActivity extends Activity with TypedViewHolder {
   implicit val TAG = LogcatTag("MainActivity")
   import KeyManager._
   import RequestCodes._
@@ -56,12 +57,14 @@ class MainActivity extends Activity with TypedViewHolder {
 
   def error(error: String) {
     val view = findView(TR.error_text)
+    findView(TR.success_text).setVisibility(View.GONE)
     view.setVisibility(View.VISIBLE)
     view.setText(error)
     findView(TR.save).setEnabled(false)
   }
   def error(err: Int): Unit = error(getString(err))
   def success(msg: String) {
+    findView(TR.error_text).setVisibility(View.GONE)
     val view = findView(TR.success_text)
     view.setVisibility(View.VISIBLE)
     view.setText(msg)
@@ -77,9 +80,6 @@ class MainActivity extends Activity with TypedViewHolder {
     val connect = findView(TR.connect)
     if (user.isEmpty)
       flipper.setDisplayedChild(1)
-    findView(TR.save) onClick {
-      finish()
-    }
     connect onClick {
       connect.setEnabled(false)
       pickAccount()
@@ -89,6 +89,7 @@ class MainActivity extends Activity with TypedViewHolder {
       val intent = new Intent(Intent.ACTION_GET_CONTENT)
       intent.setType("file/*")
 
+      // TODO support content provider URIs for google Drive, Dropbox, etc.
       try {
         startActivityForResult(intent, v.getId match {
           case R.id.browse_database => BROWSE_DATABASE
@@ -101,6 +102,18 @@ class MainActivity extends Activity with TypedViewHolder {
             Toast.LENGTH_SHORT).show()
       }
     }
+
+    findView(TR.timeout).setOnCheckedChangeListener(new OnCheckedChangeListener {
+      def onCheckedChanged(p1: RadioGroup, p2: Int) {
+        findView(TR.save).setEnabled(true)
+      }
+    })
+    findView(TR.timeout).check(settings.get(Settings.TIMEOUT) match {
+      case 45 => R.id.timeout_60
+      case 30 => R.id.timeout_30
+      case 15 => R.id.timeout_15
+      case _  => R.id.timeout_60
+    })
     findView(TR.browse_database) onClick browseHandler
     findView(TR.browse_keyfile) onClick browseHandler
 
@@ -120,6 +133,8 @@ class MainActivity extends Activity with TypedViewHolder {
     findView(TR.file_name).addTextChangedListener(watcher)
     findView(TR.password).addTextChangedListener(watcher)
     findView(TR.save) onClick { view: View =>
+      findView(TR.error_text).setVisibility(View.GONE)
+      findView(TR.success_text).setVisibility(View.GONE)
       view.setEnabled(false)
       val database = findView(TR.file_name).getText.toString
 
@@ -166,6 +181,13 @@ class MainActivity extends Activity with TypedViewHolder {
                   settings.set(Settings.PASSWORD, encpw)
                   settings.set(Settings.KEYFILE_PATH, enckeyf)
                   settings.set(Settings.DATABASE_FILE, encdb)
+                  settings.set(Settings.TIMEOUT,
+                    findView(TR.timeout).getCheckedRadioButtonId match {
+                      case R.id.timeout_60 => 60
+                      case R.id.timeout_45 => 45
+                      case R.id.timeout_30 => 30
+                      case R.id.timeout_15 => 15
+                    })
                   UiBus.post {
                     success(R.string.settings_saved)
                     setResult(Activity.RESULT_OK)
@@ -174,6 +196,7 @@ class MainActivity extends Activity with TypedViewHolder {
               } catch {
                 case e: IllegalArgumentException => UiBus.post {
                   error(R.string.keepassdroid_not_installed)
+                  RichLogger.e("failed to communicate with keepassdroid", e)
                 }
               }
               UiBus.post { findView(TR.progress2).setVisibility(View.GONE) }
@@ -251,6 +274,7 @@ class MainActivity extends Activity with TypedViewHolder {
         } else {
           pickAccount()
         }
+      // TODO support content provider URIs for google Drive, Dropbox, etc.
       case BROWSE_DATABASE =>
         if (result == Activity.RESULT_OK)
           findView(TR.file_name).setText(data.getData.getPath)

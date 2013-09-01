@@ -16,6 +16,7 @@ class Setting[A](val key: String, val default: A, val defaultRes: Option[Int]) {
 }
 
 object Settings {
+  val TIMEOUT = new Setting[Int]("timeout", 60, None)
   val GOOGLE_USER = Setting[String]("google_account", null)
   val CLOUD_KEY_HASH = Setting[String]("cloud_key_hash", null)
   val LOCAL_KEY = Setting[String]("local_key", null)
@@ -33,7 +34,8 @@ class Settings(val context: Context) {
     val p = PreferenceManager.getDefaultSharedPreferences(context)
 
   def get[A](setting: Setting[A])(implicit m: ClassManifest[A]): A = {
-    val result = if (classOf[String] == m.erasure) {
+    // :Any is necessary, or else Int turns into Float?!
+    val result: Any = if (classOf[String] == m.erasure) {
       val default: String = setting.defaultRes map {
         context.getString
       } getOrElse setting.default.asInstanceOf[String]
@@ -57,6 +59,8 @@ class Settings(val context: Context) {
       editor.putBoolean(setting.key, value.asInstanceOf[Boolean])
     } else if (classOf[String] == m.erasure) {
         editor.putString(setting.key, value.asInstanceOf[String])
+    } else if (classOf[Int] == m.erasure) {
+      editor.putInt(setting.key, value.asInstanceOf[Int])
     } else {
       throw new IllegalArgumentException("Unknown type: " + m.erasure)
     }

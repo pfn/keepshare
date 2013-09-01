@@ -4,10 +4,8 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.test.ActivityUnitTestCase;
 import com.hanhuy.android.keepshare.KeyManager;
-import com.hanhuy.android.keepshare.MainActivity;
+import com.hanhuy.android.keepshare.SetupActivity;
 import com.hanhuy.android.keepshare.Settings;
-import scala.Function1;
-import scala.runtime.AbstractFunction1;
 
 import javax.crypto.spec.SecretKeySpec;
 
@@ -20,7 +18,7 @@ public class KeyManagerTest extends ActivityUnitTestCase {
 
     static String localKey = null;
     public KeyManagerTest() {
-        super(MainActivity.class);
+        super(SetupActivity.class);
     }
 
     public void testLoadKey() {

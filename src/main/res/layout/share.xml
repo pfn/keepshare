@@ -1,11 +1,86 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:orientation="vertical"
               android:layout_width="match_parent"
+              android:padding="12dp"
               android:layout_height="320dp">
 
     <ImageView android:id="@+id/share_screenshot"
+               android:contentDescription="@string/screenshot"
+               android:layout_marginRight="12dp"
+               android:layout_alignParentLeft="true"
                android:layout_width="wrap_content"
                android:layout_height="wrap_content"/>
-</LinearLayout>
+    <TextView android:id="@+id/subject"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:layout_marginBottom="12dp"
+              android:layout_alignWithParentIfMissing="true"
+              android:layout_toRightOf="@+id/share_screenshot"/>
+
+    <ViewFlipper android:id="@+id/flipper"
+                 android:layout_below="@+id/subject"
+                 android:layout_alignLeft="@+id/subject"
+                 android:layout_alignParentBottom="true"
+                 android:layout_alignParentRight="true"
+                 android:inAnimation="@android:anim/slide_in_left"
+                 android:outAnimation="@android:anim/slide_out_right"
+                 android:layout_width="wrap_content"
+                 android:layout_height="wrap_content">
+        <LinearLayout
+                android:layout_gravity="top"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+            <ProgressBar android:id="@+id/progress"
+                         android:layout_gravity="center"
+                         android:layout_marginRight="12dp"
+                         android:layout_width="wrap_content"
+                         android:layout_height="wrap_content"
+                         style="@android:style/Widget.ProgressBar.Small"/>
+            <TextView android:id="@+id/loading"
+                      android:layout_gravity="center"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:text="@string/loading"/>
+        </LinearLayout>
+        <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                >
+            <ListView android:id="@+id/list"
+                      android:divider="@null"
+                      android:choiceMode="singleChoice"
+                      android:layout_above="@+id/continu"
+                      android:layout_width="match_parent"
+                      android:layout_height="match_parent"/>
+            <Button android:id="@+id/cancel"
+                    android:text="@string/cancel"
+                    android:minWidth="100dp"
+                    android:layout_alignParentBottom="true"
+                    android:layout_toLeftOf="@+id/continu"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+            <Button android:id="@+id/continu"
+                    android:enabled="false"
+                    android:minWidth="100dp"
+                    android:text="@string/continu"
+                    android:layout_alignParentBottom="true"
+                    android:layout_alignParentRight="true"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+        </RelativeLayout>
+    </ViewFlipper>
+    <TextView android:id="@+id/empty"
+              android:visibility="gone"
+              android:layout_below="@+id/subject"
+              android:text="No logins found"
+              android:textColor="#ffff0000"
+              android:textAppearance="?android:attr/textAppearanceMedium"
+              android:layout_alignLeft="@+id/subject"
+              android:layout_alignParentBottom="true"
+              android:layout_alignParentRight="true"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"/>
+</RelativeLayout>

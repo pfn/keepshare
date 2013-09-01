@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="horizontal"
+              android:background="@drawable/pwitem_selector"
+              android:minHeight="36dp"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content">
+    <TextView android:id="@+id/name"
+              android:paddingLeft="12dp"
+              android:layout_width="0dp"
+              android:maxLines="1"
+              android:layout_gravity="center"
+              android:layout_height="wrap_content"
+              android:layout_weight="1"
+              />
+    <View android:layout_width="1dp"
+          android:layout_marginLeft="12dp"
+          android:layout_marginRight="12dp"
+          android:layout_height="match_parent"
+          android:background="#ffaaaaaa"/>
+    <TextView android:id="@+id/username"
+              android:layout_width="0dp"
+              android:maxLines="1"
+              android:layout_gravity="center"
+              android:layout_height="wrap_content"
+              android:layout_weight="1"
+            />
+</LinearLayout>

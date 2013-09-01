@@ -2,9 +2,7 @@ package com.hanhuy.android.keepshare
 
 import android.app.{ActionBar, Activity, NotificationManager}
 
-import android.content.Intent
-import android.content.Context
-import android.content.BroadcastReceiver
+import android.content._
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Handler
@@ -12,10 +10,7 @@ import android.os.Looper
 import android.view.View
 import android.view.KeyEvent
 import android.view.MotionEvent
-import android.widget.AdapterView
-import android.widget.TextView
-import android.widget.CheckBox
-import android.content.DialogInterface
+import android.widget.{ListView, AdapterView, TextView, CheckBox}
 import android.view.LayoutInflater
 import android.text.{SpannableString, SpannableStringBuilder, Spanned}
 import android.text.style.{StyleSpan, ForegroundColorSpan}
@@ -65,11 +60,9 @@ object AndroidConversions {
       def onShow(d: DialogInterface) = f()
     }
 
-  implicit def toAdapterViewOnItemClickListener(
-      f: (AdapterView[_], View, Int, Long) => Unit) =
+  implicit def toAdapterViewOnItemClickListener[A](f: Int => A) =
     new AdapterView.OnItemClickListener() {
-      def onItemClick(av: AdapterView[_], v: View, pos: Int, id: Long) =
-        f(av, v, pos, id)
+      def onItemClick(av: AdapterView[_], v: View, pos: Int, id: Long) = f(pos)
     }
 
   implicit def toAdapterViewOnItemClickListener2(
@@ -121,6 +114,7 @@ object AndroidConversions {
   implicit def toBoolean(c: CheckBox) = c.isChecked
 
   implicit def toRichView(v: View) = RichView(v)
+  implicit def toRichListView(v: ListView) = RichListView(v)
   implicit def toRichContext(c: Context) = RichContext(c)
   implicit def toRichActivity(a: Activity) = new RichActivity(a)
   implicit def toRichHandler(h: Handler) = RichHandler(h)
@@ -150,6 +144,7 @@ object SystemService {
   import Context._
   implicit val ls = SystemService[LayoutInflater](LAYOUT_INFLATER_SERVICE)
   implicit val ns = SystemService[NotificationManager](NOTIFICATION_SERVICE)
+  implicit val cm = SystemService[ClipboardManager](CLIPBOARD_SERVICE)
 }
 case class RichContext(context: Context) {
   def systemService[T](implicit s: SystemService[T]): T =
@@ -165,6 +160,17 @@ case class RichView(view: View) extends TypedViewHolder {
 
   def onClick[A](f: => A) = view.setOnClickListener { () => f }
   def onClick[A](f: View => A) = view.setOnClickListener(f)
+}
+
+case class RichListView(view: ListView) extends TypedViewHolder {
+  import AndroidConversions._
+
+  def findViewById(id: Int): View = view.findViewById(id)
+
+  def findView[A <: View](id: Int): A =
+    view.findViewById(id).asInstanceOf[A]
+
+  def onItemClick[A](f: Int => A) = view.setOnItemClickListener(f)
 }
 // can't be case class because of inheritance :-/
 class RichActivity(activity: Activity) extends RichContext(activity)

@@ -9,7 +9,7 @@
                 android:name="com.keepassdroid.permission.READ_DATABASE"/>
     <uses-permission android:name="com.keepassdroid.permission.READ_DATABASE"/>
 
-    <!-- temporary -->
+    <!-- temporary: for testing -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 
     <uses-permission android:name="android.permission.GET_ACCOUNTS"/>
@@ -19,7 +19,7 @@
             android:name=".Application"
             android:label="@string/app_name"
             android:icon="@drawable/ic_launcher">
-        <activity android:name=".MainActivity"
+        <activity android:name=".SetupActivity"
                   android:theme="@android:style/Theme.DeviceDefault.Light"
                   android:windowSoftInputMode="adjustResize"
                   android:label="@string/app_name">
@@ -38,5 +38,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <service android:name=".ClipboardService"
+                 android:exported="false"/>
     </application>
 </manifest>

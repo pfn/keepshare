@@ -25,7 +25,7 @@
                 />
         <TextView
                 android:id="@+id/label1"
-                android:layout_width="90dp"
+                android:layout_width="100dp"
                 android:layout_alignBottom="@+id/file_name"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
@@ -98,6 +98,38 @@
                 android:layout_alignParentRight="true"
                 android:text="@string/browse"
                 />
+        <TextView
+                android:id="@+id/label4"
+                android:layout_below="@+id/key_file_name"
+                android:layout_marginTop="24dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="@string/timeout"
+                />
+        <RadioGroup android:id="@+id/timeout"
+                android:layout_alignTop="@+id/label4"
+                android:layout_width="match_parent"
+                android:layout_alignLeft="@+id/key_file_name"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/key_file_name">
+            <RadioButton android:id="@+id/timeout_60"
+                         android:layout_width="wrap_content"
+                         android:layout_height="wrap_content"
+                         android:text="60"/>
+            <RadioButton android:id="@+id/timeout_45"
+                         android:layout_width="wrap_content"
+                         android:layout_height="wrap_content"
+                         android:text="45"/>
+            <RadioButton android:id="@+id/timeout_30"
+                         android:layout_width="wrap_content"
+                         android:layout_height="wrap_content"
+                         android:text="30"/>
+            <RadioButton android:id="@+id/timeout_15"
+                         android:layout_width="wrap_content"
+                         android:layout_height="wrap_content"
+                         android:text="15"/>
+        </RadioGroup>
         <TextView
                 android:visibility="gone"
                 android:id="@+id/error_text"

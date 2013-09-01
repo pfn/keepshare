@@ -40,7 +40,7 @@
     <string name="connect">Connect</string>
     <string name="database">Database</string>
     <string name="save">Save</string>
-    <string name="settings_saved">Database connection successful!</string>
+    <string name="settings_saved">Database setup complete!</string>
     <string name="keepass_no_respond">KeePass provider did not respond</string>
     <string name="keyfile_no_exist">Key file does not exist!</string>
     <string name="password_no_blank">Password cannot be blank</string>
@@ -51,4 +51,16 @@
     <string name="setup_subtitle">: Setup</string>
     <string name="ready_to_use">Ready to use!</string>
     <string name="keepassdroid_not_installed">KeePassDroid is not installed</string>
+    <string name="loading">Loading...</string>
+    <string name="screenshot">screenshot</string>
+    <string name="not_a_url">Not a URL</string>
+    <string name="cancel">Cancel</string>
+    <string name="continu">Continue</string>
+    <string name="copy_username">Copy Username</string>
+    <string name="copy_password">Copy Password</string>
+    <string name="failed_verify">Failed to verify encrypted data, run setup!</string>
+    <string name="failed_to_open">Failed to open database: </string>
+    <string name="credentials_available">Credentials are available for copying</string>
+    <string name="invalid_token">Invalid KeePass Share token; is this a hacking attempt?!</string>
+    <string name="timeout">Timeout (secs)</string>
 </resources>
