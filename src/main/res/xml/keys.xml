@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Keyboard xmlns:android="http://schemas.android.com/apk/res/android"
+        android:keyHeight="48sp">
+    <Row android:rowEdgeFlags="top">
+        <Key android:codes="195"
+             android:keyWidth="40%p"
+             android:keyEdgeFlags="right"
+             android:keyLabel="@string/enter_username"
+             android:keyIcon="@drawable/ic_menu_friendslist"/>
+        <Key android:codes="196"
+             android:keyWidth="40%p"
+             android:keyEdgeFlags="right"
+             android:keyLabel="@string/enter_password"
+             android:keyIcon="@drawable/ic_menu_login"/>
+        <Key android:codes="10"
+             android:keyWidth="20%p"
+             android:keyIcon="@android:drawable/ic_menu_send"/>
+        <Key android:codes="14"
+             android:keyEdgeFlags="right"
+             android:keyIcon="@android:drawable/ic_menu_delete"/>
+    </Row>
+</Keyboard>

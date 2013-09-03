@@ -38,6 +38,16 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <service android:name=".PasswordIME"
+                 android:label="@string/app_name"
+                 android:permission="android.permission.BIND_INPUT_METHOD">
+            <intent-filter>
+                <action android:name="android.view.InputMethod"/>
+            </intent-filter>
+            <meta-data android:name="android.view.im"
+                       android:resource="@xml/ime"/>
+        </service>
+
         <service android:name=".ClipboardService"
                  android:exported="false"/>
     </application>

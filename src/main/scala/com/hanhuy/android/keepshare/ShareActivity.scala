@@ -1,7 +1,9 @@
 package com.hanhuy.android.keepshare
 
 import AndroidConversions._
+import RichLogger._
 
+import android.provider.Settings.Secure
 import android.app.Activity
 import android.os.Bundle
 import android.graphics.Bitmap
@@ -12,6 +14,7 @@ import android.widget.{CursorAdapter, Toast}
 import android.view.{ViewGroup, View}
 import com.keepassdroid.provider.Contract
 import android.database.Cursor
+import android.view.inputmethod.InputMethodManager
 
 object ShareActivity {
 
@@ -21,6 +24,8 @@ object ShareActivity {
 }
 class ShareActivity extends Activity with TypedViewHolder {
   implicit val TAG = LogcatTag("ShareActivity")
+  val _implicit: RichContext = this
+  import _implicit._
 
   val EXTRA_SCREENSHOT = "share_screenshot"
   lazy val settings = new Settings(this)
@@ -39,6 +44,7 @@ class ShareActivity extends Activity with TypedViewHolder {
     val extras = getIntent.getExtras
     val url = extras.getString(Intent.EXTRA_TEXT)
 
+    val imm = systemService[InputMethodManager]
     findView(TR.cancel) onClick (finish)
 
     try {
@@ -131,15 +137,27 @@ class ShareActivity extends Activity with TypedViewHolder {
               findView(TR.continu).setEnabled(true)
               findView(TR.continu).onClick {
               val intent = new Intent(this, classOf[ClipboardService])
-              intent.putExtra(ClipboardService.EXTRA_TITLE,
-              cursor.getString(cursor.getColumnIndex(Contract.TITLE)))
-              intent.putExtra(ClipboardService.EXTRA_USERNAME,
-              cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
-              intent.putExtra(ClipboardService.EXTRA_PASSWORD,
-              cursor.getString(cursor.getColumnIndex(Contract.PASSWORD)))
-              startService(intent)
-              finish()
-            }
+                intent.putExtra(ClipboardService.EXTRA_TITLE,
+                cursor.getString(cursor.getColumnIndex(Contract.TITLE)))
+                intent.putExtra(ClipboardService.EXTRA_USERNAME,
+                cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
+                intent.putExtra(ClipboardService.EXTRA_PASSWORD,
+                cursor.getString(cursor.getColumnIndex(Contract.PASSWORD)))
+                startService(intent)
+                UiBus.post {
+                  val token = getWindow.getAttributes.token
+                  imm.setInputMethod(token, PasswordIME.NAME)
+                  val ime = Secure.getString(
+                    getContentResolver, Secure.DEFAULT_INPUT_METHOD)
+                  if (PasswordIME.NAME != ime) {
+                    settings.set(Settings.IME, ime)
+                    UiBus.handler.delayed(500) { imm.showInputMethodPicker() }
+                  }
+                  UiBus.post {
+                    finish()
+                  }
+                }
+              }
             }
             list.onItemClick(onClickHandler)
             list.setAdapter(adapter)

@@ -10,13 +10,14 @@ import android.os.Looper
 import android.view.View
 import android.view.KeyEvent
 import android.view.MotionEvent
-import android.widget.{ListView, AdapterView, TextView, CheckBox}
+import android.widget._
 import android.view.LayoutInflater
 import android.text.{SpannableString, SpannableStringBuilder, Spanned}
 import android.text.style.{StyleSpan, ForegroundColorSpan}
 import android.graphics.Typeface
 import scala.annotation.tailrec
 import android.util.Log
+import android.view.inputmethod.InputMethodManager
 
 object AndroidConversions {
   val icsAndNewer =
@@ -43,6 +44,16 @@ object AndroidConversions {
 
   implicit def toViewOnClickListener[A](f: View => A) =
     new View.OnClickListener() { def onClick(v: View) = f(v) }
+
+  implicit def toCButtonOnCheckedChangedListener[A](f: Boolean => A) =
+    new CompoundButton.OnCheckedChangeListener {
+      def onCheckedChanged(p1: CompoundButton, p2: Boolean) = f(p2)
+    }
+
+  implicit def toRGOnCheckedChangedListener[A](f: Int => A) =
+    new RadioGroup.OnCheckedChangeListener {
+      def onCheckedChanged(p1: RadioGroup, id: Int) = f(id)
+    }
 
   implicit def toDialogInterfaceOnClickListener(
       f: (DialogInterface, Int) => Unit) =
@@ -114,6 +125,8 @@ object AndroidConversions {
   implicit def toBoolean(c: CheckBox) = c.isChecked
 
   implicit def toRichView(v: View) = RichView(v)
+  implicit def toRichCompoundButton(v: CompoundButton) = RichCompoundButton(v)
+  implicit def toRichRadioGroup(v: RadioGroup) = RichRadioGroup(v)
   implicit def toRichListView(v: ListView) = RichListView(v)
   implicit def toRichContext(c: Context) = RichContext(c)
   implicit def toRichActivity(a: Activity) = new RichActivity(a)
@@ -145,6 +158,7 @@ object SystemService {
   implicit val ls = SystemService[LayoutInflater](LAYOUT_INFLATER_SERVICE)
   implicit val ns = SystemService[NotificationManager](NOTIFICATION_SERVICE)
   implicit val cm = SystemService[ClipboardManager](CLIPBOARD_SERVICE)
+  implicit val im = SystemService[InputMethodManager](INPUT_METHOD_SERVICE)
 }
 case class RichContext(context: Context) {
   def systemService[T](implicit s: SystemService[T]): T =
@@ -160,6 +174,17 @@ case class RichView(view: View) extends TypedViewHolder {
 
   def onClick[A](f: => A) = view.setOnClickListener { () => f }
   def onClick[A](f: View => A) = view.setOnClickListener(f)
+}
+
+case class RichCompoundButton(override val view: CompoundButton)
+  extends RichView(view) {
+  import AndroidConversions._
+  def onCheckedChanged[A](f: Boolean => A) = view.setOnCheckedChangeListener(f)
+}
+case class RichRadioGroup(override val view: RadioGroup)
+  extends RichView(view) {
+  import AndroidConversions._
+  def onCheckedChanged[A](f: Int => A) = view.setOnCheckedChangeListener(f)
 }
 
 case class RichListView(view: ListView) extends TypedViewHolder {

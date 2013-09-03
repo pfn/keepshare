@@ -4,7 +4,10 @@ import AndroidConversions._
 
 import android.os.{Handler, Looper}
 
-trait BusEvent
+sealed trait BusEvent
+case object ServiceExit extends BusEvent
+case object KeyboardExit extends BusEvent
+
 object EventBus {
 
   class Owner {

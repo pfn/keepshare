@@ -2,16 +2,18 @@ package com.hanhuy.android.keepshare
 
 import AndroidConversions._
 
+import collection.JavaConversions._
+
 import android.app.Activity
 import android.os.Bundle
-import android.content.{ActivityNotFoundException, Intent}
+import android.content.{ComponentName, ActivityNotFoundException, Intent}
 import android.accounts.AccountManager
 import android.view.{View, MenuItem, Menu}
-import android.widget.{RadioGroup, CompoundButton, Toast}
+import android.widget.{CompoundButton, Toast}
 import java.io.File
 import android.text.{Editable, TextWatcher}
 import com.keepassdroid.provider.Contract
-import android.widget.RadioGroup.OnCheckedChangeListener
+import android.view.inputmethod.InputMethodManager
 
 object RequestCodes {
 
@@ -27,10 +29,14 @@ class SetupActivity extends Activity with TypedViewHolder {
   implicit val TAG = LogcatTag("MainActivity")
   import KeyManager._
   import RequestCodes._
+  val _implicit: RichActivity = this
+  import _implicit._
 
   lazy val flipper = findView(TR.flipper)
   lazy val settings = Settings(this)
   lazy val keymanager = new KeyManager(this, settings)
+  lazy val keyboardToggle = findViewById(
+    R.id.toggle_keyboard).asInstanceOf[CompoundButton]
 
   private def pickAccount() {
     settings.set(Settings.GOOGLE_USER, null)
@@ -71,10 +77,34 @@ class SetupActivity extends Activity with TypedViewHolder {
   }
   def success(msg: Int): Unit = success(getString(msg))
 
+  override def onResume() {
+    super.onResume()
+    val imm = systemService[InputMethodManager]
+    val list = imm.getEnabledInputMethodList
+    val enabled = list exists (
+      _.getPackageName == "com.hanhuy.android.keepshare")
+    keyboardToggle.setChecked(enabled)
+    findView(TR.password_override).setChecked(
+      settings.get(Settings.PASSWORD_OVERRIDE))
+
+  }
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
-    setContentView(R.layout.setup)
     setTitle(getTitle + getString(R.string.setup_subtitle))
+    setContentView(R.layout.setup)
+
+    keyboardToggle onCheckedChanged { b =>
+      val imm = systemService[InputMethodManager]
+      val list = imm.getEnabledInputMethodList
+      val enabled = list exists (
+        _.getPackageName == "com.hanhuy.android.keepshare")
+
+      if (b != enabled) {
+        startActivity(Intent.makeMainActivity(
+          new ComponentName("com.android.settings",
+            "com.android.settings.LanguageSettings")))
+      }
+    }
 
     val user = Option(settings.get(Settings.GOOGLE_USER))
     val connect = findView(TR.connect)
@@ -103,13 +133,16 @@ class SetupActivity extends Activity with TypedViewHolder {
       }
     }
 
-    findView(TR.timeout).setOnCheckedChangeListener(new OnCheckedChangeListener {
-      def onCheckedChanged(p1: RadioGroup, p2: Int) {
-        findView(TR.save).setEnabled(true)
-      }
-    })
+    findView(TR.password_override) onCheckedChanged { b =>
+      findView(TR.password).setText("")
+      findView(TR.save).setEnabled(true)
+    }
+
+    findView(TR.timeout) onCheckedChanged { i =>
+      findView(TR.save).setEnabled(true)
+    }
     findView(TR.timeout).check(settings.get(Settings.TIMEOUT) match {
-      case 45 => R.id.timeout_60
+      case 45 => R.id.timeout_45
       case 30 => R.id.timeout_30
       case 15 => R.id.timeout_15
       case _  => R.id.timeout_60
@@ -188,6 +221,8 @@ class SetupActivity extends Activity with TypedViewHolder {
                       case R.id.timeout_30 => 30
                       case R.id.timeout_15 => 15
                     })
+                  settings.set(Settings.PASSWORD_OVERRIDE,
+                    findView(TR.password_override).isChecked)
                   UiBus.post {
                     success(R.string.settings_saved)
                     setResult(Activity.RESULT_OK)
@@ -270,6 +305,7 @@ class SetupActivity extends Activity with TypedViewHolder {
             case STATE_SAVE => async {
               keymanager.createKey()
             }
+            case _ =>
           }
         } else {
           pickAccount()

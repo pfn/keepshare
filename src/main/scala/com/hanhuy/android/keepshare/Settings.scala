@@ -24,6 +24,8 @@ object Settings {
   val DATABASE_FILE = Setting[String]("database_file", null)
   val KEYFILE_PATH = Setting[String]("key_file", null)
   val PASSWORD = Setting[String]("password", null)
+  val IME = Setting[String]("ime", null)
+  val PASSWORD_OVERRIDE = Setting[Boolean]("password_override", false)
 
   def apply(c: Context) = {
     new Settings(c.getApplicationContext)
