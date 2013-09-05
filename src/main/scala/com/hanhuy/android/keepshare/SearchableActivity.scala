@@ -7,7 +7,7 @@ import android.os.Bundle
 import android.content._
 import android.widget.{TextView, CursorAdapter}
 import android.view.{View, ViewGroup}
-import android.database.{AbstractCursor, Cursor}
+import android.database.{CursorWindow, AbstractCursor, Cursor}
 import com.keepassdroid.provider.Contract
 import android.net.Uri
 import android.provider.BaseColumns
@@ -107,25 +107,29 @@ class SearchProvider extends ContentProvider {
     val q = Uri.decode(u.getLastPathSegment).trim
     val cursor = ShareActivity.queryDatabase(getContext, settings, q :: Nil)
 
-    // for some reason, this only presents 1 result in global search?!
     new AbstractCursor {
+      // SUGGEST_COLUMN_INTENT_DATA_ID is necessary for global search to work
       def getColumnNames = Array(
         BaseColumns._ID,
         SearchManager.SUGGEST_COLUMN_TEXT_1,
         SearchManager.SUGGEST_COLUMN_TEXT_2,
+        SearchManager.SUGGEST_COLUMN_INTENT_DATA_ID,
         SearchManager.SUGGEST_COLUMN_INTENT_EXTRA_DATA)
 
       private lazy val columnMap = Map(
         0 -> cursor.getColumnIndex(Contract._ID),
         1 -> cursor.getColumnIndex(Contract.TITLE),
         2 -> cursor.getColumnIndex(Contract.USERNAME),
-        3 -> cursor.getColumnIndex(Contract._ID))
+        3 -> cursor.getColumnIndex(Contract._ID),
+        4 -> cursor.getColumnIndex(Contract._ID))
+
 
       override def getType(column: Int) = column match {
         case 0 => Cursor.FIELD_TYPE_INTEGER
         case 1 => Cursor.FIELD_TYPE_STRING
         case 2 => Cursor.FIELD_TYPE_STRING
         case 3 => Cursor.FIELD_TYPE_INTEGER
+        case 4 => Cursor.FIELD_TYPE_INTEGER
       }
 
       def getCount            = if (cursor.isClosed) 0 else cursor.getCount

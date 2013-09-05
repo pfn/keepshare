@@ -204,6 +204,7 @@ class SetupActivity extends Activity with TypedViewHolder {
                 } else if (result == null) {
                   UiBus.post { error(R.string.keepass_no_respond) }
                 } else {
+                  keymanager.loadKey()
                   val k = keymanager.localKey
                   val encdb = KeyManager.encrypt(k, db.getAbsolutePath)
                   val encpw = KeyManager.encrypt(k, password.trim)
