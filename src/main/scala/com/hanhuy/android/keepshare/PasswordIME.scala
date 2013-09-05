@@ -25,6 +25,8 @@ with EventBus.RefOwner {
   private var passwordPress = 0l
   private var isPassword = false
 
+  private val LONG_PRESS = 2000
+
   ServiceBus += {
     case ServiceExit => quitIME()
   }
@@ -85,7 +87,8 @@ with EventBus.RefOwner {
               setText(service.password)
           } else {
 
-            val longPress = System.currentTimeMillis - passwordPress > 500
+            val longPress =
+              System.currentTimeMillis - passwordPress > LONG_PRESS
             if (!settings.get(Settings.PASSWORD_OVERRIDE) || !longPress) {
               Toast.makeText(this, if (settings.get(Settings.PASSWORD_OVERRIDE))
                 R.string.no_password_input_override else
@@ -115,7 +118,7 @@ with EventBus.RefOwner {
     if (key == 196) {
       passwordPress = System.currentTimeMillis
       UiBus.handler.removeCallbacks(overrideRunner)
-      UiBus.handler.postDelayed(overrideRunner, 500)
+      UiBus.handler.postDelayed(overrideRunner, LONG_PRESS)
     }
   }
 

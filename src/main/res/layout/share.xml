@@ -16,6 +16,8 @@
               android:layout_width="wrap_content"
               android:layout_height="wrap_content"
               android:layout_marginBottom="12dp"
+              android:maxLines="4"
+              android:ellipsize="end"
               android:layout_alignWithParentIfMissing="true"
               android:layout_toRightOf="@+id/share_screenshot"/>
 

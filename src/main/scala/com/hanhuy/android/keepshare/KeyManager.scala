@@ -15,6 +15,7 @@ import com.google.api.services.drive.model.{File, ParentReference}
 import android.app.Activity
 import javax.crypto.Cipher
 import javax.crypto.spec.{IvParameterSpec, SecretKeySpec}
+import android.content.Context
 
 object KeyManager {
   val VERIFIER = "KeePass Share Verifier"
@@ -83,7 +84,7 @@ object KeyManager {
   def decryptToString(k: SecretKeySpec, data: String): String =
     new String(decrypt(k, data), "utf-8")
 }
-class KeyManager(a: Activity, settings: Settings) {
+class KeyManager(c: Context, settings: Settings) {
   import RequestCodes._
 
   import KeyManager._
@@ -98,7 +99,7 @@ class KeyManager(a: Activity, settings: Settings) {
 
   def newChooseAccountIntent = credential.newChooseAccountIntent()
 
-  private lazy val credential = GoogleAccountCredential.usingOAuth2(a,
+  private lazy val credential = GoogleAccountCredential.usingOAuth2(c,
     Seq(DriveScopes.DRIVE_APPDATA))
 
   val KEY_FILE = "keepass-share.key"
@@ -186,6 +187,10 @@ class KeyManager(a: Activity, settings: Settings) {
   private def requestAuthz(e: UserRecoverableAuthIOException, state: String) {
     val i = e.getIntent
     i.putExtra(EXTRA_STATE, state)
-    a.startActivityForResult(i, REQUEST_AUTHORIZATION)
+    c match {
+      case a: Activity =>
+        a.startActivityForResult(i, REQUEST_AUTHORIZATION)
+      case _ =>
+    }
   }
 }

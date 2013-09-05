@@ -78,4 +78,7 @@
     </string>
     <string name="enter_username">Enter username</string>
     <string name="enter_password">Enter password</string>
+    <string name="search_usernames_passwords">Search usernames and passwords
+    </string>
+    <string name="no_search_results">No search results</string>
 </resources>
