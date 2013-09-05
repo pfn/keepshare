@@ -25,7 +25,7 @@ with EventBus.RefOwner {
   private var passwordPress = 0l
   private var isPassword = false
 
-  private val LONG_PRESS = 2000
+  private val LONG_PRESS = 1500
 
   ServiceBus += {
     case ServiceExit => quitIME()
@@ -99,7 +99,8 @@ with EventBus.RefOwner {
         } getOrElse quitIME()
         passwordPress = Integer.MAX_VALUE
       case 10 => sendDefaultEditorAction(true)
-      case 14 => quitIME()
+      case 14 => setText("")
+      case 1 => quitIME()
     }
   }
 
