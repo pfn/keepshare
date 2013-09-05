@@ -128,11 +128,7 @@ class SearchProvider extends ContentProvider {
         case 3 => Cursor.FIELD_TYPE_INTEGER
       }
 
-      def getCount = {
-        val c = if (cursor.isClosed) 0 else cursor.getCount
-        v("result count: " + c)
-        c
-      }
+      def getCount            = if (cursor.isClosed) 0 else cursor.getCount
       def getInt(col: Int)    = cursor.getInt(columnMap(col))
       def getDouble(col: Int) = cursor.getDouble(columnMap(col))
       def getFloat(col: Int)  = cursor.getFloat(columnMap(col))
