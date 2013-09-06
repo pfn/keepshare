@@ -52,6 +52,7 @@
     <string name="ready_to_use">Ready to use!</string>
     <string name="keepassdroid_not_installed">KeePassDroid is not installed</string>
     <string name="loading">Loading...</string>
+    <string name="please_wait">Please wait</string>
     <string name="screenshot">screenshot</string>
     <string name="not_a_url">Not a URL</string>
     <string name="cancel">Cancel</string>
@@ -81,4 +82,5 @@
     <string name="search_usernames_passwords">Search usernames and passwords
     </string>
     <string name="no_search_results">No search results</string>
+    <string name="no_search_query">No search query</string>
 </resources>

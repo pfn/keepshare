@@ -1,6 +1,6 @@
 package com.hanhuy.android.keepshare
 
-import android.app.{ActionBar, Activity, NotificationManager}
+import android.app._
 
 import android.content._
 import android.content.res.Configuration
@@ -59,6 +59,11 @@ object AndroidConversions {
       f: (DialogInterface, Int) => Unit) =
     new DialogInterface.OnClickListener() {
       def onClick(d: DialogInterface, id: Int) = f(d, id)
+    }
+
+  implicit def toDIOnCancelListener[A](f: () => A) =
+    new DialogInterface.OnCancelListener() {
+      def onCancel(p1: DialogInterface) = f()
     }
 
   implicit def toDialogInterfaceOnClickListener1(f: () => Unit) =
@@ -124,6 +129,7 @@ object AndroidConversions {
 
   implicit def toBoolean(c: CheckBox) = c.isChecked
 
+  implicit def toRicProgresshDialog(d: ProgressDialog) = RichProgressDialog(d)
   implicit def toRichView(v: View) = RichView(v)
   implicit def toRichCompoundButton(v: CompoundButton) = RichCompoundButton(v)
   implicit def toRichRadioGroup(v: RadioGroup) = RichRadioGroup(v)
@@ -159,6 +165,7 @@ object SystemService {
   implicit val ns = SystemService[NotificationManager](NOTIFICATION_SERVICE)
   implicit val cm = SystemService[ClipboardManager](CLIPBOARD_SERVICE)
   implicit val im = SystemService[InputMethodManager](INPUT_METHOD_SERVICE)
+  implicit val sm = SystemService[SearchManager](SEARCH_SERVICE)
 }
 case class RichContext(context: Context) {
   def systemService[T](implicit s: SystemService[T]): T =
@@ -174,6 +181,12 @@ case class RichView(view: View) extends TypedViewHolder {
 
   def onClick[A](f: => A) = view.setOnClickListener { () => f }
   def onClick[A](f: View => A) = view.setOnClickListener(f)
+}
+case class RichProgressDialog(d: ProgressDialog) {
+  import AndroidConversions._
+
+  def onCancel[A](f: => A) = d.setOnCancelListener { () => f }
+  def onClick[A](f: () => A) = d.setOnCancelListener(f)
 }
 
 case class RichCompoundButton(override val view: CompoundButton)

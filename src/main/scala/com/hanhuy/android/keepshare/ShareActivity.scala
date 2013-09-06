@@ -41,46 +41,38 @@ object ShareActivity {
       if (googleUser != null) {
         km.accountName = settings.get(Settings.GOOGLE_USER)
         km.loadKey()
-        val k = km.localKey
-        val db = KeyManager.decryptToString(
-          k, settings.get(Settings.DATABASE_FILE))
-        val pw = KeyManager.decryptToString(
-          k, settings.get(Settings.PASSWORD))
-        val keyf = KeyManager.decryptToString(
-          k, settings.get(Settings.KEYFILE_PATH))
-        val verifier = KeyManager.decryptToString(
-          k, settings.get(Settings.VERIFY_DATA))
-        if (verifier != KeyManager.VERIFIER) {
-          Toast.makeText(c,
-            R.string.failed_verify, Toast.LENGTH_LONG).show()
-          c match {
-            case a: Activity =>
-              a.startActivityForResult(new Intent(c, classOf[SetupActivity]),
-                RequestCodes.REQUEST_SETUP)
-            case _ =>
-          }
-        } else {
-          val b = new Bundle
-          b.putString(Contract.EXTRA_DATABASE, db)
-          b.putString(Contract.EXTRA_PASSWORD, pw)
-          b.putString(Contract.EXTRA_KEYFILE, keyf)
-          val res = cr.call(Contract.URI, Contract.METHOD_OPEN, null, b)
-          if (res == null || res.containsKey(Contract.EXTRA_ERROR)) {
-            Toast.makeText(c, c.getString(R.string.failed_to_open) +
-                res.getString(Contract.EXTRA_ERROR),
-              Toast.LENGTH_LONG).show()
+        km.getConfig match {
+          case Left(err) =>
+            Toast.makeText(c,
+              R.string.failed_verify, Toast.LENGTH_LONG).show()
             c match {
               case a: Activity =>
-                a.startActivityForResult(new Intent(c, classOf[SetupActivity]),
+                a.startActivityForResult(SetupActivity.intent,
                   RequestCodes.REQUEST_SETUP)
               case _ =>
             }
-          } else opened = true
+          case Right((db, pw, keyf)) =>
+            val b = new Bundle
+            b.putString(Contract.EXTRA_DATABASE, db)
+            b.putString(Contract.EXTRA_PASSWORD, pw)
+            b.putString(Contract.EXTRA_KEYFILE, keyf)
+            val res = cr.call(Contract.URI, Contract.METHOD_OPEN, null, b)
+            if (res == null || res.containsKey(Contract.EXTRA_ERROR)) {
+              Toast.makeText(c, c.getString(R.string.failed_to_open) +
+                  res.getString(Contract.EXTRA_ERROR),
+                Toast.LENGTH_LONG).show()
+              c match {
+                case a: Activity =>
+                  a.startActivityForResult(SetupActivity.intent,
+                    RequestCodes.REQUEST_SETUP)
+                case _ =>
+              }
+            } else opened = true
         }
       } else {
         c match {
           case a: Activity =>
-            a.startActivityForResult(new Intent(c, classOf[SetupActivity]),
+            a.startActivityForResult(SetupActivity.intent,
               RequestCodes.REQUEST_SETUP)
           case _ =>
         }
@@ -218,7 +210,7 @@ class ShareActivity extends Activity with TypedViewHolder {
     super.onCreate(savedInstanceState)
     Option(settings.get(Settings.VERIFY_DATA)) map { _ => init() } getOrElse {
       startActivityForResult(
-        new Intent(this, classOf[SetupActivity]), RequestCodes.REQUEST_SETUP)
+        SetupActivity.intent, RequestCodes.REQUEST_SETUP)
     }
   }
 

@@ -1,19 +1,21 @@
 package com.hanhuy.android.keepshare
 
 import AndroidConversions._
+import RichLogger._
 
 import collection.JavaConversions._
 
-import android.app.Activity
+import android.app.{ProgressDialog, Activity}
 import android.os.Bundle
 import android.content.{ComponentName, ActivityNotFoundException, Intent}
 import android.accounts.AccountManager
 import android.view.{View, MenuItem, Menu}
 import android.widget.{CompoundButton, Toast}
-import java.io.File
+import java.io.{FileOutputStream, File}
 import android.text.{Editable, TextWatcher}
 import com.keepassdroid.provider.Contract
 import android.view.inputmethod.InputMethodManager
+import android.provider.OpenableColumns
 
 object RequestCodes {
 
@@ -24,9 +26,20 @@ object RequestCodes {
   val BROWSE_KEYFILE  = 4
   val REQUEST_SETUP   = 5
 
+  val EXTRA_FOR_RESULT = "com.hanhuy.android.keepshare.extra.FOR_RESULT"
+
+}
+object SetupActivity {
+  lazy val intent = {
+    val intent = Intent.makeMainActivity(
+      new ComponentName("com.hanhuy.android.keepshare",
+        "com.hanhuy.android.keepshare.SetupActivity"))
+    intent.putExtra(RequestCodes.EXTRA_FOR_RESULT, true)
+    intent
+  }
 }
 class SetupActivity extends Activity with TypedViewHolder {
-  implicit val TAG = LogcatTag("MainActivity")
+  implicit val TAG = LogcatTag("SetupActivity")
   import KeyManager._
   import RequestCodes._
   val _implicit: RichActivity = this
@@ -117,6 +130,7 @@ class SetupActivity extends Activity with TypedViewHolder {
 
     val browseHandler = { v: View =>
       val intent = new Intent(Intent.ACTION_GET_CONTENT)
+      intent.addCategory(Intent.CATEGORY_OPENABLE)
       intent.setType("file/*")
 
       // TODO support content provider URIs for google Drive, Dropbox, etc.
@@ -227,6 +241,8 @@ class SetupActivity extends Activity with TypedViewHolder {
                   UiBus.post {
                     success(R.string.settings_saved)
                     setResult(Activity.RESULT_OK)
+                    if (getIntent.hasExtra(EXTRA_FOR_RESULT))
+                      finish()
                   }
                 }
               } catch {
@@ -313,8 +329,60 @@ class SetupActivity extends Activity with TypedViewHolder {
         }
       // TODO support content provider URIs for google Drive, Dropbox, etc.
       case BROWSE_DATABASE =>
-        if (result == Activity.RESULT_OK)
-          findView(TR.file_name).setText(data.getData.getPath)
+        if (result == Activity.RESULT_OK) {
+          val uri = data.getData
+          if (uri.getScheme == "content") {
+            val progress = ProgressDialog.show(this,
+              "Downloading", "Please Wait", false, true)
+            var canceled = false
+            progress.onCancel {
+              canceled = true
+            }
+            async {
+              val c = getContentResolver.query(uri, null, null, null, null)
+              var name = uri.getLastPathSegment
+              var size = 100
+              val cName = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+              val cSize = c.getColumnIndex(OpenableColumns.SIZE)
+              if (cName != -1) {
+                Stream.continually(c.moveToNext) takeWhile identity foreach { _ =>
+                  if (!c.isNull(cName)) {
+                    name = c.getString(cName)
+                    size = c.getInt(cSize) // oh well, overflow don't care
+                  }
+                }
+              }
+              c.close()
+              UiBus.post {
+                progress.setMax(size)
+              }
+              val external = getExternalFilesDir(null)
+              val input = getContentResolver.openInputStream(uri)
+              val dest = new java.io.File(external, name)
+              val out = new FileOutputStream(dest)
+
+              UiBus.post { findView(TR.file_name).setText(dest.getAbsolutePath) }
+              try {
+                var total = 0
+                val buf = Array.ofDim[Byte](32768)
+                Stream.continually(input.read(buf, 0, 32768)) takeWhile (
+                  _ != -1 && !canceled) foreach { read =>
+                  total += read
+                  out.write(buf, 0, read)
+                  UiBus.post { progress.setProgress(total) }
+                }
+                if (canceled)
+                  dest.delete()
+              } finally {
+                input.close()
+                out.close()
+              }
+              UiBus.post { progress.dismiss() }
+            }
+          } else {
+            findView(TR.file_name).setText(uri.getPath)
+          }
+        }
       case BROWSE_KEYFILE =>
         if (result == Activity.RESULT_OK)
           findView(TR.key_file_name).setText(data.getData.getPath)

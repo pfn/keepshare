@@ -2,51 +2,125 @@ package com.hanhuy.android.keepshare
 
 import AndroidConversions._
 
-import android.app.{ListActivity, SearchManager, Activity}
+
+import android.app.{ProgressDialog, SearchManager, Activity}
 import android.os.Bundle
 import android.content._
-import android.widget.{TextView, CursorAdapter}
-import android.view.{View, ViewGroup}
-import android.database.{CursorWindow, AbstractCursor, Cursor}
+import android.widget._
+import android.database.{AbstractCursor, Cursor}
 import com.keepassdroid.provider.Contract
 import android.net.Uri
 import android.provider.BaseColumns
+import android.view.{MenuItem, View, ViewGroup, Menu}
 
-class SearchableActivity extends ListActivity {
+class SearchableActivity extends Activity {
   import RichLogger._
   implicit val TAG = LogcatTag("SearchableActivity")
+  val _implicit: RichActivity = this
+  import _implicit._
 
   lazy val settings = Settings(this)
   lazy val km = new KeyManager(this, settings)
   lazy val empty = findViewById(android.R.id.empty).asInstanceOf[TextView]
+  lazy val list = findViewById(android.R.id.list).asInstanceOf[ListView]
+
+  private var searchView = Option.empty[SearchView]
+  private var queryInput = Option.empty[String]
 
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.searchable_activity)
-    handleIntent(getIntent)
+    list.setEmptyView(empty)
+
+    if (settings.get(Settings.GOOGLE_USER) == null) {
+      startActivityForResult(SetupActivity.intent, RequestCodes.REQUEST_SETUP)
+    } else if (!km.ready) {
+      startActivityForResult(SetupActivity.intent, RequestCodes.REQUEST_SETUP)
+    } else if (KeyManager.cloudKey == null) {
+      val p = ProgressDialog.show(this, getString(R.string.loading),
+        getString(R.string.please_wait), true, false)
+      async {
+        km.accountName = settings.get(Settings.GOOGLE_USER)
+        km.loadKey
+        km.getConfig match {
+          case Left(x) =>
+            startActivityForResult(
+              SetupActivity.intent, RequestCodes.REQUEST_SETUP)
+          case _ =>
+        }
+        UiBus.post {
+          p.dismiss()
+          handleIntent(getIntent)
+        }
+      }
+    }
   }
 
   override def onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
     setIntent(intent)
-    handleIntent(intent)
+  }
+
+  override def onResume() {
+    super.onResume()
+      handleIntent(getIntent)
   }
 
   private def handleIntent(intent: Intent) {
     if (Intent.ACTION_SEARCH == intent.getAction) {
-      val query = Option(intent.getStringExtra(SearchManager.QUERY)) getOrElse
-        intent.getStringExtra(SearchManager.USER_QUERY)
+      queryInput = Option(intent.getStringExtra(SearchManager.QUERY)) orElse
+        Option(intent.getCharSequenceExtra(SearchManager.USER_QUERY)) map (
+        _.toString)
       v("extras: " + intent.getExtras)
-      doSearch(query)
+      queryInput foreach { q =>
+        doSearch(q, Option(
+          intent.getStringExtra(SearchManager.EXTRA_DATA_KEY)) map (_.toLong))
+        searchView foreach { _.setQuery(q, false) }
+      }
+    } else {
+      empty.setText(R.string.no_search_query)
     }
   }
 
-  private def doSearch(query: String) {
+  override def onCreateOptionsMenu(menu: Menu) = {
+    getMenuInflater.inflate(R.menu.searchable, menu)
+    getMenuInflater.inflate(R.menu.main, menu)
+
+    searchView = Option(menu.findItem(R.id.menu_search)
+      .getActionView.asInstanceOf[SearchView])
+    searchView foreach { search =>
+      search.setIconifiedByDefault(false)
+      search.setSearchableInfo(
+        systemService[SearchManager].getSearchableInfo(getComponentName))
+      queryInput foreach { search.setQuery(_, false) }
+    }
+    true
+  }
+
+  override def onOptionsItemSelected(item: MenuItem) = {
+    item.getItemId match {
+      case R.id.clear_user_data =>
+        settings.clear()
+        KeyManager.clear()
+        finish()
+        true
+      case _ => super.onOptionsItemSelected(item)
+    }
+  }
+
+  private def doSearch(query: String, id: Option[Long]) {
     v("Query is: " + query)
+    v("id is: " + id)
     async {
       val cursor = ShareActivity.queryDatabase(this, settings, query :: Nil)
       if (cursor != null && !cursor.isClosed) {
         UiBus.post {
+          var selected = -1
+          Stream.continually(cursor.moveToNext) takeWhile (
+            _ && selected == -1) foreach { _ =>
+              if (id exists (_ == cursor.getLong(0)))
+                selected = cursor.getPosition()
+            }
           val adapter = new CursorAdapter(this, cursor, false) {
             def newView(p1: Context, cursor: Cursor, c: ViewGroup) = {
               val view = getLayoutInflater.inflate(R.layout.pwitem, c, false)
@@ -64,8 +138,12 @@ class SearchableActivity extends ListActivity {
                 cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
             }
           }
-          setListAdapter(adapter)
-          getListView.onItemClick { pos =>
+          list.setAdapter(adapter)
+          if (selected != -1) {
+            list.setItemChecked(selected, true)
+            list.smoothScrollToPosition(selected)
+          }
+          list.onItemClick { pos =>
             ShareActivity.selectHandler(
               this, settings, adapter.getItem(pos).asInstanceOf[Cursor])
           }
@@ -122,7 +200,6 @@ class SearchProvider extends ContentProvider {
         2 -> cursor.getColumnIndex(Contract.USERNAME),
         3 -> cursor.getColumnIndex(Contract._ID),
         4 -> cursor.getColumnIndex(Contract._ID))
-
 
       override def getType(column: Int) = column match {
         case 0 => Cursor.FIELD_TYPE_INTEGER

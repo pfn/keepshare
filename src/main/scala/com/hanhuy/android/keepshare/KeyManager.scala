@@ -99,6 +99,27 @@ class KeyManager(c: Context, settings: Settings) {
 
   def newChooseAccountIntent = credential.newChooseAccountIntent()
 
+  def ready = Seq(Settings.GOOGLE_USER,
+    Settings.DATABASE_FILE,
+    Settings.PASSWORD,
+    Settings.KEYFILE_PATH,
+    Settings.VERIFY_DATA) forall (settings.get(_) != null)
+
+  def getConfig = {
+    val db = KeyManager.decryptToString(
+      localKey, settings.get(Settings.DATABASE_FILE))
+    val pw = KeyManager.decryptToString(
+      localKey, settings.get(Settings.PASSWORD))
+    val keyf = KeyManager.decryptToString(
+      localKey, settings.get(Settings.KEYFILE_PATH))
+    val verifier = KeyManager.decryptToString(
+      localKey, settings.get(Settings.VERIFY_DATA))
+    if (verifier != KeyManager.VERIFIER)
+      Left(c.getString(R.string.failed_verify))
+    else
+      Right((db, pw, keyf))
+  }
+
   private lazy val credential = GoogleAccountCredential.usingOAuth2(c,
     Seq(DriveScopes.DRIVE_APPDATA))
 
