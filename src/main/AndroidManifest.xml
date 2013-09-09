@@ -4,10 +4,10 @@
       android:versionCode="1"
       android:versionName="1.0">
     <permission android:protectionLevel="dangerous"
-                android:label="KeePassDroid database access"
+                android:label="KeePass Share database access"
                 android:permissionGroup="@string/app_name"
-                android:name="com.keepassdroid.permission.READ_DATABASE"/>
-    <uses-permission android:name="com.keepassdroid.permission.READ_DATABASE"/>
+                android:name="com.hanhuy.android.keepshare.permission.READ_DATABASE"/>
+    <uses-permission android:name="com.hanhuy.android.keepshare.permission.READ_DATABASE"/>
 
     <!-- used to save file selection from a content provider -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
@@ -73,5 +73,12 @@
                  android:exported="false"/>
         <service android:name=".CredentialHolderService"
                  android:exported="false"/>
+        <activity android:name="com.keepassdroid.provider.AuthzActivity"
+                  android:exported="false"
+                  android:theme="@android:style/Theme.DeviceDefault.Dialog"/>
+        <provider android:name="com.keepassdroid.provider.DatabaseProvider"
+                  android:authorities="com.hanhuy.android.keepshare.database"
+                  android:grantUriPermissions="false"
+                  android:readPermission="com.hanhuy.android.keepshare.permission.READ_DATABASE"/>
     </application>
 </manifest>
