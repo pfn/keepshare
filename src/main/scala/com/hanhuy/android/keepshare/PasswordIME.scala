@@ -52,7 +52,7 @@ with EventBus.RefOwner {
 
   override def onStartInputView(info: EditorInfo, restarting: Boolean) {
     import InputType._
-    if (ClipboardService.instance.isDefined) {
+    if (CredentialHolderService.instance.isDefined) {
       val itype = info.inputType
       isPassword = itype & TYPE_MASK_CLASS match {
         case TYPE_CLASS_NUMBER => itype & TYPE_MASK_VARIATION match {
@@ -76,12 +76,12 @@ with EventBus.RefOwner {
   def onRelease(key: Int) {
     key match {
       case 195 =>
-        ClipboardService.instance map { service =>
+        CredentialHolderService.instance map { service =>
           if (service.username != null)
             setText(service.username)
         } getOrElse quitIME()
       case 196 =>
-        ClipboardService.instance map { service =>
+        CredentialHolderService.instance map { service =>
           if (isPassword) {
             if (service.password != null)
               setText(service.password)

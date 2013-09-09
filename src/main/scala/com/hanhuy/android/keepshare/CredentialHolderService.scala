@@ -6,22 +6,23 @@ import android.app.{PendingIntent, Service}
 import android.content._
 import android.os.Handler
 import android.support.v4.app.NotificationCompat
-import java.util.UUID
-import android.widget.Toast
 import android.view.inputmethod.InputMethodManager
 import android.provider.Settings.Secure
 
-object ClipboardService {
+object CredentialHolderService {
   val EXTRA_TITLE    = "com.hanhuy.android.keepshare.extra.TITLE"
   val EXTRA_USERNAME = "com.hanhuy.android.keepshare.extra.USERNAME"
   val EXTRA_PASSWORD = "com.hanhuy.android.keepshare.extra.PASSWORD"
 
-  var instance: Option[ClipboardService] = None
+  var instance: Option[CredentialHolderService] = None
 
   val ACTION_IME = "com.hanhuy.android.keepshare.action.IME"
 }
-class ClipboardService extends Service with EventBus.RefOwner {
-  import ClipboardService._
+
+/** Holds selected credentials in memory for the requested time
+  */
+class CredentialHolderService extends Service with EventBus.RefOwner {
+  import CredentialHolderService._
   val _implicit: RichContext = this
   import _implicit._
   def onBind(i: Intent) = null
@@ -72,10 +73,10 @@ class ClipboardService extends Service with EventBus.RefOwner {
         this, 0, new Intent(ACTION_IME), PendingIntent.FLAG_UPDATE_CURRENT))
       .setTicker(getString(R.string.credentials_available))
 
-    handler.postDelayed(finishRunnable, settings.get(Settings.KEYBOARD_TIMEOUT) * 1000)
+    handler.postDelayed(finishRunnable,
+      settings.get(Settings.KEYBOARD_TIMEOUT) * 1000)
 
     startForeground(1, builder.build)
-
     Service.START_STICKY
   }
 

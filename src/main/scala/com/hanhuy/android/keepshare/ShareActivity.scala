@@ -110,12 +110,12 @@ object ShareActivity {
   }
   def selectHandler(a: Activity, settings: Settings, cursor: Cursor) = {
     val imm = a.systemService[InputMethodManager]
-    val intent = new Intent(a, classOf[ClipboardService])
-    intent.putExtra(ClipboardService.EXTRA_TITLE,
+    val intent = new Intent(a, classOf[CredentialHolderService])
+    intent.putExtra(CredentialHolderService.EXTRA_TITLE,
       cursor.getString(cursor.getColumnIndex(Contract.TITLE)))
-    intent.putExtra(ClipboardService.EXTRA_USERNAME,
+    intent.putExtra(CredentialHolderService.EXTRA_USERNAME,
       cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
-    intent.putExtra(ClipboardService.EXTRA_PASSWORD,
+    intent.putExtra(CredentialHolderService.EXTRA_PASSWORD,
       cursor.getString(cursor.getColumnIndex(Contract.PASSWORD)))
     a.startService(intent)
 

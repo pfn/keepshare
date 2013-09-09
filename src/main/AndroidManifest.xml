@@ -71,7 +71,7 @@
 
         <service android:name=".PINHolderService"
                  android:exported="false"/>
-        <service android:name=".ClipboardService"
+        <service android:name=".CredentialHolderService"
                  android:exported="false"/>
     </application>
 </manifest>
