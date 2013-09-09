@@ -67,7 +67,7 @@ class SearchableActivity extends Activity {
 
   override def onResume() {
     super.onResume()
-      handleIntent(getIntent)
+    handleIntent(getIntent)
   }
 
   private def handleIntent(intent: Intent) {
@@ -112,6 +112,12 @@ class SearchableActivity extends Activity {
   private def doSearch(query: String, id: Option[Long]) {
     v("Query is: " + query)
     v("id is: " + id)
+    if (settings.get(Settings.NEEDS_PIN) && PINHolderService.instance.isEmpty) {
+        startActivityForResult(new Intent(this, classOf[PINEntryActivity]),
+          RequestCodes.REQUEST_PIN)
+      return
+    }
+
     val pd = ProgressDialog.show(this,
       getString(R.string.searching),
       getString(R.string.running_search), true, false)

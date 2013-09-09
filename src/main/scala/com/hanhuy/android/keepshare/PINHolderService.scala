@@ -36,7 +36,12 @@ class PINHolderService extends Service {
 
   lazy val settings = Settings(this)
 
-  def pinKey: SecretKey = _key
+  def pinKey: SecretKey =  {
+    handler.removeCallbacks(finishRunner)
+    handler.postDelayed(finishRunner,
+      settings.get(Settings.PIN_TIMEOUT) * 60 * 1000)
+    _key
+  }
   private var _key: SecretKey = _
 
   def onBind(p1: Intent) = null
