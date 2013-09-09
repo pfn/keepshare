@@ -4,7 +4,7 @@ import RichLogger._
 
 import collection.JavaConversions._
 
-import java.security.{SecureRandom, MessageDigest}
+import java.security.{Key, SecureRandom, MessageDigest}
 import com.google.api.client.googleapis.extensions.android.gms.auth._
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.{Drive, DriveScopes}
@@ -13,7 +13,7 @@ import com.google.api.client.http.{ByteArrayContent, GenericUrl}
 import java.nio.ByteBuffer
 import com.google.api.services.drive.model.{File, ParentReference}
 import android.app.Activity
-import javax.crypto.Cipher
+import javax.crypto.{SecretKey, Cipher}
 import javax.crypto.spec.{IvParameterSpec, SecretKeySpec}
 import android.content.Context
 
@@ -28,7 +28,7 @@ object KeyManager {
   lazy val sha1 = MessageDigest.getInstance("SHA1")
   def sha1(b: Array[Byte]): String = hex(sha1.digest(b))
 
-  private var _cloudKey: Array[Byte] = _
+  private var _cloudKey: SecretKey = _
 
   def cloudKey = _cloudKey
 
@@ -54,7 +54,7 @@ object KeyManager {
 
   /** @return a hex string iv:encrypted
     */
-  def encrypt(k: SecretKeySpec, data: Array[Byte]): String = {
+  def encrypt(k: Key, data: Array[Byte]): String = {
     val cipher = Cipher.getInstance(CIPHER_ALG)
     val iv = Array.ofDim[Byte](16)
     random.nextBytes(iv)
@@ -63,13 +63,13 @@ object KeyManager {
     hex(iv) + ":" + hex(cipher.doFinal(data))
   }
 
-  def encrypt(k: SecretKeySpec, data: String): String =
+  def encrypt(k: Key, data: String): String =
     encrypt(k, data.getBytes("utf-8"))
 
   /** @param data iv:encrypted in hex
     * @return a byte array
     */
-  def decrypt(k: SecretKeySpec, data: String): Array[Byte] = {
+  def decrypt(k: Key, data: String): Array[Byte] = {
     val cipher = Cipher.getInstance(CIPHER_ALG)
     data.split(":") match {
       case Array(ivs, encs) =>
@@ -81,7 +81,7 @@ object KeyManager {
     }
   }
 
-  def decryptToString(k: SecretKeySpec, data: String): String =
+  def decryptToString(k: Key, data: String): String =
     new String(decrypt(k, data), "utf-8")
 }
 class KeyManager(c: Context, settings: Settings) {
@@ -99,25 +99,30 @@ class KeyManager(c: Context, settings: Settings) {
 
   def newChooseAccountIntent = credential.newChooseAccountIntent()
 
-  def ready = Seq(Settings.GOOGLE_USER,
+  def ready = (Seq(Settings.GOOGLE_USER,
     Settings.DATABASE_FILE,
     Settings.PASSWORD,
     Settings.KEYFILE_PATH,
-    Settings.VERIFY_DATA) forall (settings.get(_) != null)
+    Settings.VERIFY_DATA) forall (settings.get(_) != null)) &&
+    (!settings.get(Settings.NEEDS_PIN) || PINHolderService.instance.isDefined)
 
-  def getConfig = {
-    val db = KeyManager.decryptToString(
-      localKey, settings.get(Settings.DATABASE_FILE))
-    val pw = KeyManager.decryptToString(
-      localKey, settings.get(Settings.PASSWORD))
-    val keyf = KeyManager.decryptToString(
-      localKey, settings.get(Settings.KEYFILE_PATH))
-    val verifier = KeyManager.decryptToString(
-      localKey, settings.get(Settings.VERIFY_DATA))
-    if (verifier != KeyManager.VERIFIER)
-      Left(c.getString(R.string.failed_verify))
-    else
-      Right((db, pw, keyf))
+  def getConfig: Either[KeyError,(String,String,String)] = {
+    localKey match {
+      case Left(error) => Left(error)
+      case Right(key) =>
+        val db = KeyManager.decryptToString(
+          key, settings.get(Settings.DATABASE_FILE))
+        val pw = KeyManager.decryptToString(
+          key, settings.get(Settings.PASSWORD))
+        val keyf = KeyManager.decryptToString(
+          key, settings.get(Settings.KEYFILE_PATH))
+        val verifier = KeyManager.decryptToString(
+          key, settings.get(Settings.VERIFY_DATA))
+        if (verifier != KeyManager.VERIFIER)
+          Left(KeyError.VerifyFailure(c.getString(R.string.failed_verify)))
+        else
+          Right((db, pw, keyf))
+    }
   }
 
   private lazy val credential = GoogleAccountCredential.usingOAuth2(c,
@@ -128,11 +133,11 @@ class KeyManager(c: Context, settings: Settings) {
   lazy val drive = new Drive.Builder(AndroidHttp.newCompatibleTransport,
     new GsonFactory, credential).build
 
-  def loadKey(): Array[Byte] = {
-    if (!nameSelected)
-      throw new IllegalStateException("account name has not been set")
+  def loadKey(): SecretKey = {
 
     Option(KeyManager.cloudKey) getOrElse {
+      if (!nameSelected)
+        throw new IllegalStateException("account name has not been set")
       val req = drive.files.list
       req.setQ("'appdata' in parents")
       try {
@@ -158,7 +163,7 @@ class KeyManager(c: Context, settings: Settings) {
               e("cloud key has changed")
               return null
             }
-            _cloudKey = buf
+            _cloudKey = new SecretKeySpec(buf, ALG)
             v("Loaded cloud key")
         } getOrElse createKey()
       } catch {
@@ -168,7 +173,7 @@ class KeyManager(c: Context, settings: Settings) {
     }
   }
 
-  def createKey(): Array[Byte] = {
+  def createKey(): SecretKey = {
     val keybuf = Array.ofDim[Byte](32)
     random.nextBytes(keybuf)
     settings.set(Settings.CLOUD_KEY_HASH, sha1(keybuf))
@@ -187,21 +192,33 @@ class KeyManager(c: Context, settings: Settings) {
     }
   }
 
-  lazy val localKey: SecretKeySpec = {
+  def localKey: Either[KeyError,SecretKey] = {
     if (cloudKey == null)
       throw new IllegalStateException("Cloud Key must be loaded first")
 
     val k = settings.get(Settings.LOCAL_KEY)
-    val ckey = new SecretKeySpec(cloudKey, ALG)
 
-    if (k == null) {
+    val needsPin = settings.get(Settings.NEEDS_PIN)
+    if (needsPin && PINHolderService.instance.isEmpty) {
+      Left(KeyError.NeedPin)
+    } else if (k == null) {
       val keybuf = Array.ofDim[Byte](32)
       random.nextBytes(keybuf)
 
-      settings.set(Settings.LOCAL_KEY, encrypt(ckey, keybuf))
-      new SecretKeySpec(keybuf, ALG)
+      val saved = PINHolderService.instance map { s =>
+        bytes(encrypt(s.pinKey, keybuf)) } getOrElse keybuf
+
+      val k = encrypt(cloudKey, saved)
+
+      settings.set(Settings.LOCAL_KEY, k)
+      Right(new SecretKeySpec(keybuf, ALG))
     } else {
-      new SecretKeySpec(decrypt(ckey, k), ALG)
+      val key = decrypt(cloudKey, k)
+      val actual = PINHolderService.instance map { s =>
+        val st = new String(key, "utf-8")
+        decrypt(s.pinKey, st)
+      } getOrElse key
+      Right(new SecretKeySpec(actual, ALG))
     }
   }
 
@@ -214,4 +231,10 @@ class KeyManager(c: Context, settings: Settings) {
       case _ =>
     }
   }
+}
+
+sealed trait KeyError
+object KeyError {
+  case object NeedPin extends KeyError
+  case class VerifyFailure(error: String) extends KeyError
 }

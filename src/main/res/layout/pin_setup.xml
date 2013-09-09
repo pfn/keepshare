@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+              android:background="@android:drawable/picture_frame"
+              android:padding="12dp"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent">
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <TextView android:id="@+id/pin_prompt"
+                  android:layout_width="wrap_content"
+                  android:layout_gravity="center"
+                  android:layout_height="wrap_content"
+                  android:textAppearance="?android:attr/textAppearanceMedium"
+                  android:layout_marginBottom="64sp"
+                  android:text="@string/select_pin"/>
+        <TextView android:id="@+id/pin"
+                  android:layout_width="wrap_content"
+                  android:layout_gravity="center"
+                  android:gravity="center"
+                  android:textSize="48sp"
+                  android:minEms="6"
+                  android:maxLines="1"
+                  android:password="true"
+                  android:layout_margin="24dp"
+                  android:layout_height="wrap_content"
+                  android:background="@android:drawable/edit_text"
+                  />
+        <TextView android:id="@+id/pin_error"
+                  android:layout_width="wrap_content"
+                  android:visibility="invisible"
+                  android:layout_gravity="bottom|center"
+                  android:layout_height="wrap_content"
+                  android:layout_marginBottom="12dp"
+                  android:textAppearance="?android:attr/textAppearanceMedium"
+                  android:layout_marginTop="64sp"
+                  android:textColor="#ffff0000"
+                  android:text="@string/pin_at_least_4"/>
+    </FrameLayout>
+    <TableLayout android:layout_height="wrap_content"
+                 android:layout_width="match_parent"
+                 android:stretchColumns="0,1,2">
+
+        <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+            <Button android:id="@+id/pin_1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/pin_button_height"
+                    android:text="1"/>
+            <Button android:id="@+id/pin_2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/pin_button_height"
+                    android:text="2"/>
+            <Button android:id="@+id/pin_3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/pin_button_height"
+                    android:text="3"/>
+        </TableRow>
+        <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+            <Button android:id="@+id/pin_4"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/pin_button_height"
+                    android:text="4"/>
+            <Button android:id="@+id/pin_5"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/pin_button_height"
+                    android:text="5"/>
+            <Button android:id="@+id/pin_6"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/pin_button_height"
+                    android:text="6"/>
+        </TableRow>
+        <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+            <Button android:id="@+id/pin_7"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/pin_button_height"
+                    android:text="7"/>
+            <Button android:id="@+id/pin_8"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/pin_button_height"
+                    android:text="8"/>
+            <Button android:id="@+id/pin_9"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/pin_button_height"
+                    android:text="9"/>
+        </TableRow>
+        <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+            <ImageButton android:id="@+id/pin_back"
+                         android:layout_width="wrap_content"
+                    android:layout_height="@dimen/pin_button_height"
+                    android:src="@drawable/ic_menu_back"/>
+            <Button android:id="@+id/pin_0"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/pin_button_height"
+                    android:text="0"/>
+            <Button android:id="@+id/pin_ok"
+                    android:enabled="false"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/pin_button_height"
+                    android:text="OK"/>
+        </TableRow>
+    </TableLayout>
+</LinearLayout>

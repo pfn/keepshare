@@ -42,15 +42,32 @@ object ShareActivity {
         km.accountName = settings.get(Settings.GOOGLE_USER)
         km.loadKey()
         km.getConfig match {
-          case Left(err) =>
-            Toast.makeText(c,
-              R.string.failed_verify, Toast.LENGTH_LONG).show()
-            c match {
-              case a: Activity =>
-                a.startActivityForResult(SetupActivity.intent,
-                  RequestCodes.REQUEST_SETUP)
-              case _ =>
-            }
+          case Left(err) => err match {
+            case KeyError.NeedPin =>
+              c match {
+                case a: Activity =>
+                  a.startActivityForResult(
+                    new Intent(c, classOf[PINEntryActivity]),
+                    RequestCodes.REQUEST_PIN)
+                case _ => UiBus.post {
+                  Toast.makeText(c,
+                    c.getString(R.string.app_name) +
+                      c.getString(R.string.pin_unlock_required),
+                    Toast.LENGTH_SHORT).show()
+                }
+              }
+            case _ =>
+              UiBus.post {
+                Toast.makeText(c,
+                  R.string.failed_verify, Toast.LENGTH_LONG).show()
+              }
+              c match {
+                case a: Activity =>
+                  a.startActivityForResult(SetupActivity.intent,
+                    RequestCodes.REQUEST_SETUP)
+                case _ =>
+              }
+          }
           case Right((db, pw, keyf)) =>
             val b = new Bundle
             b.putString(Contract.EXTRA_DATABASE, db)
@@ -131,7 +148,6 @@ class ShareActivity extends Activity with TypedViewHolder {
     val extras = getIntent.getExtras
     val url = extras.getString(Intent.EXTRA_TEXT)
 
-    val imm = systemService[InputMethodManager]
     findView(TR.cancel) onClick finish
 
     try {
@@ -215,9 +231,10 @@ class ShareActivity extends Activity with TypedViewHolder {
   }
 
   override def onActivityResult(request: Int, result: Int, data: Intent) {
-    if (request == RequestCodes.REQUEST_SETUP && result == Activity.RESULT_OK) {
-      init()
-    } else
-      finish()
+    val success = request match {
+      case RequestCodes.REQUEST_SETUP => result == Activity.RESULT_OK
+      case RequestCodes.REQUEST_PIN => result == Activity.RESULT_OK
+    }
+    if (success) init() else finish()
   }
 }

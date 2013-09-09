@@ -43,7 +43,7 @@ class ClipboardService extends Service with EventBus.RefOwner {
   ServiceBus += {
     case KeyboardExit =>
       handler.removeCallbacks(finishRunnable)
-      finishRunnable.run()
+      finishRunnable()
   }
 
   override def onCreate() {
@@ -72,7 +72,7 @@ class ClipboardService extends Service with EventBus.RefOwner {
         this, 0, new Intent(ACTION_IME), PendingIntent.FLAG_UPDATE_CURRENT))
       .setTicker(getString(R.string.credentials_available))
 
-    handler.postDelayed(finishRunnable, settings.get(Settings.TIMEOUT) * 1000)
+    handler.postDelayed(finishRunnable, settings.get(Settings.KEYBOARD_TIMEOUT) * 1000)
 
     startForeground(1, builder.build)
 

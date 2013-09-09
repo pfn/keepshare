@@ -47,8 +47,11 @@
     <string name="database_no_exist">Database file does not exist!</string>
     <string name="database_no_blank">Database cannot be blank</string>
     <string name="decrypt_saved_failed">Failed to decrypt saved data :-(</string>
-    <string name="must_install_explorer">You must install a file explorer in order to browse</string>
+    <string name="must_install_explorer">
+        You must install a file explorer in order to browse</string>
     <string name="setup_subtitle">: Setup</string>
+    <string name="setup_pin_subtitle">: Setup PIN</string>
+    <string name="enter_pin_subtitle">: Enter PIN</string>
     <string name="ready_to_use">Ready to use!</string>
     <string name="keepassdroid_not_installed">KeePassDroid is not installed</string>
     <string name="loading">Loading...</string>
@@ -59,18 +62,25 @@
     <string name="continu">Continue</string>
     <string name="copy_username">Username</string>
     <string name="copy_password">Password</string>
-    <string name="failed_verify">Failed to verify encrypted data, run setup!</string>
+    <string name="failed_verify">
+        Failed to verify encrypted data, run setup!</string>
     <string name="failed_to_open">Failed to open database: </string>
-    <string name="credentials_available">Credentials are available for input</string>
-    <string name="invalid_token">Invalid KeePass Share token; is this a hacking attempt?!</string>
-    <string name="timeout">Timeout (secs)</string>
+    <string name="credentials_available">
+        Credentials are available for input</string>
+    <string name="invalid_token">
+        Invalid KeePass Share token; is this a hacking attempt?!</string>
+    <string name="keyboard_timeout">Keyboard Timeout (secs)</string>
+    <string name="service_timeout">PIN unlock timeout (mins)</string>
     <string name="select_entry_prompt">Select an entry to continue:</string>
     <string name="copied_username">Username copied to clipboard!</string>
     <string name="copied_password">Password copied to clipboard!</string>
     <string name="clear">Clear</string>
     <string name="no_passwords_selected">No passwords selected</string>
-    <string name="no_password_input">Cannot enter password on a non-password input</string>
-    <string name="no_password_input_override">Cannot enter password on a non-password input; long-press to override</string>
+    <string name="no_password_input">
+        Cannot enter password on a non-password input</string>
+    <string name="no_password_input_override">
+        Cannot enter password on a non-password input; long-press to override
+    </string>
     <string name="off">Off</string>
     <string name="on">On</string>
     <string name="keyboard_status">Custom keyboard status</string>
@@ -83,4 +93,16 @@
     </string>
     <string name="no_search_results">No search results</string>
     <string name="no_search_query">No search query</string>
+    <string name="setup">Setup</string>
+    <string name="setup_pin">Setup PIN</string>
+    <string name="change_pin">Change PIN</string>
+    <string name="pin_at_least_4">PIN must be at least 4 digits</string>
+    <string name="select_pin">Select a PIN</string>
+    <string name="confirm_pin">Confirm selected PIN</string>
+    <string name="try_again">Try again</string>
+    <string name="pin_unlock_required">: PIN unlock required</string>
+    <string name="confirm_clear_data">
+        Are you sure you want to clear your configuration?</string>
+    <string name="setup_required_for_pin">
+        You must complete your configuration before setting a PIN</string>
 </resources>

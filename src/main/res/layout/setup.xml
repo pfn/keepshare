@@ -52,7 +52,7 @@
                         />
                 <TextView
                         android:id="@+id/label1"
-                        android:layout_width="100dp"
+                        android:layout_width="@dimen/field_label_width"
                         android:layout_alignBottom="@+id/file_name"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="8dp"
@@ -129,10 +129,10 @@
                         android:id="@+id/label4"
                         android:layout_below="@+id/key_file_name"
                         android:layout_marginTop="24dp"
-                        android:layout_width="wrap_content"
+                        android:layout_width="@dimen/field_label_width"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="8dp"
-                        android:text="@string/timeout"
+                        android:text="@string/keyboard_timeout"
                         />
                 <RadioGroup android:id="@+id/timeout"
                         android:layout_alignTop="@+id/label4"
@@ -164,6 +164,38 @@
                           android:layout_marginTop="12dp"
                           android:layout_below="@+id/timeout"
                           android:text="@string/enable_password_override"/>
+                <TextView
+                        android:id="@+id/label5"
+                        android:layout_below="@+id/password_override"
+                        android:layout_marginTop="24dp"
+                        android:layout_width="@dimen/field_label_width"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/service_timeout"
+                        />
+                <RadioGroup android:id="@+id/service_timeout"
+                            android:layout_alignTop="@+id/label5"
+                            android:layout_width="match_parent"
+                            android:layout_alignLeft="@+id/key_file_name"
+                            android:layout_height="wrap_content"
+                            android:layout_below="@+id/key_file_name">
+                    <RadioButton android:id="@+id/svctimeout_60"
+                                 android:layout_width="wrap_content"
+                                 android:layout_height="wrap_content"
+                                 android:text="60"/>
+                    <RadioButton android:id="@+id/svctimeout_15"
+                                 android:layout_width="wrap_content"
+                                 android:layout_height="wrap_content"
+                                 android:text="15"/>
+                    <RadioButton android:id="@+id/svctimeout_5"
+                                 android:layout_width="wrap_content"
+                                 android:layout_height="wrap_content"
+                                 android:text="5"/>
+                    <RadioButton android:id="@+id/svctimeout_1"
+                                 android:layout_width="wrap_content"
+                                 android:layout_height="wrap_content"
+                                 android:text="1"/>
+                </RadioGroup>
             </RelativeLayout>
         </ScrollView>
         <TextView

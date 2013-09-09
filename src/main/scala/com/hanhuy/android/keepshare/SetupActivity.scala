@@ -5,7 +5,7 @@ import RichLogger._
 
 import collection.JavaConversions._
 
-import android.app.{ProgressDialog, Activity}
+import android.app.{AlertDialog, ProgressDialog, Activity}
 import android.os.Bundle
 import android.content.{ComponentName, ActivityNotFoundException, Intent}
 import android.accounts.AccountManager
@@ -21,13 +21,12 @@ object RequestCodes {
 
   val REQUEST_ACCOUNT_PICKER = 1
   val REQUEST_AUTHORIZATION  = 2
-
-  val BROWSE_DATABASE = 3
-  val BROWSE_KEYFILE  = 4
-  val REQUEST_SETUP   = 5
+  val BROWSE_DATABASE        = 3
+  val BROWSE_KEYFILE         = 4
+  val REQUEST_SETUP          = 5
+  val REQUEST_PIN            = 6
 
   val EXTRA_FOR_RESULT = "com.hanhuy.android.keepshare.extra.FOR_RESULT"
-
 }
 object SetupActivity {
   lazy val intent = {
@@ -59,16 +58,41 @@ class SetupActivity extends Activity with TypedViewHolder {
 
   override def onCreateOptionsMenu(menu: Menu) = {
     super.onCreateOptionsMenu(menu)
+    getMenuInflater.inflate(R.menu.setup, menu)
     getMenuInflater.inflate(R.menu.main, menu)
+    if (settings.get(Settings.NEEDS_PIN)) {
+      menu.findItem(R.id.menu_setup_pin).setVisible(false)
+    } else {
+      menu.findItem(R.id.menu_change_pin).setVisible(false)
+    }
     true
   }
 
   override def onOptionsItemSelected(item: MenuItem) = {
     item.getItemId match {
       case R.id.clear_user_data =>
-        settings.clear()
-        KeyManager.clear()
-        finish()
+        new AlertDialog.Builder(this)
+          .setTitle(R.string.clear_user_data)
+          .setMessage(R.string.confirm_clear_data)
+          .setPositiveButton(android.R.string.yes, { () =>
+            settings.clear()
+            KeyManager.clear()
+            finish()
+          })
+          .setNegativeButton(android.R.string.no, null)
+          .show()
+        true
+      case R.id.menu_setup_pin =>
+        if (keymanager.ready) {
+          startActivity(new Intent(this, classOf[PINSetupActivity]))
+        } else {
+          Toast.makeText(this,
+            R.string.setup_required_for_pin, Toast.LENGTH_SHORT).show()
+        }
+        true
+      case R.id.menu_change_pin =>
+        startActivityForResult(new Intent(this, classOf[PINEntryActivity]),
+          RequestCodes.REQUEST_PIN)
         true
       case _ => super.onOptionsItemSelected(item)
     }
@@ -133,7 +157,6 @@ class SetupActivity extends Activity with TypedViewHolder {
       intent.addCategory(Intent.CATEGORY_OPENABLE)
       intent.setType("file/*")
 
-      // TODO support content provider URIs for google Drive, Dropbox, etc.
       try {
         startActivityForResult(intent, v.getId match {
           case R.id.browse_database => BROWSE_DATABASE
@@ -155,15 +178,20 @@ class SetupActivity extends Activity with TypedViewHolder {
     findView(TR.timeout) onCheckedChanged { i =>
       findView(TR.save).setEnabled(true)
     }
-    findView(TR.timeout).check(settings.get(Settings.TIMEOUT) match {
+    findView(TR.timeout).check(settings.get(Settings.KEYBOARD_TIMEOUT) match {
       case 45 => R.id.timeout_45
       case 30 => R.id.timeout_30
       case 15 => R.id.timeout_15
       case _  => R.id.timeout_60
     })
+    findView(TR.service_timeout).check(settings.get(Settings.PIN_TIMEOUT) match {
+      case 60 => R.id.svctimeout_60
+      case 15 => R.id.svctimeout_15
+      case 5  => R.id.svctimeout_5
+      case _  => R.id.svctimeout_1
+    })
     findView(TR.browse_database) onClick browseHandler
     findView(TR.browse_keyfile) onClick browseHandler
-
 
     val watcher = new TextWatcher {
       def beforeTextChanged(p1: CharSequence, p2: Int, p3: Int, p4: Int) {}
@@ -219,30 +247,43 @@ class SetupActivity extends Activity with TypedViewHolder {
                   UiBus.post { error(R.string.keepass_no_respond) }
                 } else {
                   keymanager.loadKey()
-                  val k = keymanager.localKey
-                  val encdb = KeyManager.encrypt(k, db.getAbsolutePath)
-                  val encpw = KeyManager.encrypt(k, password.trim)
-                  val enckeyf = KeyManager.encrypt(k, keyfilepath)
-                  val verifier = KeyManager.encrypt(k, KeyManager.VERIFIER)
-
-                  settings.set(Settings.VERIFY_DATA, verifier)
-                  settings.set(Settings.PASSWORD, encpw)
-                  settings.set(Settings.KEYFILE_PATH, enckeyf)
-                  settings.set(Settings.DATABASE_FILE, encdb)
-                  settings.set(Settings.TIMEOUT,
-                    findView(TR.timeout).getCheckedRadioButtonId match {
-                      case R.id.timeout_60 => 60
-                      case R.id.timeout_45 => 45
-                      case R.id.timeout_30 => 30
-                      case R.id.timeout_15 => 15
-                    })
-                  settings.set(Settings.PASSWORD_OVERRIDE,
-                    findView(TR.password_override).isChecked)
-                  UiBus.post {
-                    success(R.string.settings_saved)
-                    setResult(Activity.RESULT_OK)
-                    if (getIntent.hasExtra(EXTRA_FOR_RESULT))
+                  keymanager.localKey match {
+                    case Left(error) =>
+                      Toast.makeText(
+                        this, error.toString, Toast.LENGTH_SHORT).show()
                       finish()
+                    case Right(k) =>
+                      val encdb = KeyManager.encrypt(k, db.getAbsolutePath)
+                      val encpw = KeyManager.encrypt(k, password.trim)
+                      val enckeyf = KeyManager.encrypt(k, keyfilepath)
+                      val verifier = KeyManager.encrypt(k, KeyManager.VERIFIER)
+
+                      settings.set(Settings.VERIFY_DATA, verifier)
+                      settings.set(Settings.PASSWORD, encpw)
+                      settings.set(Settings.KEYFILE_PATH, enckeyf)
+                      settings.set(Settings.DATABASE_FILE, encdb)
+                      settings.set(Settings.KEYBOARD_TIMEOUT,
+                        findView(TR.timeout).getCheckedRadioButtonId match {
+                          case R.id.timeout_60 => 60
+                          case R.id.timeout_45 => 45
+                          case R.id.timeout_30 => 30
+                          case R.id.timeout_15 => 15
+                        })
+                      settings.set(Settings.PIN_TIMEOUT,
+                        findView(TR.service_timeout).getCheckedRadioButtonId match {
+                          case R.id.svctimeout_60 => 60
+                          case R.id.svctimeout_15 => 15
+                          case R.id.svctimeout_5  => 5
+                          case R.id.svctimeout_1  => 1
+                        })
+                      settings.set(Settings.PASSWORD_OVERRIDE,
+                        findView(TR.password_override).isChecked)
+                      UiBus.post {
+                        success(R.string.settings_saved)
+                        setResult(Activity.RESULT_OK)
+                        if (getIntent.hasExtra(EXTRA_FOR_RESULT))
+                          finish()
+                      }
                   }
                 }
               } catch {
@@ -263,32 +304,31 @@ class SetupActivity extends Activity with TypedViewHolder {
     user foreach { name =>
       keymanager.accountName = name
       async {
-        val k = keymanager.loadKey()
+        val ckey = keymanager.loadKey()
         (Option(settings.get(Settings.DATABASE_FILE))
           , Option(settings.get(Settings.PASSWORD))
           , Option(settings.get(Settings.KEYFILE_PATH))
           , Option(settings.get(Settings.VERIFY_DATA))) match {
           case (Some(encdb), Some(encpw), Some(enckeyf), Some(encverifier)) =>
-            val k = keymanager.localKey
-            val verifier = KeyManager.decryptToString(k, encverifier)
-            if (KeyManager.VERIFIER == verifier) {
-              UiBus.post {
-                findView(TR.file_name).setText(
-                  KeyManager.decryptToString(k, encdb))
-                findView(TR.password).setText(
-                  KeyManager.decryptToString(k, encpw))
-                findView(TR.key_file_name).setText(
-                  KeyManager.decryptToString(k, enckeyf))
-                success(R.string.ready_to_use)
-                findView(TR.save).setEnabled(false)
-              }
-            } else {
-              Toast.makeText(this,
-                R.string.decrypt_saved_failed, Toast.LENGTH_SHORT).show()
+            keymanager.getConfig match {
+              case Left(error) =>
+                UiBus.post {
+                  Toast.makeText(this,
+                    R.string.decrypt_saved_failed, Toast.LENGTH_SHORT).show()
+                  finish()
+                }
+              case Right((db,pw,keyf)) =>
+                UiBus.post {
+                  findView(TR.file_name).setText(db)
+                  findView(TR.password).setText(pw)
+                  findView(TR.key_file_name).setText(keyf)
+                  success(R.string.ready_to_use)
+                  findView(TR.save).setEnabled(false)
+                }
             }
           case _ =>
         }
-        if (k != null) UiBus.post {
+        if (ckey != null) UiBus.post {
           findView(TR.progress2).setVisibility(View.GONE)
         }
       }
@@ -327,7 +367,6 @@ class SetupActivity extends Activity with TypedViewHolder {
         } else {
           pickAccount()
         }
-      // TODO support content provider URIs for google Drive, Dropbox, etc.
       case BROWSE_DATABASE =>
         if (result == Activity.RESULT_OK) {
           val uri = data.getData
@@ -386,6 +425,9 @@ class SetupActivity extends Activity with TypedViewHolder {
       case BROWSE_KEYFILE =>
         if (result == Activity.RESULT_OK)
           findView(TR.key_file_name).setText(data.getData.getPath)
+      case REQUEST_PIN => // for change pin
+        if (result == Activity.RESULT_OK)
+          startActivity(new Intent(this, classOf[PINSetupActivity]))
     }
   }
 }

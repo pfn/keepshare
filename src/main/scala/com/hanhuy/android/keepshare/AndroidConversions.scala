@@ -128,6 +128,7 @@ object AndroidConversions {
   }
 
   implicit def toBoolean(c: CheckBox) = c.isChecked
+  implicit def toRichRunnable(r: Runnable) = RichRunnable(r)
 
   implicit def toRicProgresshDialog(d: ProgressDialog) = RichProgressDialog(d)
   implicit def toRichView(v: View) = RichView(v)
@@ -167,6 +168,11 @@ object SystemService {
   implicit val im = SystemService[InputMethodManager](INPUT_METHOD_SERVICE)
   implicit val sm = SystemService[SearchManager](SEARCH_SERVICE)
 }
+
+case class RichRunnable(r: Runnable) {
+  def apply() = r.run()
+}
+
 case class RichContext(context: Context) {
   def systemService[T](implicit s: SystemService[T]): T =
     context.getSystemService(s.name).asInstanceOf[T]

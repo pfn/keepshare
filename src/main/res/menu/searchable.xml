@@ -5,4 +5,7 @@
           android:showAsAction="always"
           android:iconifiedByDefault="false"
           android:id="@+id/menu_search"/>
+    <item android:id="@+id/menu_setup"
+          android:showAsAction="never"
+          android:title="@string/setup"/>
 </menu>

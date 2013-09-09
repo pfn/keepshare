@@ -16,7 +16,8 @@ class Setting[A](val key: String, val default: A, val defaultRes: Option[Int]) {
 }
 
 object Settings {
-  val TIMEOUT = new Setting[Int]("timeout", 60, None)
+  val KEYBOARD_TIMEOUT = new Setting[Int]("timeout", 60, None)
+  val PIN_TIMEOUT = new Setting[Int]("pin_timeout", 1, None)
   val GOOGLE_USER = Setting[String]("google_account", null)
   val CLOUD_KEY_HASH = Setting[String]("cloud_key_hash", null)
   val LOCAL_KEY = Setting[String]("local_key", null)
@@ -26,6 +27,8 @@ object Settings {
   val PASSWORD = Setting[String]("password", null)
   val IME = Setting[String]("ime", null)
   val PASSWORD_OVERRIDE = Setting[Boolean]("password_override", false)
+  val NEEDS_PIN = Setting[Boolean]("needs_pin", false)
+  val PIN_VERIFIER = Setting[String]("pin_verifier", "")
 
   def apply(c: Context) = {
     new Settings(c.getApplicationContext)

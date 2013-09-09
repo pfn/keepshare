@@ -35,13 +35,17 @@ class SearchableActivity extends Activity {
     if (settings.get(Settings.GOOGLE_USER) == null) {
       startActivityForResult(SetupActivity.intent, RequestCodes.REQUEST_SETUP)
     } else if (!km.ready) {
-      startActivityForResult(SetupActivity.intent, RequestCodes.REQUEST_SETUP)
+      if (settings.get(Settings.NEEDS_PIN) && PINHolderService.instance.isEmpty)
+        startActivityForResult(new Intent(this, classOf[PINEntryActivity]),
+          RequestCodes.REQUEST_PIN)
+      else
+        startActivityForResult(SetupActivity.intent, RequestCodes.REQUEST_SETUP)
     } else if (KeyManager.cloudKey == null) {
       val p = ProgressDialog.show(this, getString(R.string.loading),
         getString(R.string.please_wait), true, false)
       async {
         km.accountName = settings.get(Settings.GOOGLE_USER)
-        km.loadKey
+        km.loadKey()
         km.getConfig match {
           case Left(x) =>
             startActivityForResult(
@@ -84,7 +88,6 @@ class SearchableActivity extends Activity {
 
   override def onCreateOptionsMenu(menu: Menu) = {
     getMenuInflater.inflate(R.menu.searchable, menu)
-    getMenuInflater.inflate(R.menu.main, menu)
 
     searchView = Option(menu.findItem(R.id.menu_search)
       .getActionView.asInstanceOf[SearchView])
@@ -99,10 +102,8 @@ class SearchableActivity extends Activity {
 
   override def onOptionsItemSelected(item: MenuItem) = {
     item.getItemId match {
-      case R.id.clear_user_data =>
-        settings.clear()
-        KeyManager.clear()
-        finish()
+      case R.id.menu_setup =>
+        startActivity(new Intent(this, classOf[SetupActivity]))
         true
       case _ => super.onOptionsItemSelected(item)
     }
@@ -157,9 +158,18 @@ class SearchableActivity extends Activity {
   }
 
   override def onActivityResult(request: Int, result: Int, data: Intent) {
-    if (request == RequestCodes.REQUEST_SETUP && result == Activity.RESULT_OK) {
-      handleIntent(getIntent)
-    } else
+
+    val success = request match {
+      case RequestCodes.REQUEST_SETUP =>
+        if (result == Activity.RESULT_OK) {
+          handleIntent(getIntent)
+          true
+        } else {
+          false
+        }
+      case RequestCodes.REQUEST_PIN => result == Activity.RESULT_OK
+    }
+    if (!success)
       finish()
   }
 }
