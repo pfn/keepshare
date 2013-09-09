@@ -112,6 +112,9 @@ class SearchableActivity extends Activity {
   private def doSearch(query: String, id: Option[Long]) {
     v("Query is: " + query)
     v("id is: " + id)
+    val pd = ProgressDialog.show(this,
+      getString(R.string.searching),
+      getString(R.string.running_search), true, false)
     async {
       val cursor = ShareActivity.queryDatabase(this, settings, query :: Nil)
       if (cursor != null && !cursor.isClosed) {
@@ -153,6 +156,9 @@ class SearchableActivity extends Activity {
         }
       } else UiBus.post {
         empty.setText(R.string.no_search_results)
+      }
+      UiBus.post {
+        pd.dismiss()
       }
     }
   }

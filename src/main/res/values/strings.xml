@@ -92,6 +92,8 @@
     <string name="search_usernames_passwords">Search usernames and passwords
     </string>
     <string name="no_search_results">No search results</string>
+    <string name="searching">Searching...</string>
+    <string name="running_search">Running your search</string>
     <string name="no_search_query">No search query</string>
     <string name="setup">Setup</string>
     <string name="setup_pin">Setup PIN</string>
