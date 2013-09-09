@@ -92,7 +92,7 @@ class SearchableActivity extends Activity {
     searchView = Option(menu.findItem(R.id.menu_search)
       .getActionView.asInstanceOf[SearchView])
     searchView foreach { search =>
-      search.setIconifiedByDefault(false)
+      search.setIconifiedByDefault(getResources.getBoolean(R.bool.is_phone))
       search.setSearchableInfo(
         systemService[SearchManager].getSearchableInfo(getComponentName))
       queryInput foreach { search.setQuery(_, false) }

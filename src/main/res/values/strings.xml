@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">KeePass Share</string>
     <string name="setup_header">
-        Enter your KeePass database unlocking information</string>
+        Enter your KeePass database unlocking information to get started</string>
     <string name="setup_instructions">To
         start using <i>KeePass Share</i> enter the paths to your KeePass
         database and keyfile, if set. You will also need to

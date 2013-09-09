@@ -20,7 +20,8 @@ object PINHolderService {
     val spec = new PBEKeySpec(pin.toCharArray,
       "com.hanhuy.android.keepshare".getBytes("utf-8"), 1000, 256)
     val kf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
-    kf.generateSecret(spec)
+    // must convert the KEY or else IV failure on 4.2 and below
+    new SecretKeySpec(kf.generateSecret(spec).getEncoded, KeyManager.ALG)
   }
 }
 
