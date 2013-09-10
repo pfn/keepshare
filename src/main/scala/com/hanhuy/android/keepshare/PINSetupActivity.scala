@@ -36,7 +36,8 @@ class PINSetupActivity extends Activity with TypedViewHolder {
         settings.set(Settings.LOCAL_KEY, newkey)
         settings.set(Settings.NEEDS_PIN, true)
         settings.set(Settings.PIN_VERIFIER,
-          KeyManager.encrypt(pinKey, PINHolderService.PIN_VERIFIER))
+          KeyManager.encrypt(KeyManager.cloudKey,  KeyManager.encrypt(pinKey,
+            PINHolderService.PIN_VERIFIER)))
       }
       finish()
     }

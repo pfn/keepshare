@@ -3,7 +3,7 @@ package com.hanhuy.android.keepshare
 import AndroidConversions._
 import RichLogger._
 
-import android.app.{AlertDialog, Activity}
+import android.app.{ProgressDialog, AlertDialog, Activity}
 import android.os.Bundle
 import android.view.{MenuItem, Menu, View}
 import android.content.Intent
@@ -15,13 +15,14 @@ class PINEntryActivity extends Activity with TypedViewHolder {
   lazy val ok = findView(TR.pin_ok)
   lazy val error = findView(TR.pin_error)
   lazy val settings = Settings(this)
+  lazy val km = new KeyManager(this, settings)
 
   private var pin = ""
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
     setTitle(getTitle + getString(R.string.enter_pin_subtitle))
     setContentView(R.layout.pin_setup)
-    prompt.setText("Verify your PIN")
+    prompt.setText(R.string.verify_pin)
     setResult(Activity.RESULT_CANCELED)
 
     def validatePin() {
@@ -37,27 +38,45 @@ class PINEntryActivity extends Activity with TypedViewHolder {
       val pinKey = PINHolderService.keyFor(pin)
       val verifier = settings.get(Settings.PIN_VERIFIER)
 
-      val decrypted = try {
-        Some(KeyManager.decryptToString(pinKey, verifier))
-      } catch {
-        case e: Exception =>
-          v("Failed to decrypt", e)
-          None
+      val withKey = () => {
+        val decrypted = try {
+          Some(KeyManager.decryptToString(pinKey,
+            KeyManager.decryptToString(KeyManager.cloudKey, verifier)))
+        } catch {
+          case e: Exception =>
+            v("Failed to decrypt", e)
+            None
+        }
+
+        if (decrypted exists {_ == PINHolderService.PIN_VERIFIER }) {
+          val intent = new Intent(this, classOf[PINHolderService])
+          intent.putExtra(PINHolderService.EXTRA_PIN, pin)
+          startService(intent)
+          setResult(Activity.RESULT_OK)
+          finish()
+        } else {
+          error.setVisibility(View.VISIBLE)
+          error.setText(R.string.try_again)
+          pinEntry.setText("")
+          pin = ""
+          UiBus.handler.removeCallbacks(clearError)
+          UiBus.handler.postDelayed(clearError, 1000)
+        }
       }
 
-      if (decrypted exists {_ == PINHolderService.PIN_VERIFIER }) {
-        val intent = new Intent(this, classOf[PINHolderService])
-        intent.putExtra(PINHolderService.EXTRA_PIN, pin)
-        startService(intent)
-        setResult(Activity.RESULT_OK)
-        finish()
+      if (KeyManager.cloudKey == null) {
+        val pd = ProgressDialog.show(this, getString(R.string.loading),
+          getString(R.string.fetching_key), true, false)
+        async {
+          km.accountName = settings.get(Settings.GOOGLE_USER)
+          km.loadKey()
+          UiBus.post {
+            pd.dismiss()
+            withKey()
+          }
+        }
       } else {
-        error.setVisibility(View.VISIBLE)
-        error.setText(R.string.try_again)
-        pinEntry.setText("")
-        pin = ""
-        UiBus.handler.removeCallbacks(clearError)
-        UiBus.handler.postDelayed(clearError, 1000)
+        withKey()
       }
     }
     val onClick = { view: View =>

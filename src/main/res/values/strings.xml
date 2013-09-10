@@ -106,4 +106,6 @@
         Are you sure you want to clear your configuration?</string>
     <string name="setup_required_for_pin">
         You must complete your configuration before setting a PIN</string>
+    <string name="verify_pin">Verify your PIN</string>
+    <string name="fetching_key">Retrieving key from Google Drive</string>
 </resources>
