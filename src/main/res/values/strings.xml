@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">KeePass Share</string>
+    <string name="app_name">KeepShare</string>
     <string name="setup_header">
         Enter your KeePass database unlocking information to get started</string>
     <string name="setup_instructions">To
-        start using <i>KeePass Share</i> enter the paths to your KeePass
+        start using <i>KeepShare</i> enter the paths to your KeePass
         database and keyfile, if set. You will also need to
         save your database password.
         All information is <b>securely encrypted</b> using two
@@ -17,16 +17,16 @@
         in Google Drive.
     </string>
     <string name="connect_instructions">Get started with
-        binding <i>KeePass Share</i>
+        binding <i>KeepShare</i>
         to <i>Google Drive</i> by pressing the <b>Connect</b> button. This
         will initialize your secret key in the cloud if it has not already
         been setup. You will be prompted to grant access for storing private
         application data.
     </string>
-    <string name="overview"><i>KeePass Share</i> is an easy way to make
+    <string name="overview"><i>KeepShare</i> is an easy way to make
         your passwords immediately available no matter which application
         you are running. Request access to passwords by choosing
-        to <b>Share</b> with <i>KeePass Share</i> from the application you are
+        to <b>Share</b> with <i>KeepShare</i> from the application you are
         currently running. A notification or dialog will appear to let you
         select usernames and passwords and allow exporting them to the
         clipboard.
@@ -67,8 +67,7 @@
     <string name="failed_to_open">Failed to open database: </string>
     <string name="credentials_available">
         Credentials are available for input</string>
-    <string name="invalid_token">
-        Invalid KeePass Share token; is this a hacking attempt?!</string>
+    <string name="invalid_token">Invalid KeepShare</string>
     <string name="keyboard_timeout">Keyboard Timeout (secs)</string>
     <string name="service_timeout">PIN unlock timeout (mins)</string>
     <string name="select_entry_prompt">Select an entry to continue:</string>

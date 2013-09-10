@@ -18,12 +18,14 @@ import javax.crypto.spec.{IvParameterSpec, SecretKeySpec}
 import android.content.Context
 
 object KeyManager {
-  val VERIFIER = "KeePass Share Verifier"
+  val VERIFIER = "KeepShare Verifier"
 
   val STATE_SAVE = "save"
   val STATE_LOAD = "load"
 
   val EXTRA_STATE = "com.hanhuy.android.keepshare.extra.STATE"
+
+  val KEY_FILE = "keepshare.key"
 
   lazy val sha1 = MessageDigest.getInstance("SHA1")
   def sha1(b: Array[Byte]): String = hex(sha1.digest(b))
@@ -127,8 +129,6 @@ class KeyManager(c: Context, settings: Settings) {
 
   private lazy val credential = GoogleAccountCredential.usingOAuth2(c,
     Seq(DriveScopes.DRIVE_APPDATA))
-
-  val KEY_FILE = "keepass-share.key"
 
   lazy val drive = new Drive.Builder(AndroidHttp.newCompatibleTransport,
     new GsonFactory, credential).build

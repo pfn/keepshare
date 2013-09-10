@@ -4,7 +4,7 @@
       android:versionCode="1"
       android:versionName="1.0">
     <permission android:protectionLevel="dangerous"
-                android:label="KeePass Share database access"
+                android:label="KeePass database access"
                 android:permissionGroup="@string/app_name"
                 android:name="com.hanhuy.android.keepshare.permission.READ_DATABASE"/>
     <uses-permission android:name="com.hanhuy.android.keepshare.permission.READ_DATABASE"/>
