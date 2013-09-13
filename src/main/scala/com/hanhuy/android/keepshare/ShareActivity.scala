@@ -3,12 +3,14 @@ package com.hanhuy.android.keepshare
 import AndroidConversions._
 import RichLogger._
 
+import collection.JavaConversions._
+
 import android.provider.Settings.Secure
-import android.app.Activity
+import android.app.{AlertDialog, Activity}
 import android.os.Bundle
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
-import android.content.{ContentResolver, Context, Intent}
+import android.content.{ComponentName, ContentResolver, Context, Intent}
 import java.net.{URI, MalformedURLException, URL}
 import android.widget.{Adapter, CursorAdapter, Toast}
 import android.view.{ViewGroup, View}
@@ -17,6 +19,7 @@ import android.database.Cursor
 import android.view.inputmethod.InputMethodManager
 
 object ShareActivity {
+  implicit val TAG = LogcatTag("ShareActivity")
 
   def subhosts(host: String): Seq[String] =
     host.split("""\.""").tails.toList filter (_.size > 1) map (_ mkString ".")
@@ -31,6 +34,7 @@ object ShareActivity {
   }
   def queryDatabase(c: Context, settings: Settings,
                     query: Seq[String]): Cursor = {
+    v("possible queries: " + query)
     val km = new KeyManager(c, settings)
     val cr = c.getContentResolver
     val r = cr.query(Contract.URI, null, "", null, null)
@@ -110,32 +114,48 @@ object ShareActivity {
   }
   def selectHandler(a: Activity, settings: Settings, cursor: Cursor) = {
     val imm = a.systemService[InputMethodManager]
-    val intent = new Intent(a, classOf[CredentialHolderService])
-    intent.putExtra(CredentialHolderService.EXTRA_TITLE,
-      cursor.getString(cursor.getColumnIndex(Contract.TITLE)))
-    intent.putExtra(CredentialHolderService.EXTRA_USERNAME,
-      cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
-    intent.putExtra(CredentialHolderService.EXTRA_PASSWORD,
-      cursor.getString(cursor.getColumnIndex(Contract.PASSWORD)))
-    a.startService(intent)
+    val keyboardEnabled =  imm.getEnabledInputMethodList exists {
+      _.getPackageName == "com.hanhuy.android.keepshare" }
 
-    UiBus.post {
-      val token = a.getWindow.getAttributes.token
-      imm.setInputMethod(token, PasswordIME.NAME)
-      val ime = Secure.getString(
-        a.getContentResolver, Secure.DEFAULT_INPUT_METHOD)
-      if (PasswordIME.NAME != ime) {
-        settings.set(Settings.IME, ime)
-        UiBus.handler.delayed(500) { imm.showInputMethodPicker() }
-      }
+    if (!keyboardEnabled) {
+      val d = new AlertDialog.Builder(a)
+        .setTitle(R.string.keyboard_not_enabled_title)
+        .setMessage(R.string.keyboard_not_enabled_prompt)
+        .setPositiveButton(android.R.string.yes, {() =>
+          val intent = new Intent
+          intent.setComponent(new ComponentName("com.android.settings",
+            "com.android.settings.LanguageSettings"))
+          a.startActivity(intent)
+        })
+        .setNegativeButton(android.R.string.no, {() => a.finish()})
+        .show()
+    } else {
+      val intent = new Intent(a, classOf[CredentialHolderService])
+      intent.putExtra(CredentialHolderService.EXTRA_TITLE,
+        cursor.getString(cursor.getColumnIndex(Contract.TITLE)))
+      intent.putExtra(CredentialHolderService.EXTRA_USERNAME,
+        cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
+      intent.putExtra(CredentialHolderService.EXTRA_PASSWORD,
+        cursor.getString(cursor.getColumnIndex(Contract.PASSWORD)))
+      a.startService(intent)
       UiBus.post {
-        a.finish()
+        val token = a.getWindow.getAttributes.token
+        imm.setInputMethod(token, PasswordIME.NAME)
+        val ime = Secure.getString(
+          a.getContentResolver, Secure.DEFAULT_INPUT_METHOD)
+        if (PasswordIME.NAME != ime) {
+          settings.set(Settings.IME, ime)
+          UiBus.handler.delayed(500) { imm.showInputMethodPicker() }
+        }
+        UiBus.post {
+          a.finish()
+        }
       }
     }
   }
 }
 class ShareActivity extends Activity with TypedViewHolder {
-  implicit val TAG = LogcatTag("ShareActivity")
+  import ShareActivity._
   val _implicit: RichContext = this
   import _implicit._
 
@@ -148,77 +168,78 @@ class ShareActivity extends Activity with TypedViewHolder {
     val extras = getIntent.getExtras
     val url = extras.getString(Intent.EXTRA_TEXT)
 
-    findView(TR.cancel) onClick finish
+    findView(TR.cancel) onClick {
+      ServiceBus.send(ShareActivityCancel)
+      finish()
+    }
 
-    try {
-      new URL(url) // throws if malformed
+    if (url.indexOf(":") == -1) {
+      Toast.makeText(this, R.string.not_a_url, Toast.LENGTH_SHORT).show()
+      finish()
+      return
+    }
 
-      val subject = extras.getString(Intent.EXTRA_SUBJECT)
-      findView(TR.subject).setText(subject + " - " + url)
+    val subject = extras.getString(Intent.EXTRA_SUBJECT)
+    findView(TR.subject).setText(subject + " - " + url)
 
-      if (extras.containsKey(EXTRA_SCREENSHOT)) {
-        val bitmap: Bitmap = extras.getParcelable("share_screenshot")
-        findView(TR.share_screenshot).setImageDrawable(
-          new BitmapDrawable(getResources, bitmap))
-      } else findView(TR.share_screenshot).setVisibility(View.GONE)
+    if (extras.containsKey(EXTRA_SCREENSHOT)) {
+      val bitmap: Bitmap = extras.getParcelable("share_screenshot")
+      findView(TR.share_screenshot).setImageDrawable(
+        new BitmapDrawable(getResources, bitmap))
+    } else findView(TR.share_screenshot).setVisibility(View.GONE)
 
-      async {
-        val uri = new URI(url)
-        val uris = ShareActivity.goUp(uri) map (_.toString)
-        val subhosts = ShareActivity.subhosts(uri.getHost)
-        val cursor = ShareActivity.queryDatabase(this, settings,
-          uris ++ subhosts)
+    async {
+      val uri = new URI(url)
+      val uris = ShareActivity.goUp(uri) map (_.toString)
+      val subhosts = ShareActivity.subhosts(uri.getHost)
+      val cursor = ShareActivity.queryDatabase(this, settings, uris ++ subhosts)
 
-        if (cursor != null) {
+      if (cursor != null) {
 
-          UiBus.post {
-            findView(TR.flipper).showNext()
-            val list = findView(TR.list)
-            list.setEmptyView(findView(TR.empty))
+        UiBus.post {
+          findView(TR.flipper).showNext()
+          val list = findView(TR.list)
+          list.setEmptyView(findView(TR.empty))
 
-            if (!cursor.isClosed) {
+          if (!cursor.isClosed) {
 
-              val adapter = new CursorAdapter(this, cursor, false) {
-                def newView(p1: Context, cursor: Cursor, c: ViewGroup) = {
-                  val view = getLayoutInflater.inflate(R.layout.pwitem, c, false)
-                  view.findView(TR.name).setText(
-                    cursor.getString(cursor.getColumnIndex(Contract.TITLE)))
-                  view.findView(TR.username).setText(
-                    cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
-                  view
-                }
-
-                def bindView(view: View, c: Context, cursor: Cursor) {
-                  view.findView(TR.name).setText(
-                    cursor.getString(cursor.getColumnIndex(Contract.TITLE)))
-                  view.findView(TR.username).setText(
-                    cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
-                }
+            val adapter = new CursorAdapter(this, cursor, false) {
+              def newView(p1: Context, cursor: Cursor, c: ViewGroup) = {
+                val view = getLayoutInflater.inflate(R.layout.pwitem, c, false)
+                view.findView(TR.name).setText(
+                  cursor.getString(cursor.getColumnIndex(Contract.TITLE)))
+                view.findView(TR.username).setText(
+                  cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
+                view
               }
-              val onClickHandler = { pos: Int =>
-                val cursor = adapter.getItem(pos).asInstanceOf[Cursor]
+
+              def bindView(view: View, c: Context, cursor: Cursor) {
+                view.findView(TR.name).setText(
+                  cursor.getString(cursor.getColumnIndex(Contract.TITLE)))
+                view.findView(TR.username).setText(
+                  cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
+              }
+            }
+            val onClickHandler = { pos: Int =>
+              val cursor = adapter.getItem(pos).asInstanceOf[Cursor]
+              findView(TR.continu).setEnabled(true)
+              findView(TR.continu).onClick {
+                ShareActivity.selectHandler(this, settings, cursor)
+              }
+            }
+            list.onItemClick(onClickHandler)
+            list.setAdapter(adapter)
+            if (adapter.getCount < 2) {
+              findView(TR.select_prompt).setVisibility(View.GONE)
+              if (adapter.getCount == 1) {
+                list.setItemChecked(0, true)
+                onClickHandler(0)
                 findView(TR.continu).setEnabled(true)
-                findView(TR.continu).onClick (
-                  ShareActivity.selectHandler(this, settings, cursor))
-              }
-              list.onItemClick(onClickHandler)
-              list.setAdapter(adapter)
-              if (adapter.getCount < 2) {
-                findView(TR.select_prompt).setVisibility(View.GONE)
-                if (adapter.getCount == 1) {
-                  list.setItemChecked(0, true)
-                  onClickHandler(0)
-                  findView(TR.continu).setEnabled(true)
-                }
               }
             }
           }
         }
       }
-    } catch {
-      case e: MalformedURLException =>
-        Toast.makeText(this, R.string.not_a_url, Toast.LENGTH_SHORT).show()
-        finish()
     }
   }
 

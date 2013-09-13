@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="com.hanhuy.android.keepshare"
-      android:versionCode="2"
-      android:versionName="1.0.1">
+      android:versionCode="3"
+      android:versionName="1.1.0">
     <permission android:protectionLevel="dangerous"
                 android:label="KeePass database access"
                 android:permissionGroup="@string/app_name"
@@ -52,6 +52,8 @@
             <meta-data android:name="android.app.searchable"
                        android:resource="@xml/searchable"/>
         </activity>
+        <activity android:name=".IMESearchActivity"
+                  android:theme="@android:style/Theme.DeviceDefault.Light.Dialog"/>
         <activity android:name=".PINEntryActivity"
                   android:theme="@android:style/Theme.DeviceDefault.Light"/>
         <provider android:name=".SearchProvider"
@@ -78,7 +80,6 @@
                   android:theme="@android:style/Theme.DeviceDefault.Dialog"/>
         <provider android:name="com.keepassdroid.provider.DatabaseProvider"
                   android:authorities="com.hanhuy.android.keepshare.database"
-                  android:grantUriPermissions="false"
                   android:readPermission="com.hanhuy.android.keepshare.permission.READ_DATABASE"/>
     </application>
 </manifest>

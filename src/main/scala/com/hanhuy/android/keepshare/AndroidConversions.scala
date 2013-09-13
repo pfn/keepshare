@@ -66,6 +66,11 @@ object AndroidConversions {
       def onCancel(p1: DialogInterface) = f()
     }
 
+  implicit def toDIOnDismissListener[A](f: () => A) =
+    new DialogInterface.OnDismissListener() {
+      def onDismiss(p1: DialogInterface) = f()
+    }
+
   implicit def toDialogInterfaceOnClickListener1(f: () => Unit) =
     new DialogInterface.OnClickListener() {
       def onClick(d: DialogInterface, id: Int) = f()

@@ -80,6 +80,7 @@
     <string name="no_password_input_override">
         Cannot enter password on a non-password input; long-press to override
     </string>
+    <string name="override_password_input">Overriding password input</string>
     <string name="off">Off</string>
     <string name="on">On</string>
     <string name="keyboard_status">Custom keyboard status</string>
@@ -108,4 +109,10 @@
         You must complete your configuration before setting a PIN</string>
     <string name="verify_pin">Verify your PIN</string>
     <string name="fetching_key">Retrieving key from Google Drive</string>
+    <string name="ime_search_title">: No password entries loaded</string>
+    <string name="ime_search_prompt">Would you like to search for \'%s\'?</string>
+    <string name="keyboard_not_enabled_title">
+        KeepShare keyboard is not enabled</string>
+    <string name="keyboard_not_enabled_prompt">
+        Would you like to enable KeepShare\'s keyboard now?</string>
 </resources>

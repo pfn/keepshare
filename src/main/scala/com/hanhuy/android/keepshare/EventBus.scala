@@ -7,6 +7,9 @@ import android.os.{Handler, Looper}
 sealed trait BusEvent
 case object ServiceExit extends BusEvent
 case object KeyboardExit extends BusEvent
+case object IMESearchOk extends BusEvent
+case object IMESearchCancel extends BusEvent
+case object ShareActivityCancel extends BusEvent
 
 object EventBus {
 

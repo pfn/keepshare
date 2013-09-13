@@ -2,16 +2,21 @@ package com.hanhuy.android.keepshare
 
 import AndroidConversions._
 import TypedResource._
+import RichLogger._
 
 import android.inputmethodservice.{Keyboard, InputMethodService}
 import android.inputmethodservice.KeyboardView.OnKeyboardActionListener
 import android.view.inputmethod.{EditorInfo, ExtractedTextRequest, InputMethodManager}
 import android.text.InputType
 import android.widget.Toast
-import android.view.KeyEvent
+import android.app.{Activity, AlertDialog}
+import android.os.Bundle
+import android.content.Intent
 
 object PasswordIME {
   val NAME = "com.hanhuy.android.keepshare/.PasswordIME"
+
+  val EXTRA_PACKAGE = "com.hanhuy.android.keepshare.extra.PACKAGE"
 }
 class PasswordIME extends InputMethodService with OnKeyboardActionListener
 with EventBus.RefOwner {
@@ -24,11 +29,16 @@ with EventBus.RefOwner {
   lazy val input = new Keyboard(this, R.xml.keys)
   private var passwordPress = 0l
   private var isPassword = false
+  private var packagePrompted = Option.empty[String]
 
   private val LONG_PRESS = 1500
 
   ServiceBus += {
     case ServiceExit => quitIME()
+  }
+
+  ServiceBus += {
+    case ShareActivityCancel => quitIME()
   }
 
   override def onCreateInputView() = {
@@ -65,11 +75,35 @@ with EventBus.RefOwner {
                | TYPE_TEXT_VARIATION_VISIBLE_PASSWORD => true
             case _ => false
           }
+        case _ => false
       }
     } else {
-      Toast.makeText(this,
-        R.string.no_passwords_selected, Toast.LENGTH_SHORT).show()
-      quitIME()
+      v("Prompting for password search")
+      if (!packagePrompted.exists(_==info.packageName)) {
+        packagePrompted = Option(info.packageName)
+
+        UiBus += {
+          case IMESearchCancel =>
+            v("Received cancel, quitting IME")
+            quitIME()
+            EventBus.Remove
+          case IMESearchOk =>
+            val intent = new Intent(this, classOf[ShareActivity])
+            val appHost = info.packageName.split("""\.""").reverse.mkString(".")
+            intent.setAction(Intent.ACTION_SEND)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            intent.setType("text/plain")
+            intent.putExtra(Intent.EXTRA_SUBJECT, "Application search")
+            intent.putExtra(Intent.EXTRA_TEXT, "android-package://" + appHost)
+            startActivity(intent)
+            EventBus.Remove
+        }
+        val intent = new Intent(this, classOf[IMESearchActivity])
+        intent.addFlags(
+          Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+        intent.putExtra(PasswordIME.EXTRA_PACKAGE, info.packageName)
+        startActivity(intent)
+      }
     }
   }
 
@@ -111,7 +145,7 @@ with EventBus.RefOwner {
     } else {
       val oldIME = settings.get(Settings.IME)
       if (oldIME != null)
-        systemService[InputMethodManager].setInputMethod(token, oldIME)
+        switchInputMethod(oldIME)
     }
     ServiceBus.send(KeyboardExit)
   }
@@ -126,7 +160,7 @@ with EventBus.RefOwner {
   val overrideRunner: Runnable = () => {
     if (passwordPress != Integer.MAX_VALUE)
       Toast.makeText(this,
-        "Overriding password input", Toast.LENGTH_SHORT).show()
+        R.string.override_password_input, Toast.LENGTH_SHORT).show()
   }
 
   def onText(p1: CharSequence) {}
@@ -135,4 +169,25 @@ with EventBus.RefOwner {
   def swipeRight() {}
   def swipeUp() {}
   def onKey(p1: Int, p2: Array[Int]) {}
+}
+
+class IMESearchActivity extends Activity with TypedViewHolder {
+  override def onCreate(savedInstanceState: Bundle) {
+    super.onCreate(savedInstanceState)
+    setContentView(R.layout.ime_search_activity)
+    val packageName = getIntent.getStringExtra(PasswordIME.EXTRA_PACKAGE)
+    setTitle(getTitle + getString(R.string.ime_search_title))
+    findView(TR.text).setText(
+      getString(R.string.ime_search_prompt, packageName))
+    findView(TR.confirm) onClick {
+      UiBus.send(IMESearchOk)
+      finish()
+    }
+    findView(TR.cancel) onClick { finish() }
+  }
+
+  override def onStop() {
+    super.onStop()
+    UiBus.send(IMESearchCancel)
+  }
 }

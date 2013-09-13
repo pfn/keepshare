@@ -2,4 +2,5 @@
 <resources>
     <bool name="is_phone">false</bool>
     <bool name="is_tablet">true</bool>
+    <integer name="share_screenshot_visibility">0</integer>
 </resources>

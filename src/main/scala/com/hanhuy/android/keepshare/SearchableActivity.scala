@@ -54,7 +54,6 @@ class SearchableActivity extends Activity {
         }
         UiBus.post {
           p.dismiss()
-          handleIntent(getIntent)
         }
       }
     }
@@ -123,9 +122,9 @@ class SearchableActivity extends Activity {
       getString(R.string.running_search), true, false)
     async {
       val cursor = ShareActivity.queryDatabase(this, settings, query :: Nil)
+      var selected = -1
       if (cursor != null && !cursor.isClosed) {
         UiBus.post {
-          var selected = -1
           Stream.continually(cursor.moveToNext) takeWhile (
             _ && selected == -1) foreach { _ =>
               if (id exists (_ == cursor.getLong(0)))
@@ -149,10 +148,6 @@ class SearchableActivity extends Activity {
             }
           }
           list.setAdapter(adapter)
-          if (selected != -1) {
-            list.setItemChecked(selected, true)
-            list.smoothScrollToPosition(selected)
-          }
           list.onItemClick { pos =>
             ShareActivity.selectHandler(
               this, settings, adapter.getItem(pos).asInstanceOf[Cursor])
@@ -165,6 +160,12 @@ class SearchableActivity extends Activity {
       }
       UiBus.post {
         pd.dismiss()
+        if (selected != -1) {
+          UiBus.post {
+            list.setItemChecked(selected, true)
+            list.smoothScrollToPosition(selected)
+          }
+        }
       }
     }
   }

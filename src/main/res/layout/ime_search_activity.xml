@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+             android:layout_width="match_parent"
+             android:layout_height="240dp">
+    <TextView android:id="@+id/text"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_centerHorizontal="true"
+              android:layout_above="@+id/centerline"
+              android:textAppearance="?android:attr/textAppearanceMedium"
+              android:gravity="center"
+              android:text="stub"
+              android:layout_marginBottom="24dp" />
+    <View android:id="@+id/centerline"
+          android:layout_width="0dp"
+          android:layout_height="0dp"
+          android:layout_centerInParent="true"/>
+    <Button android:id="@+id/cancel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="4dp"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentLeft="true"
+            android:layout_alignRight="@+id/centerline"
+            android:text="@android:string/no"/>
+    <Button android:id="@+id/confirm"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="4dp"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentRight="true"
+            android:layout_alignLeft="@+id/centerline"
+            android:text="@android:string/yes"/>
+</RelativeLayout>
