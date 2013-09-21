@@ -86,7 +86,7 @@
     <TextView android:id="@+id/empty"
               android:visibility="gone"
               android:layout_below="@+id/subject"
-              android:text="No logins found"
+              android:text="@string/no_logins_found"
               android:textColor="#ffff0000"
               android:textAppearance="?android:attr/textAppearanceMedium"
               android:layout_alignLeft="@+id/subject"

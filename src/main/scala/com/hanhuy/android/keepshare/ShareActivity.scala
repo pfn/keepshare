@@ -237,6 +237,8 @@ class ShareActivity extends Activity with TypedViewHolder {
                 findView(TR.continu).setEnabled(true)
               }
             }
+          } else {
+            findView(TR.select_prompt).setVisibility(View.GONE)
           }
         }
       }

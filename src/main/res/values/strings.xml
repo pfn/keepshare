@@ -115,4 +115,5 @@
         KeepShare keyboard is not enabled</string>
     <string name="keyboard_not_enabled_prompt">
         Would you like to enable KeepShare\'s keyboard now?</string>
+    <string name="no_logins_found">No logins found</string>
 </resources>

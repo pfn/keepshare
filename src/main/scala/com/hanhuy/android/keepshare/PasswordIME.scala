@@ -49,14 +49,13 @@ with EventBus.RefOwner {
 
   private def setText(text: String) {
     val ic = getCurrentInputConnection
-    ic.beginBatchEdit
     val etr = new ExtractedTextRequest
-    val et = ic.getExtractedText(etr, 0)
+    ic.beginBatchEdit
     ic.setSelection(0, 0)
-    ic.deleteSurroundingText(0, et.text.length)
-
+    Option(ic.getExtractedText(etr, 0)) foreach { et =>
+      ic.deleteSurroundingText(0, et.text.length)
+    }
     ic.commitText(text, text.length)
-
     ic.endBatchEdit
   }
 
