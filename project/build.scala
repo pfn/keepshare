@@ -6,8 +6,7 @@ import android.ArbitraryProject
 object KeepshareBuild extends Build {
 
   //val kpdGit = uri("c:/Users/pfnguyen/src/keepassdroid" +
-  val kpdGit = uri("https://github.com/pfn/keepassdroid.git" +
-    "#bd12ce30f841a800b33644bf9a4db315edcada9b")
+  val kpdGit = uri("https://github.com/pfn/keepassdroid.git#858f5e1")
 
   val kpdBase = ArbitraryProject.git(kpdGit)
 

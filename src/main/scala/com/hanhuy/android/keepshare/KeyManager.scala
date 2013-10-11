@@ -16,6 +16,8 @@ import android.app.Activity
 import javax.crypto.{SecretKey, Cipher}
 import javax.crypto.spec.{IvParameterSpec, SecretKeySpec}
 import android.content.Context
+import java.io.IOException
+import android.widget.Toast
 
 object KeyManager {
   val VERIFIER = "KeepShare Verifier"
@@ -167,6 +169,7 @@ class KeyManager(c: Context, settings: Settings) {
             v("Loaded cloud key")
         } getOrElse createKey()
       } catch {
+        case e: IOException =>
         case e: UserRecoverableAuthIOException => requestAuthz(e, STATE_LOAD)
       }
       KeyManager.cloudKey

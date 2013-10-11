@@ -17,6 +17,7 @@ object CredentialHolderService {
   var instance: Option[CredentialHolderService] = None
 
   val ACTION_IME = "com.hanhuy.android.keepshare.action.IME"
+  val ACTION_CANCEL = "com.hanhuy.android.keepshare.action.CRED_CANCEL"
 }
 
 /** Holds selected credentials in memory for the requested time
@@ -50,6 +51,7 @@ class CredentialHolderService extends Service with EventBus.RefOwner {
   override def onCreate() {
     val filter = new IntentFilter
     filter.addAction(ACTION_IME)
+    filter.addAction(ACTION_CANCEL)
     registerReceiver(receiver, filter)
   }
   override def onDestroy() {
@@ -68,6 +70,9 @@ class CredentialHolderService extends Service with EventBus.RefOwner {
     val builder = new NotificationCompat.Builder(this)
       .setContentText(username)
       .setContentTitle(getString(R.string.app_name) + ": " + title)
+      .addAction(android.R.drawable.ic_menu_delete, getString(R.string.cancel),
+      PendingIntent.getBroadcast(this, 0,
+        new Intent(ACTION_CANCEL), PendingIntent.FLAG_UPDATE_CURRENT))
       .setSmallIcon(R.drawable.ic_lock)
       .setContentIntent(PendingIntent.getBroadcast(
         this, 0, new Intent(ACTION_IME), PendingIntent.FLAG_UPDATE_CURRENT))
@@ -83,6 +88,9 @@ class CredentialHolderService extends Service with EventBus.RefOwner {
   val receiver = new BroadcastReceiver {
     def onReceive(c: Context, intent: Intent) {
       intent.getAction match {
+        case ACTION_CANCEL =>
+          handler.removeCallbacks(finishRunnable)
+          finishRunnable.run()
         case ACTION_IME =>
           val ime = Secure.getString(
             getContentResolver, Secure.DEFAULT_INPUT_METHOD)
