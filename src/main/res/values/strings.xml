@@ -31,6 +31,7 @@
         select usernames and passwords and allow exporting them to the
         clipboard.
     </string>
+    <string name="toast_unable_load_key">Unable to load key from Google Drive, retrying: %s</string>
     <string name="clear_user_data">Clear user data</string>
     <string name="filename_hint">filename...</string>
     <string name="browse">Browse</string>

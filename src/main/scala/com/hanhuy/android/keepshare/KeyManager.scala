@@ -169,8 +169,23 @@ class KeyManager(c: Context, settings: Settings) {
             v("Loaded cloud key")
         } getOrElse createKey()
       } catch {
-        case e: IOException =>
-        case e: UserRecoverableAuthIOException => requestAuthz(e, STATE_LOAD)
+        case e: UserRecoverableAuthIOException =>
+          UiBus.post {
+            Toast.makeText(Application.instance,
+              Application.instance.getString(
+                R.string.toast_unable_load_key, e.getMessage),
+              Toast.LENGTH_SHORT).show()
+          }
+          requestAuthz(e, STATE_LOAD)
+        case ex: IOException =>
+          e("IO error loading cloud key", ex)
+          UiBus.post {
+            Toast.makeText(Application.instance,
+              Application.instance.getString(
+                R.string.toast_unable_load_key, ex.getMessage),
+              Toast.LENGTH_SHORT).show()
+          }
+          loadKey()
       }
       KeyManager.cloudKey
     }
