@@ -28,6 +28,7 @@ object AndroidConversions {
     Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD
   val jellybeanAndNewer =
     Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN
+  val kitkatAndNewer = Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT
 
   implicit def toBroadcastReceiver(f: (Context, Intent) => Unit) =
     new BroadcastReceiver() {

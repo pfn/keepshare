@@ -5,13 +5,12 @@ import android.ArbitraryProject
 
 object KeepshareBuild extends Build {
 
-  //val kpdGit = uri("c:/Users/pfnguyen/src/keepassdroid" +
-  val kpdGit = uri("https://github.com/pfn/keepassdroid.git#858f5e1")
+  val kpdGit = uri("https://github.com/pfn/keepassdroid.git#6c278ab")
 
   val kpdBase = ArbitraryProject.git(kpdGit)
 
   lazy val kpdSettings = android.Plugin.androidBuild ++ Seq(
-    libraryProject in Android := true
+    platformTarget in Android := "android-14"
   )
 
   override def buildLoaders = ArbitraryProject.settingsLoader(

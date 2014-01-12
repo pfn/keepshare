@@ -155,7 +155,7 @@ class SetupActivity extends Activity with TypedViewHolder {
     val browseHandler = { v: View =>
       val intent = new Intent(Intent.ACTION_GET_CONTENT)
       intent.addCategory(Intent.CATEGORY_OPENABLE)
-      intent.setType("file/*")
+      intent.setType(if (kitkatAndNewer) "application/*" else "file/*")
 
       try {
         startActivityForResult(intent, v.getId match {
