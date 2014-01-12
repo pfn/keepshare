@@ -13,3 +13,5 @@ libraryDependencies ++= Seq(
   "com.android.support" % "support-v4" % "18.0.0",
   "com.google.android.gms" % "play-services" % "3.1.36"
 )
+
+run <<= run in android.Keys.Android
