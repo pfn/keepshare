@@ -166,7 +166,17 @@ class ShareActivity extends Activity with TypedViewHolder {
   def init() {
     setContentView(R.layout.share)
     val extras = getIntent.getExtras
-    val url = extras.getString(Intent.EXTRA_TEXT)
+    val (url, subject) = {
+      val u = extras.getString(Intent.EXTRA_TEXT)
+      val s = extras.getString(Intent.EXTRA_SUBJECT)
+      if (u.charAt(0) == '"') {
+        val end = u.lastIndexOf('"')
+        if (u.length > end + 2)
+          (u.substring(end + 2, u.length).trim, u.substring(1, end))
+        else
+          (u, s)
+      } else (u, s)
+    }
 
     findView(TR.cancel) onClick {
       ServiceBus.send(ShareActivityCancel)
@@ -179,7 +189,6 @@ class ShareActivity extends Activity with TypedViewHolder {
       return
     }
 
-    val subject = extras.getString(Intent.EXTRA_SUBJECT)
     findView(TR.subject).setText(subject + " - " + url)
 
     if (extras.containsKey(EXTRA_SCREENSHOT)) {

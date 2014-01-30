@@ -59,7 +59,9 @@ class CredentialHolderService extends Service with EventBus.RefOwner {
     ServiceBus.send(ServiceExit)
   }
 
-  override def onStartCommand(intent: Intent, flags: Int, startId: Int) = {
+  override def onStartCommand(intent: Intent, flags: Int, startId: Int): Int = {
+    if (intent == null) return Service.START_NOT_STICKY
+
     instance = Some(this)
     handler.removeCallbacks(finishRunnable)
 
