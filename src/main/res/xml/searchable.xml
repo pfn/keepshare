@@ -2,7 +2,7 @@
 
 <searchable xmlns:android="http://schemas.android.com/apk/res/android"
             android:includeInGlobalSearch="true"
-            android:label="@string/app_name"
+            android:label="@string/appname"
             android:hint="@string/search_usernames_passwords"
             android:searchMode="queryRewriteFromText"
             android:searchSuggestAuthority="com.hanhuy.android.keepshare"

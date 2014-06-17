@@ -71,8 +71,8 @@ class CredentialHolderService extends Service with EventBus.RefOwner {
 
     val builder = new NotificationCompat.Builder(this)
       .setContentText(username)
-      .setContentTitle(getString(R.string.app_name) + ": " + title)
-      .addAction(android.R.drawable.ic_menu_delete, getString(R.string.cancel),
+      .setContentTitle(getString(R.string.appname) + ": " + title)
+      .addAction(android.R.drawable.ic_menu_delete, getString(R.string.clear),
       PendingIntent.getBroadcast(this, 0,
         new Intent(ACTION_CANCEL), PendingIntent.FLAG_UPDATE_CURRENT))
       .setSmallIcon(R.drawable.ic_lock)

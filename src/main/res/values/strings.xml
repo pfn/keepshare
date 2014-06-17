@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">KeepShare</string>
+    <string name="appname">KeepShare</string>
     <string name="setup_header">
         Enter your KeePass database unlocking information to get started</string>
     <string name="setup_instructions">To
@@ -31,6 +31,8 @@
         select usernames and passwords and allow exporting them to the
         clipboard.
     </string>
+    <string name="pin_holder_notif_text">Tap to lock database</string>
+    <string name="pin_holder_notif_title">%s: database open</string>
     <string name="toast_unable_load_key">Unable to load key from Google Drive, retrying: %s</string>
     <string name="clear_user_data">Clear user data</string>
     <string name="filename_hint">filename...</string>
@@ -59,6 +61,7 @@
     <string name="please_wait">Please wait</string>
     <string name="screenshot">screenshot</string>
     <string name="not_a_url">Not a URL</string>
+    <string name="clear">Clear</string>
     <string name="cancel">Cancel</string>
     <string name="continu">Continue</string>
     <string name="copy_username">Username</string>
@@ -74,7 +77,6 @@
     <string name="select_entry_prompt">Select an entry to continue:</string>
     <string name="copied_username">Username copied to clipboard!</string>
     <string name="copied_password">Password copied to clipboard!</string>
-    <string name="clear">Clear</string>
     <string name="no_passwords_selected">No passwords selected</string>
     <string name="no_password_input">
         Cannot enter password on a non-password input</string>

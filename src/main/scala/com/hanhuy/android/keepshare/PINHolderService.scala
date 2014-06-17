@@ -3,16 +3,18 @@ package com.hanhuy.android.keepshare
 import RichLogger._
 import AndroidConversions._
 
-import android.app.Service
-import android.content.Intent
+import android.app.{Notification, PendingIntent, Service}
+import android.content.{IntentFilter, Context, BroadcastReceiver, Intent}
 import javax.crypto.spec.{PBEKeySpec, SecretKeySpec}
 import javax.crypto.{SecretKey, SecretKeyFactory}
 import android.os.Handler
+import android.support.v4.app.NotificationCompat
 
 object PINHolderService {
   var instance = Option.empty[PINHolderService]
 
   val EXTRA_PIN = "com.hanhuy.android.keepshare.extra.PIN"
+  val ACTION_CANCEL = "com.hanhuy.android.keepshare.action.PIN_CANCEL"
 
   val PIN_VERIFIER = EXTRA_PIN
 
@@ -55,6 +57,8 @@ class PINHolderService extends Service {
   }
 
   val finishRunner: Runnable = () => {
+    unregisterReceiver(receiver)
+    stopForeground(true)
     stopSelf()
   }
 
@@ -62,8 +66,24 @@ class PINHolderService extends Service {
     val pin = intent.getStringExtra(EXTRA_PIN)
     _key = keyFor(pin)
     handler.removeCallbacks(finishRunner)
+    val builder = new NotificationCompat.Builder(this)
+      .setPriority(Notification.PRIORITY_MIN)
+      .setContentText(getString(R.string.pin_holder_notif_text))
+      .setContentTitle(getString(R.string.pin_holder_notif_title, getString(R.string.appname)))
+      .setSmallIcon(R.drawable.ic_lock)
+      .setContentIntent(PendingIntent.getBroadcast(
+      this, 0, new Intent(ACTION_CANCEL), PendingIntent.FLAG_UPDATE_CURRENT))
     handler.postDelayed(finishRunner,
       settings.get(Settings.PIN_TIMEOUT) * 60 * 1000)
+    startForeground(1, builder.build)
+    registerReceiver(receiver, new IntentFilter(ACTION_CANCEL))
     Service.START_NOT_STICKY
+  }
+
+  val receiver = new BroadcastReceiver {
+    override def onReceive(c: Context, i: Intent) {
+      handler.removeCallbacks(finishRunner)
+      finishRunner.run()
+    }
   }
 }

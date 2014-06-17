@@ -55,7 +55,7 @@ object ShareActivity {
                     RequestCodes.REQUEST_PIN)
                 case _ => UiBus.post {
                   Toast.makeText(c,
-                    c.getString(R.string.app_name) +
+                    c.getString(R.string.appname) +
                       c.getString(R.string.pin_unlock_required),
                     Toast.LENGTH_SHORT).show()
                 }

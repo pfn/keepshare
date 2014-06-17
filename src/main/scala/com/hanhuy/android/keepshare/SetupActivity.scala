@@ -249,9 +249,11 @@ class SetupActivity extends Activity with TypedViewHolder {
                   keymanager.loadKey()
                   keymanager.localKey match {
                     case Left(error) =>
-                      Toast.makeText(
-                        this, error.toString, Toast.LENGTH_SHORT).show()
-                      finish()
+                      UiBus.post {
+                        Toast.makeText(
+                          this, error.toString, Toast.LENGTH_SHORT).show()
+                        finish()
+                      }
                     case Right(k) =>
                       val encdb = KeyManager.encrypt(k, db.getAbsolutePath)
                       val encpw = KeyManager.encrypt(k, password.trim)

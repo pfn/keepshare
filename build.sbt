@@ -10,8 +10,8 @@ libraryDependencies ++= Seq(
   "com.google.oauth-client" % "google-oauth-client" % "1.16.0-rc" intransitive(),
   "com.google.code.findbugs" % "jsr305" % "2.0.1",
   "com.google.code.gson" % "gson" % "2.2.4",
-  "com.android.support" % "support-v4" % "18.0.0",
-  "com.google.android.gms" % "play-services" % "3.1.36"
+  "com.android.support" % "support-v4" % "19.1.0",
+  "com.google.android.gms" % "play-services" % "4.3.23"
 )
 
 run <<= run in android.Keys.Android
