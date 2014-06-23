@@ -15,6 +15,10 @@ import android.accessibilityservice.{AccessibilityService => Accessibility}
 import scala.collection.JavaConversions._
 
 /**
+ * The clipboard remains vulnerable to
+ * https://www2.dcsec.uni-hannover.de/files/p170.pdf
+ * Until this bug is fixed https://code.google.com/p/android/issues/detail?id=41037
+ * duplicated at https://code.google.com/p/android/issues/detail?id=56097
  * @author pfnguyen
  */
 object AccessibilityService {
@@ -282,16 +286,6 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
   }
 
   def pasteData(node: AccessibilityNodeInfo, data: String, set: Seq[Char]) {
-    // this will break if data approaches/exceeds 512 characters in length
-    val randomlength = 512
-
-    val random = new java.security.SecureRandom
-    val dataset = (set.min to set.max).toList
-    val positions = Stream.iterate(Set.empty[Int])(
-      _ + random.nextInt(randomlength)).dropWhile(
-        _.size < data.length).head.toList.sorted
-    val subs = positions.zipWithIndex.toMap
-
     var lockCounter = 0
     val lock = new Object
     def block(i: Int) = lock.synchronized {
@@ -313,6 +307,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
     }
 
     UiBus.post {
+      // unfortunately, this doesn't work for password fields...
       val text = node.getText
       if (text != null && !text.isEmpty) {
         val args = new Bundle
@@ -326,51 +321,18 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
     }
     block(2)
 
-    (0 until randomlength) foreach { i =>
-
-      val (paste, idx, c) = if (subs.contains(i)) {
-        (true, Some(subs(i)), data(subs(i)).toString)
-      } else {
-        (false, None, dataset(random.nextInt(dataset.size)).toString)
-      }
-      UiBus.post {
-        systemService[ClipboardManager].setPrimaryClip(
-          ClipData.newPlainText("keepshare data", c))
-        clear(i + randomlength)
-      }
-      block(i + randomlength)
-
-      if (paste) {
-        UiBus.post {
-          node.performAction(AccessibilityNodeInfo.ACTION_PASTE)
-          d("%s -> %d" format (idx, Option(node.getText) map (_.length) getOrElse 0))
-          clear(i)
-        }
-        block(i)
-
-      }
+    UiBus.post {
+      systemService[ClipboardManager].setPrimaryClip(
+        ClipData.newPlainText("", data))
+      clear(3)
     }
-    (0 until (data.length * 2 - 1)).reverse foreach { x =>
-      if (x % 2 == 1) {
-        UiBus.post {
-          val args = new Bundle
-          import AccessibilityNodeInfo._
-          args.putInt(ACTION_ARGUMENT_SELECTION_START_INT, x)
-          args.putInt(ACTION_ARGUMENT_SELECTION_END_INT, x + 1)
-          node.performAction(ACTION_SET_SELECTION, args)
-          clear(x)
-        }
-        block(x)
-        UiBus.post {
-          import AccessibilityNodeInfo._
-          node.performAction(ACTION_CUT)
-          clear(x + 1)
-        }
-        block(x + 1)
-      }
+    block(3)
 
+    UiBus.post {
+      node.performAction(AccessibilityNodeInfo.ACTION_PASTE)
+      clear(4)
     }
-
+    block(4)
   }
 
 }
