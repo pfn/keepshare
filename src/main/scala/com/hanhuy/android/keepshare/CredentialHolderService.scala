@@ -1,6 +1,6 @@
 package com.hanhuy.android.keepshare
 
-import AndroidConversions._
+import com.hanhuy.android.common.AndroidConversions._
 
 import android.app.{PendingIntent, Service}
 import android.content._
@@ -8,6 +8,7 @@ import android.os.Handler
 import android.support.v4.app.NotificationCompat
 import android.view.inputmethod.InputMethodManager
 import android.provider.Settings.Secure
+import com.hanhuy.android.common.{EventBus, RichContext, ServiceBus}
 
 object CredentialHolderService {
   val EXTRA_TITLE    = "com.hanhuy.android.keepshare.extra.TITLE"

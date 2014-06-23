@@ -1,6 +1,7 @@
 package com.hanhuy.android.keepshare
 
-import RichLogger._
+import com.hanhuy.android.common.{UiBus, LogcatTag}
+import com.hanhuy.android.common.RichLogger._
 
 import collection.JavaConversions._
 

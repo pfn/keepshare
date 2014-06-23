@@ -1,5 +1,6 @@
 package com.hanhuy.android.keepshare
 
+import com.hanhuy.android.common.{LogcatTag, AndroidConversions, RichLogger}
 import RichLogger._
 import AndroidConversions._
 
@@ -76,7 +77,7 @@ class PINHolderService extends Service {
     handler.postDelayed(finishRunner,
       settings.get(Settings.PIN_TIMEOUT) * 60 * 1000)
     startForeground(1, builder.build)
-    registerReceiver(receiver, new IntentFilter(ACTION_CANCEL))
+    registerReceiver(receiver, ACTION_CANCEL)
     Service.START_NOT_STICKY
   }
 

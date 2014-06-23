@@ -1,8 +1,9 @@
 package com.hanhuy.android.keepshare
 
-import AndroidConversions._
+import com.hanhuy.android.common.AndroidConversions._
+import com.hanhuy.android.common._
+import com.hanhuy.android.common.RichLogger._
 import TypedResource._
-import RichLogger._
 
 import android.inputmethodservice.{Keyboard, InputMethodService}
 import android.inputmethodservice.KeyboardView.OnKeyboardActionListener
@@ -35,9 +36,6 @@ with EventBus.RefOwner {
 
   ServiceBus += {
     case ServiceExit => quitIME()
-  }
-
-  ServiceBus += {
     case ShareActivityCancel => quitIME()
   }
 

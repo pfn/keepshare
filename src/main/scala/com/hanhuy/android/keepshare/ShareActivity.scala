@@ -1,7 +1,8 @@
 package com.hanhuy.android.keepshare
 
-import AndroidConversions._
-import RichLogger._
+import com.hanhuy.android.common.AndroidConversions._
+import com.hanhuy.android.common._
+import com.hanhuy.android.common.RichLogger._
 
 import collection.JavaConversions._
 
@@ -11,12 +12,14 @@ import android.os.Bundle
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.content.{ComponentName, ContentResolver, Context, Intent}
-import java.net.{URI, MalformedURLException, URL}
+import java.net.URI
 import android.widget.{Adapter, CursorAdapter, Toast}
 import android.view.{ViewGroup, View}
 import com.keepassdroid.provider.Contract
 import android.database.Cursor
 import android.view.inputmethod.InputMethodManager
+
+import TypedResource._
 
 object ShareActivity {
   implicit val TAG = LogcatTag("ShareActivity")
@@ -156,7 +159,7 @@ object ShareActivity {
 }
 class ShareActivity extends Activity with TypedViewHolder {
   import ShareActivity._
-  val _implicit: RichContext = this
+  val _implicit: RichActivity = this
   import _implicit._
 
   val EXTRA_SCREENSHOT = "share_screenshot"

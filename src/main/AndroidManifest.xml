@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="com.hanhuy.android.keepshare"
-      android:versionCode="11"
-      android:versionName="1.2.4">
+      android:versionCode="13"
+      android:versionName="2.0.0">
     <permission android:protectionLevel="dangerous"
                 android:label="KeePass database access"
                 android:permissionGroup="@string/appname"
@@ -41,6 +41,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <activity android:name=".AccessibilitySearchActivity"
+                  android:theme="@android:style/Theme.DeviceDefault.Light.Dialog"
+                  android:windowSoftInputMode="adjustResize"
+                  android:label="@string/appname">
+        </activity>
         <activity android:name=".SearchableActivity"
                   android:launchMode="singleTop"
                   android:theme="@android:style/Theme.DeviceDefault.Light">
@@ -77,6 +82,18 @@
                  android:exported="false"/>
         <service android:name=".CredentialHolderService"
                  android:exported="false"/>
+        <service android:name=".AccessibilityService"
+                 android:label="@string/accessibility_service_label"
+                 android:enabled="@bool/v18plus"
+                 android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+                >
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                    android:name="android.accessibilityservice"
+                    android:resource="@xml/accessibility_service_config" />
+        </service>
         <activity android:name="com.keepassdroid.provider.AuthzActivity"
                   android:exported="false"
                   android:theme="@android:style/Theme.DeviceDefault.Dialog"/>

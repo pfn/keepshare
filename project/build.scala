@@ -10,7 +10,7 @@ object KeepshareBuild extends Build {
   val kpdBase = ArbitraryProject.git(kpdGit)
 
   lazy val kpdSettings = android.Plugin.androidBuild ++ Seq(
-    platformTarget in Android := "android-14"
+    platformTarget in Android := "android-18"
   )
 
   override def buildLoaders = ArbitraryProject.settingsLoader(

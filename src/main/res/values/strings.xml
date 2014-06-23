@@ -31,6 +31,8 @@
         select usernames and passwords and allow exporting them to the
         clipboard.
     </string>
+    <string name="form_fill_notif_text">Tap to find passwords for: %s</string>
+    <string name="form_fill_notif_title">%s: search for passwords to fill</string>
     <string name="pin_holder_notif_text">Tap to lock database</string>
     <string name="pin_holder_notif_title">%s: database open</string>
     <string name="toast_unable_load_key">Unable to load key from Google Drive, retrying: %s</string>
@@ -119,4 +121,9 @@
     <string name="keyboard_not_enabled_prompt">
         Would you like to enable KeepShare\'s keyboard now?</string>
     <string name="no_logins_found">No logins found</string>
+    <string name="accessibility_service_label">KeepShare Form Filler</string>
+    <string name="accessibility_service_description">
+        Username and password form filling service. Automatically pulls data
+        from your KeePass database to fill credential forms.
+    </string>
 </resources>

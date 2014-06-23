@@ -1,7 +1,9 @@
 package com.hanhuy.android.keepshare
 
-import AndroidConversions._
-
+import com.hanhuy.android.common.AndroidConversions._
+import com.hanhuy.android.common.{UiBus, RichActivity, LogcatTag}
+import com.hanhuy.android.common.RichLogger._
+import TypedResource._
 
 import android.app.{ProgressDialog, SearchManager, Activity}
 import android.os.Bundle
@@ -14,7 +16,6 @@ import android.provider.BaseColumns
 import android.view.{MenuItem, View, ViewGroup, Menu}
 
 class SearchableActivity extends Activity {
-  import RichLogger._
   implicit val TAG = LogcatTag("SearchableActivity")
   val _implicit: RichActivity = this
   import _implicit._
@@ -188,7 +189,6 @@ class SearchableActivity extends Activity {
 }
 
 class SearchProvider extends ContentProvider {
-  import RichLogger._
   implicit val TAG = LogcatTag("SearchProvider")
   lazy val settings = Settings(getContext)
 

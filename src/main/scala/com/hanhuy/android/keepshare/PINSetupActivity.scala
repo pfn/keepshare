@@ -1,11 +1,12 @@
 package com.hanhuy.android.keepshare
 
-import AndroidConversions._
+import com.hanhuy.android.common.AndroidConversions._
 
 import android.app.Activity
 import android.os.Bundle
 import android.view.View
 import android.content.Intent
+import com.hanhuy.android.common.UiBus
 
 class PINSetupActivity extends Activity with TypedViewHolder {
 
