@@ -103,9 +103,15 @@ class AccessibilitySearchActivity extends Activity with TypedViewHolder {
 
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
-    Option(settings.get(Settings.VERIFY_DATA)) map { _ => init() } getOrElse {
+    if (settings.get(Settings.GOOGLE_USER) == null) {
       startActivityForResult(
         SetupActivity.intent, RequestCodes.REQUEST_SETUP)
+    } else {
+      if (settings.get(Settings.NEEDS_PIN) && PINHolderService.instance.isEmpty)
+        startActivityForResult(new Intent(this, classOf[PINEntryActivity]),
+          RequestCodes.REQUEST_PIN)
+      else
+        init()
     }
   }
 
