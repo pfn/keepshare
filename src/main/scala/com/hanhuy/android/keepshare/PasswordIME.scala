@@ -88,7 +88,8 @@ with EventBus.RefOwner {
             val intent = new Intent(this, classOf[ShareActivity])
             val appHost = info.packageName.split("""\.""").reverse.mkString(".")
             intent.setAction(Intent.ACTION_SEND)
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
+              Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
             intent.setType("text/plain")
             intent.putExtra(Intent.EXTRA_SUBJECT, "Application search")
             intent.putExtra(Intent.EXTRA_TEXT, "android-package://" + appHost)

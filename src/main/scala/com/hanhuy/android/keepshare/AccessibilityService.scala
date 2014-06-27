@@ -4,7 +4,7 @@ import java.net.URI
 
 import android.app.{KeyguardManager, PendingIntent, Notification, NotificationManager}
 import android.content._
-import android.os.Bundle
+import android.os.{Handler, HandlerThread, Bundle}
 import android.view.accessibility.{AccessibilityNodeInfo, AccessibilityEvent}
 import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common._
@@ -19,6 +19,11 @@ import scala.collection.JavaConversions._
  * https://www2.dcsec.uni-hannover.de/files/p170.pdf
  * Until this bug is fixed https://code.google.com/p/android/issues/detail?id=41037
  * duplicated at https://code.google.com/p/android/issues/detail?id=56097
+ *
+ * Mitigations against clipboard sniffing are clipboard data randomization,
+ * and pasting data randomly from the clipboard when it matches what we need
+ * to paste. However, the android bug where it inserts an additional space
+ * breaks this behavior.
  * @author pfnguyen
  */
 object AccessibilityService {
@@ -33,6 +38,8 @@ object AccessibilityService {
   val EXTRA_WINDOWID = "com.hanhuy.android.keepshare.extra.WINDOW_ID"
   val EXTRA_PACKAGE  = "com.hanhuy.android.keepshare.extra.PACKAGE"
   val EXTRA_URI      = "com.hanhuy.android.keepshare.extra.URI"
+
+  var lastCallback: Option[Runnable] = None
 
   def childrenToSeq(node: AccessibilityNodeInfo): Seq[AccessibilityNodeInfo] = {
     (0 until node.getChildCount) map node.getChild
@@ -105,6 +112,11 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
   private var lastWindowId: Option[Int] = None
   private var lastFoundWindowId: Option[Int] = None
 
+  private val thread = new HandlerThread("AccessibilityService")
+  private lazy val handler = {
+    thread.start
+    new Handler(thread.getLooper)
+  }
   /**
    * @param windowId must match current view tree or no processing will occur
    * @param f (packageName, searchURI, view tree, password field)
@@ -119,12 +131,10 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
     // half overlays, like IME will show with a different window ID
     // notifications seem to put in the wrong package name as well
     // any views with systemui should be filtered out
-    d("withTree")
     val r = if (tree.windowId.exists (_ == windowId) && !tree.exists (
         _.viewIdResourceName exists (_ startsWith "com.android.systemui"))) {
       val password = tree find (_.isPassword)
 
-      d("tree: " + tree)
       // ugly
       val packageName = tree.packageName.get
       val searchURI = if (password.isDefined) {
@@ -150,6 +160,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
       } else None
       Some(f(packageName, searchURI, tree, password))
     } else {
+      d("Not handling because %s != %s; %s", tree.windowId, windowId, tree)
       None
     }
 
@@ -164,9 +175,10 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
     if (!EXCLUDED_PACKAGES(packageName) && filling) {
       val windowId = event.getWindowId
       event.getEventType match {
-        case t@(TYPE_WINDOW_CONTENT_CHANGED | TYPE_WINDOW_STATE_CHANGED) =>
+        case TYPE_WINDOW_CONTENT_CHANGED | TYPE_WINDOW_STATE_CHANGED =>
 
-          async {
+          lastCallback foreach handler.removeCallbacks
+          val r: Runnable = { () =>
             withTree(windowId) { (pkg, searchURI, tree, password) =>
 
               if (password.isDefined) {
@@ -207,6 +219,9 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
             }
             lastWindowId = Some(windowId)
           }
+          handler.post(r)
+          lastCallback = Some(r)
+
 
         case TYPE_VIEW_HOVER_ENTER | TYPE_VIEW_HOVER_EXIT =>
           lastWindowId = Some(event.getWindowId)
@@ -219,6 +234,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
 
   override def onCreate() {
     super.onCreate()
+    d("Launching accessibility service")
     registerReceiver(receiver, Seq(ACTION_CANCEL, ACTION_SEARCH,
       Intent.ACTION_SCREEN_OFF, Intent.ACTION_USER_PRESENT))
     filling = !systemService[KeyguardManager](
@@ -227,6 +243,8 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
 
   override def onDestroy() {
     super.onDestroy()
+    d("Exiting accessibility service")
+    thread.quit()
     unregisterReceiver(receiver)
     systemService[NotificationManager].cancel(NOTIF_FOUND)
   }
@@ -240,7 +258,8 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
       case ACTION_CANCEL =>
       case ACTION_SEARCH =>
         val newIntent = new Intent(this, classOf[AccessibilitySearchActivity])
-        newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
+          Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
         newIntent.setAction(Intent.ACTION_SEND)
         newIntent.putExtras(intent)
         startActivity(newIntent)
@@ -248,14 +267,18 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
 
   ServiceBus += {
     case a@AccessibilityFillEvent(_, _, _, _, _) =>
-      async { if (!fillIn(a)) fillInfo = Some(a) }
+      lastCallback foreach handler.removeCallbacks
+      val r: Runnable = { () => fillIn(a) }
+      handler.post(r)
+      lastCallback = Some(r)
   }
 
   def fillIn(event: AccessibilityFillEvent,
              pkg: String,
              searchURI: Option[URI],
              tree: AccessibilityTree,
-             passwordField: Option[AccessibilityTree]): Boolean = synchronized {
+             passwordField: Option[AccessibilityTree]): Unit = synchronized {
+    d("Fill in %s == %s ?" format (event.pkg, pkg))
     if (event.pkg == pkg && passwordField.isDefined &&
         (searchURI.map (_.toString) == Option(event.uri))) {
       // needs to run on ui thread
@@ -269,23 +292,25 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
 
       // do password first because some username fields have autocompletes...
       passwordField foreach (_.node foreach { n =>
-        pasteData(n, event.password, event.password ++ event.username) })
+        pasteData(n, event.password) })
 
-      text foreach (_.node foreach { n => pasteData(n, event.username,
-        event.password ++ event.username) })
+      text foreach (_.node foreach { n =>
+        Thread.sleep(100)
+        pasteData(n, event.username) })
+      if (text.isEmpty)
+        w("No username field for password form: " + tree)
 
       //clipboard.setPrimaryClip(clip)
       true
-    } else false
+    } else fillInfo = Some(event)
   }
-  def fillIn(event: AccessibilityFillEvent): Boolean = synchronized {
-    val r = withTree(event.windowId) { (pkg, searchURI, tree, passwordField) =>
+  def fillIn(event: AccessibilityFillEvent): Unit = synchronized {
+     withTree(event.windowId) { (pkg, searchURI, tree, passwordField) =>
       fillIn(event, pkg, searchURI, tree, passwordField)
-    }
-    r exists (b => b)
+    } getOrElse { fillInfo = Some(event) }
   }
 
-  def pasteData(node: AccessibilityNodeInfo, data: String, set: Seq[Char]) {
+  def pasteData(node: AccessibilityNodeInfo, data: String) {
     var lockCounter = 0
     val lock = new Object
     def block(i: Int) = lock.synchronized {
@@ -298,13 +323,11 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
       lock.notify()
     }
 
-    if (!node.isFocused) {
-      UiBus.post {
-        node.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
-        clear(1)
-      }
-      block(1)
+    UiBus.post {
+      node.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+      clear(1)
     }
+    block(1)
 
     UiBus.post {
       // unfortunately, this doesn't work for password fields...
@@ -333,6 +356,12 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
       clear(4)
     }
     block(4)
+    UiBus.post {
+      systemService[ClipboardManager].setPrimaryClip(
+        ClipData.newPlainText("", ""))
+      clear(5)
+    }
+    block(5)
   }
 
 }
