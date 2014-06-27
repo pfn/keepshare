@@ -82,7 +82,8 @@ class SearchableActivity extends Activity {
         searchView foreach { _.setQuery(q, false) }
       }
     } else {
-      empty.setText(R.string.no_search_query)
+      if (!settings.get(Settings.NEEDS_PIN) || PINHolderService.instance.isDefined)
+        doSearch("", None)
     }
   }
 

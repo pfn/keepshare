@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="com.hanhuy.android.keepshare"
       android:versionCode="13"
-      android:versionName="2.0.0">
+      android:versionName="2.0.0preview">
     <permission android:protectionLevel="dangerous"
                 android:label="KeePass database access"
                 android:permissionGroup="@string/appname"
