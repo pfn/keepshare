@@ -142,7 +142,10 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
           val urlbar = tree.findNodeById("com.android.chrome:id/url_bar")
           val d = urlbar map { u =>
             val url = u.getText.toString
-            Some(new URI(if (url.indexOf(":/") < 0) "http://" + url else url))
+
+            util.control.Exception.catching(classOf[Exception]) opt {
+              new URI(if (url.indexOf(":/") < 0) "http://" + url else url)
+            }
           } getOrElse None
           d
         } else if (packageName == "com.android.browser") {

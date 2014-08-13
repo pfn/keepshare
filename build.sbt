@@ -2,7 +2,10 @@ import android.Keys._
 
 name := "keepshare"
 
+resolvers += Resolver.sonatypeRepo("snapshots")
+
 libraryDependencies ++= Seq(
+  "ch.acra" % "acra" % "4.5.0",
   "com.google.apis" % "google-api-services-drive" % "v2-rev130-1.18.0-rc" intransitive(),
   "com.google.api-client" % "google-api-client-android" % "1.18.0-rc" intransitive(),
   "com.google.api-client" % "google-api-client" % "1.18.0-rc" intransitive(),
@@ -18,5 +21,7 @@ libraryDependencies ++= Seq(
 )
 
 proguardOptions in Android += "-keepclassmembers class scala.runtime.RichInt { ** until(); }"
+
+ndkBuild in Android := Nil
 
 run <<= run in android.Keys.Android
