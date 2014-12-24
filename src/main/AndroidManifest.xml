@@ -44,6 +44,8 @@
         <activity android:name=".AccessibilitySearchActivity"
                   android:theme="@android:style/Theme.DeviceDefault.Light.Dialog"
                   android:windowSoftInputMode="adjustResize"
+                  android:allowTaskReparenting="true"
+                  android:launchMode="singleInstance"
                   android:label="@string/appname">
         </activity>
         <activity android:name=".SearchableActivity"
@@ -60,6 +62,8 @@
                        android:resource="@xml/searchable"/>
         </activity>
         <activity android:name=".IMESearchActivity"
+                  android:allowTaskReparenting="true"
+                  android:launchMode="singleInstance"
                   android:theme="@android:style/Theme.DeviceDefault.Light.Dialog"/>
         <activity android:name=".PINEntryActivity"
                   android:theme="@android:style/Theme.DeviceDefault.Light"/>
