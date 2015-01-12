@@ -240,8 +240,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
     d("Launching accessibility service")
     registerReceiver(receiver, Seq(ACTION_CANCEL, ACTION_SEARCH,
       Intent.ACTION_SCREEN_OFF, Intent.ACTION_USER_PRESENT))
-    filling = !systemService[KeyguardManager](
-      SystemService[KeyguardManager](Context.KEYGUARD_SERVICE)).isKeyguardLocked
+    filling = !systemService[KeyguardManager].isKeyguardLocked
   }
 
   override def onDestroy() {
