@@ -27,7 +27,6 @@ public class KeyManagerTest extends ActivityUnitTestCase {
         assertNotNull(getActivity());
         Settings settings = new Settings(getActivity());
         KeyManager km = new KeyManager(getActivity(), settings);
-        km.accountName_$eq("pfnguyen@gmail.com");
         SecretKey key = km.loadKey();
         assertNotNull("Key cannot be null", key);
         assertEquals("improper key length", 32, key.getEncoded().length);
@@ -38,7 +37,6 @@ public class KeyManagerTest extends ActivityUnitTestCase {
         assertNotNull(getActivity());
         Settings settings = new Settings(getActivity());
         KeyManager km = new KeyManager(getActivity(), settings);
-        km.accountName_$eq("pfnguyen@gmail.com");
         km.loadKey();
         SecretKey k = km.localKey().right().get();
         assertNotNull("key cannot be null", k);

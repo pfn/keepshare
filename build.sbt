@@ -24,3 +24,6 @@ proguardOptions in Android += "-keepclassmembers class scala.runtime.RichInt { *
 ndkBuild in Android := Nil
 
 run <<= run in android.Keys.Android
+
+proguardOptions in Android +=
+  "-keep class * extends junit.framework.TestCase { *; }"
