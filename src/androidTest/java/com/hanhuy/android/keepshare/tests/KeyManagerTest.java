@@ -3,9 +3,7 @@ package com.hanhuy.android.keepshare.tests;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.test.ActivityUnitTestCase;
-import com.hanhuy.android.keepshare.KeyManager;
-import com.hanhuy.android.keepshare.SetupActivity;
-import com.hanhuy.android.keepshare.Settings;
+import com.hanhuy.android.keepshare.*;
 
 import javax.crypto.spec.SecretKeySpec;
 import javax.crypto.SecretKey;
@@ -38,6 +36,11 @@ public class KeyManagerTest extends ActivityUnitTestCase {
         Settings settings = new Settings(getActivity());
         KeyManager km = new KeyManager(getActivity(), settings);
         km.loadKey();
+        if (km.localKey().isLeft()) {
+            if (KeyError.NeedPin$.MODULE$ != km.localKey().left().get())
+                fail("is left: " + km.localKey().left());
+            return;
+        }
         SecretKey k = km.localKey().right().get();
         assertNotNull("key cannot be null", k);
         String hexed = KeyManager.hex(k.getEncoded());
