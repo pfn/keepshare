@@ -13,7 +13,8 @@ object KeepshareBuild extends Build {
   lazy val kpdSettings = android.Plugin.androidBuild ++ Seq(
     platformTarget in Android := "android-18",
     libraryProject in Android := true,
-    debugIncludesTests in Android := false
+    debugIncludesTests in Android := false,
+    javacOptions in Compile ++= "-target" :: "1.7" :: "-source" :: "1.7" :: Nil
   )
 
   override def buildLoaders = ArbitraryProject.settingsLoader(

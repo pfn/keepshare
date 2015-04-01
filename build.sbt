@@ -4,20 +4,19 @@ name := "keepshare"
 
 resolvers += Resolver.sonatypeRepo("snapshots")
 
+javacOptions in Global ++= "-target" :: "1.7" :: "-source" :: "1.7" :: Nil
+
+scalaVersion in Global := "2.11.6"
+
+retrolambdaEnable in Android := false
+
 libraryDependencies ++= Seq(
   "ch.acra" % "acra" % "4.5.0",
-  "com.google.apis" % "google-api-services-drive" % "v2-rev130-1.18.0-rc" intransitive(),
-  "com.google.api-client" % "google-api-client-android" % "1.18.0-rc" intransitive(),
-  "com.google.api-client" % "google-api-client" % "1.18.0-rc" intransitive(),
-  "com.google.http-client" % "google-http-client" % "1.18.0-rc" intransitive(),
-  "com.google.http-client" % "google-http-client-gson" % "1.18.0-rc" intransitive(),
-  "com.google.http-client" % "google-http-client-android" % "1.18.0-rc" intransitive(),
-  "com.google.oauth-client" % "google-oauth-client" % "1.18.0-rc" intransitive(),
-  "com.hanhuy" %% "android-common" % "0.3-SNAPSHOT",
+  "com.hanhuy" %% "android-common" % "0.4-SNAPSHOT",
   "com.google.code.findbugs" % "jsr305" % "2.0.1",
   "com.google.code.gson" % "gson" % "2.2.4",
-  "com.android.support" % "support-v4" % "19.1.0",
-  "com.google.android.gms" % "play-services" % "4.4.52"
+  "com.android.support" % "support-v4" % "22.0.0",
+  "com.google.android.gms" % "play-services-drive" % "7.0.0"
 )
 
 proguardOptions in Android += "-keepclassmembers class scala.runtime.RichInt { ** until(); }"

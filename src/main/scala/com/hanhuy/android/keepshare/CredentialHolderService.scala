@@ -8,7 +8,7 @@ import android.os.Handler
 import android.support.v4.app.NotificationCompat
 import android.view.inputmethod.InputMethodManager
 import android.provider.Settings.Secure
-import com.hanhuy.android.common.{EventBus, RichContext, ServiceBus}
+import com.hanhuy.android.common.{EventBus, ServiceBus}
 
 object CredentialHolderService {
   val EXTRA_TITLE    = "com.hanhuy.android.keepshare.extra.TITLE"

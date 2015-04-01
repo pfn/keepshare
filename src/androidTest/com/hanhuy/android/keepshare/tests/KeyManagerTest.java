@@ -8,6 +8,7 @@ import com.hanhuy.android.keepshare.SetupActivity;
 import com.hanhuy.android.keepshare.Settings;
 
 import javax.crypto.spec.SecretKeySpec;
+import javax.crypto.SecretKey;
 
 /** in order for any of these tests to succeed, the app must have been run
   *  at least once with an account selected/granted access to Google Drive
@@ -27,9 +28,9 @@ public class KeyManagerTest extends ActivityUnitTestCase {
         Settings settings = new Settings(getActivity());
         KeyManager km = new KeyManager(getActivity(), settings);
         km.accountName_$eq("pfnguyen@gmail.com");
-        byte[] key = km.loadKey();
+        SecretKey key = km.loadKey();
         assertNotNull("Key cannot be null", key);
-        assertEquals("improper key length", 32, key.length);
+        assertEquals("improper key length", 32, key.getEncoded().length);
     }
 
     public void testLocalKey() {
@@ -39,7 +40,7 @@ public class KeyManagerTest extends ActivityUnitTestCase {
         KeyManager km = new KeyManager(getActivity(), settings);
         km.accountName_$eq("pfnguyen@gmail.com");
         km.loadKey();
-        SecretKeySpec k = km.localKey();
+        SecretKey k = km.localKey().right().get();
         assertNotNull("key cannot be null", k);
         String hexed = KeyManager.hex(k.getEncoded());
         assertNotNull("cannot be null", hexed);

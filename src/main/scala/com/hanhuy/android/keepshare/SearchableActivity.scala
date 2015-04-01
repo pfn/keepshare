@@ -1,7 +1,7 @@
 package com.hanhuy.android.keepshare
 
 import com.hanhuy.android.common.AndroidConversions._
-import com.hanhuy.android.common.{UiBus, RichActivity, LogcatTag}
+import com.hanhuy.android.common.{UiBus, LogcatTag}
 import com.hanhuy.android.common.RichLogger._
 import TypedResource._
 
@@ -95,7 +95,7 @@ class SearchableActivity extends Activity {
     searchView foreach { search =>
       search.setIconifiedByDefault(getResources.getBoolean(R.bool.is_phone))
       search.setSearchableInfo(
-        systemService[SearchManager].getSearchableInfo(getComponentName))
+        this.systemService[SearchManager].getSearchableInfo(getComponentName))
       queryInput foreach { search.setQuery(_, false) }
     }
     true

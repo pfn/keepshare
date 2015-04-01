@@ -117,7 +117,7 @@ class SetupActivity extends Activity with TypedViewHolder {
 
   override def onResume() {
     super.onResume()
-    val imm = systemService[InputMethodManager]
+    val imm = this.systemService[InputMethodManager]
     val list = imm.getEnabledInputMethodList
     val enabled = list exists (
       _.getPackageName == "com.hanhuy.android.keepshare")
@@ -132,7 +132,7 @@ class SetupActivity extends Activity with TypedViewHolder {
     setContentView(R.layout.setup)
 
     keyboardToggle onCheckedChanged { b =>
-      val imm = systemService[InputMethodManager]
+      val imm = this.systemService[InputMethodManager]
       val list = imm.getEnabledInputMethodList
       val enabled = list exists (
         _.getPackageName == "com.hanhuy.android.keepshare")

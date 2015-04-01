@@ -8,7 +8,7 @@ import android.database.Cursor
 import android.os.Bundle
 import android.view.{View, ViewGroup}
 import android.widget.CursorAdapter
-import com.hanhuy.android.common.{ServiceBus, UiBus, RichActivity}
+import com.hanhuy.android.common.{ServiceBus, UiBus}
 import com.keepassdroid.provider.Contract
 
 import com.hanhuy.android.common.AndroidConversions._

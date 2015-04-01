@@ -1,18 +1,17 @@
 package com.hanhuy.android.keepshare
 
+import com.google.android.gms.auth.UserRecoverableAuthException
+import com.google.android.gms.common.AccountPicker
+import com.google.android.gms.common.api.GoogleApiClient
+import com.google.android.gms.drive.{DriveFile, MetadataChangeSet, Drive}
+import com.google.android.gms.drive.query.{Query, SearchableField, Filters}
 import com.hanhuy.android.common.{UiBus, LogcatTag}
 import com.hanhuy.android.common.RichLogger._
 
 import collection.JavaConversions._
 
 import java.security.{Key, SecureRandom, MessageDigest}
-import com.google.api.client.googleapis.extensions.android.gms.auth._
-import com.google.api.client.json.gson.GsonFactory
-import com.google.api.services.drive.{Drive, DriveScopes}
-import com.google.api.client.extensions.android.http.AndroidHttp
-import com.google.api.client.http.{ByteArrayContent, GenericUrl}
 import java.nio.ByteBuffer
-import com.google.api.services.drive.model.{File, ParentReference}
 import android.app.Activity
 import javax.crypto.{SecretKey, Cipher}
 import javax.crypto.spec.{IvParameterSpec, SecretKeySpec}
@@ -95,14 +94,16 @@ class KeyManager(c: Context, settings: Settings) {
   import KeyManager._
   implicit val TAG = LogcatTag("KeyManager")
 
-  private var nameSelected = false
-  def accountName = credential.getSelectedAccountName
-  def accountName_=(a: String) = {
-    nameSelected = true
-    credential.setSelectedAccountName(a)
-  }
+  private var nameSelected = true
+//  def accountName = credential.getSelectedAccountName
+//  def accountName_=(a: String) = {
+//    nameSelected = true
+//    credential.setSelectedAccountName(a)
+//  }
+  var accountName: String = _
 
-  def newChooseAccountIntent = credential.newChooseAccountIntent()
+  def newChooseAccountIntent = AccountPicker.newChooseAccountIntent(null, null,
+    Array("com.google"), false, null, null, null, null)
 
   def ready = (Seq(Settings.GOOGLE_USER,
     Settings.DATABASE_FILE,
@@ -130,47 +131,57 @@ class KeyManager(c: Context, settings: Settings) {
     }
   }
 
-  private lazy val credential = GoogleAccountCredential.usingOAuth2(c,
-    Seq(DriveScopes.DRIVE_APPDATA))
-
-  lazy val drive = new Drive.Builder(AndroidHttp.newCompatibleTransport,
-    new GsonFactory, credential).build
+  lazy val apiClient = {
+    val client = new GoogleApiClient.Builder(c)
+      .addApi(Drive.API)
+      .addScope(Drive.SCOPE_APPFOLDER)
+      .build
+    val result = client.blockingConnect()
+    if (!result.isSuccess) throw new IOException(result.toString)
+    client
+  }
 
   def loadKey(): SecretKey = {
 
     Option(KeyManager.cloudKey) getOrElse {
       if (!nameSelected)
         throw new IllegalStateException("account name has not been set")
-      val req = drive.files.list
-      req.setQ("'appdata' in parents")
+      val appFolder = Drive.DriveApi.getAppFolder(apiClient)
       try {
-        val files = req.execute()
-        files.getItems find (_.getTitle == KEY_FILE) map {
-          file =>
-            val resp = drive.getRequestFactory.buildGetRequest(
-              new GenericUrl(file.getDownloadUrl)).execute
-            val buf = Array.ofDim[Byte](32)
-            val in = resp.getContent
-            val b = ByteBuffer.allocate(32)
-            Stream.continually(in.read(buf)).takeWhile(_ != -1) foreach { r =>
-              b.put(buf, 0, r)
-            }
-            b.flip()
-            if (b.remaining != 32) {
-              e("wrong buffer size: " + b.remaining)
-              return null
-            }
-            b.get(buf)
-            val hash = settings.get(Settings.CLOUD_KEY_HASH)
-            if (hash != null && sha1(buf) != hash) {
-              e("cloud key has changed")
-              return null
-            }
-            _cloudKey = new SecretKeySpec(buf, ALG)
-            v("Loaded cloud key")
+        val result = appFolder.queryChildren(apiClient,
+          new Query.Builder()
+            .addFilter(Filters.eq(SearchableField.TITLE, KEY_FILE))
+            .build())
+          .await().getMetadataBuffer
+        result find (_ != null) map { metadata =>
+          val dfile = Drive.DriveApi.getFile(apiClient, metadata.getDriveId)
+            .open(apiClient, DriveFile.MODE_READ_ONLY, null)
+            .await().getDriveContents
+          val buf = Array.ofDim[Byte](32)
+          val in = dfile.getInputStream
+          val b = ByteBuffer.allocate(32)
+          Stream.continually(in.read(buf)).takeWhile(_ != -1) foreach { r =>
+            b.put(buf, 0, r)
+          }
+          in.close()
+          dfile.discard(apiClient)
+          b.flip()
+          if (b.remaining != 32) {
+            e("wrong buffer size: " + b.remaining)
+            return null
+          }
+          b.get(buf)
+          val hash = settings.get(Settings.CLOUD_KEY_HASH)
+          if (hash != null && sha1(buf) != hash) {
+            e("cloud key has changed")
+            return null
+          }
+          _cloudKey = new SecretKeySpec(buf, ALG)
+          v("Loaded cloud key")
         } getOrElse createKey()
+        result.release()
       } catch {
-        case e: UserRecoverableAuthIOException =>
+        case e: UserRecoverableAuthException =>
           UiBus.post {
             Toast.makeText(Application.instance,
               Application.instance.getString(
@@ -193,19 +204,24 @@ class KeyManager(c: Context, settings: Settings) {
   }
 
   def createKey(): SecretKey = {
-    val keybuf = Array.ofDim[Byte](32)
-    random.nextBytes(keybuf)
-    settings.set(Settings.CLOUD_KEY_HASH, sha1(keybuf))
-
-    val content = new ByteArrayContent("application/octet-stream", keybuf)
-    val f = new File
-    f.setTitle(KEY_FILE)
-    f.setParents(Seq(new ParentReference().setId("appdata")))
     try {
-      val r = drive.files.insert(f, content).execute()
+
+      val keybuf = Array.ofDim[Byte](32)
+      random.nextBytes(keybuf)
+      settings.set(Settings.CLOUD_KEY_HASH, sha1(keybuf))
+      val appFolder = Drive.DriveApi.getAppFolder(apiClient)
+      val metadata = new MetadataChangeSet.Builder()
+        .setMimeType("application/octet-stream")
+        .setTitle(KEY_FILE).build()
+      val contents = Drive.DriveApi.newDriveContents(apiClient).await().getDriveContents
+      val out = contents.getOutputStream
+      val written = out.write(keybuf)
+      out.close()
+      appFolder.createFile(apiClient, metadata, contents)
+
       loadKey()
     } catch {
-      case e: UserRecoverableAuthIOException =>
+      case e: UserRecoverableAuthException =>
         requestAuthz(e, STATE_SAVE)
         null
     }
@@ -241,7 +257,7 @@ class KeyManager(c: Context, settings: Settings) {
     }
   }
 
-  private def requestAuthz(e: UserRecoverableAuthIOException, state: String) {
+  private def requestAuthz(e: UserRecoverableAuthException, state: String) {
     val i = e.getIntent
     i.putExtra(EXTRA_STATE, state)
     c match {
