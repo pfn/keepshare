@@ -7,8 +7,9 @@ object Application {
   private var _instance: Application = _
   def instance = _instance
 }
-@ReportsCrashes(formKey = "",
-  formUri = "http://hanhuy-acra.appspot.com/api/crashreport")
+@ReportsCrashes(
+  formUri = "http://hanhuy-acra.appspot.com/api/crashreport",
+  sendReportsAtShutdown = false)
 class Application extends android.app.Application {
   override def onCreate() {
     super.onCreate()
