@@ -10,7 +10,7 @@
 
     <uses-permission android:name="android.permission.GET_ACCOUNTS"/>
     <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-sdk android:minSdkVersion="14" android:targetSdkVersion="18"/>
+    <uses-sdk android:minSdkVersion="14" android:targetSdkVersion="21"/>
     <application
             tools:replace="android:label,android:icon"
             android:name=".Application"
