@@ -131,14 +131,15 @@ class SearchableActivity extends Activity {
     val pd = ProgressDialog.show(this,
       getString(R.string.searching),
       getString(R.string.running_search), true, false)
-    import collection.JavaConversions._
     async {
       val results = ShareActivity.queryDatabase(this, settings, query :: Nil)
       results map { result =>
-        val selected = result.zipWithIndex find { case (e, i) =>
-          id contains Database.getId(e)
-          false
-        } map { _._2 } getOrElse -1
+        val selected = (for {
+          i <- id
+          f <- result.zipWithIndex find { case (e, _) =>
+            i == Database.getId(e)
+          }
+        } yield f._2) getOrElse -1
         UiBus.post {
           val adapter = new BaseAdapter {
 
