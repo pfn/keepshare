@@ -7,13 +7,13 @@ import android.content.{Intent, Context}
 import android.database.Cursor
 import android.os.Bundle
 import android.view.{View, ViewGroup}
-import android.widget.CursorAdapter
+import android.widget.{BaseAdapter, CursorAdapter}
 import com.hanhuy.android.common.{ServiceBus, UiBus}
-import com.keepassdroid.provider.Contract
 
 import com.hanhuy.android.common.AndroidConversions._
 
 import TypedResource._
+import com.hanhuy.keepassj.PwDefs
 
 /**
  * @author pfnguyen
@@ -44,33 +44,32 @@ class AccessibilitySearchActivity extends Activity with TypedViewHolder {
       val uri = new URI(url)
       val uris = ShareActivity.goUp(uri) map (_.toString)
       val subhosts = ShareActivity.subhosts(uri.getHost)
-      val cursor = ShareActivity.queryDatabase(this, settings, uris ++ subhosts)
+      val results = ShareActivity.queryDatabase(this, settings, uris ++ subhosts)
 
-      if (cursor != null) {
+      results map { result =>
 
         UiBus.post {
           findView(TR.flipper).showNext()
           val list = findView(TR.list)
           list.setEmptyView(findView(TR.empty))
 
-          if (!cursor.isClosed) {
+            val adapter = new BaseAdapter {
 
-            val adapter = new CursorAdapter(this, cursor, false) {
-              def newView(p1: Context, cursor: Cursor, c: ViewGroup) = {
-                val view = getLayoutInflater.inflate(R.layout.pwitem, c, false)
-                view.findView(TR.name).setText(
-                  cursor.getString(cursor.getColumnIndex(Contract.TITLE)))
-                view.findView(TR.username).setText(
-                  cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
-                view
+              override def getCount = result.getUCount
+
+              override def getItemId(i: Int) = Database.getId(getItem(i))
+
+              override def getView(i: Int, view: View, c: ViewGroup) = {
+                val row = Option(view) getOrElse getLayoutInflater.inflate(R.layout.pwitem, c, false)
+                row.findView(TR.name).setText(
+                  Database.getField(getItem(i), PwDefs.TitleField) orNull)
+                row.findView(TR.username).setText(
+                  Database.getField(getItem(i), PwDefs.UserNameField) orNull)
+                row
               }
 
-              def bindView(view: View, c: Context, cursor: Cursor) {
-                view.findView(TR.name).setText(
-                  cursor.getString(cursor.getColumnIndex(Contract.TITLE)))
-                view.findView(TR.username).setText(
-                  cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
-              }
+              override def getItem(i: Int) = result.GetAt(i)
+
             }
             val onClickHandler = { pos: Int =>
               val cursor = adapter.getItem(pos).asInstanceOf[Cursor]
@@ -78,8 +77,8 @@ class AccessibilitySearchActivity extends Activity with TypedViewHolder {
               findView(TR.continu).onClick {
                 ServiceBus.send(AccessibilityFillEvent(
                   packageName, windowId, url,
-                  cursor.getString(cursor.getColumnIndex(Contract.USERNAME)),
-                  cursor.getString(cursor.getColumnIndex(Contract.PASSWORD))))
+                  Database.getField(result.GetAt(pos), PwDefs.UserNameField) orNull,
+                  Database.getField(result.GetAt(pos), PwDefs.PasswordField) orNull))
                 finish()
               }
             }
@@ -93,9 +92,6 @@ class AccessibilitySearchActivity extends Activity with TypedViewHolder {
                 findView(TR.continu).setEnabled(true)
               }
             }
-          } else {
-            findView(TR.select_prompt).setVisibility(View.GONE)
-          }
         }
       }
     }

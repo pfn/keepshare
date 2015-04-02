@@ -4,11 +4,6 @@
       package="com.hanhuy.android.keepshare"
       android:versionCode="13"
       android:versionName="2.0.0preview">
-    <permission android:protectionLevel="dangerous"
-                android:label="KeePass database access"
-                android:permissionGroup="@string/appname"
-                android:name="com.hanhuy.android.keepshare.permission.READ_DATABASE"/>
-    <uses-permission android:name="com.hanhuy.android.keepshare.permission.READ_DATABASE"/>
 
     <!-- used to save file selection from a content provider -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
@@ -100,11 +95,5 @@
                     android:name="android.accessibilityservice"
                     android:resource="@xml/accessibility_service_config" />
         </service>
-        <activity android:name="com.keepassdroid.provider.AuthzActivity"
-                  android:exported="false"
-                  android:theme="@android:style/Theme.DeviceDefault.Dialog"/>
-        <provider android:name="com.keepassdroid.provider.DatabaseProvider"
-                  android:authorities="com.hanhuy.android.keepshare.database"
-                  android:readPermission="com.hanhuy.android.keepshare.permission.READ_DATABASE"/>
     </application>
 </manifest>

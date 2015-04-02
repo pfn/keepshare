@@ -14,9 +14,10 @@ import android.view.{View, MenuItem, Menu}
 import android.widget.{CompoundButton, Toast}
 import java.io.{FileOutputStream, File}
 import android.text.{Editable, TextWatcher}
-import com.keepassdroid.provider.Contract
 import android.view.inputmethod.InputMethodManager
 import android.provider.OpenableColumns
+
+import scala.util.Try
 
 object RequestCodes {
 
@@ -236,64 +237,54 @@ class SetupActivity extends Activity with TypedViewHolder {
             async {
               val b = new Bundle
               val keyfilepath = if (keyf.isFile) keyf.getAbsolutePath else ""
-              b.putString(Contract.EXTRA_DATABASE, db.getAbsolutePath)
-              b.putString(Contract.EXTRA_PASSWORD, password.trim)
-              b.putString(Contract.EXTRA_KEYFILE, keyfilepath)
-              try {
-                val result = getContentResolver.call(
-                  Contract.URI, Contract.METHOD_OPEN, null, b)
-                if (result != null && result.containsKey(Contract.EXTRA_ERROR)) {
-                  UiBus.post {  error(result.getString(Contract.EXTRA_ERROR)) }
-                } else if (result == null) {
-                  UiBus.post { error(R.string.keepass_no_respond) }
-                } else {
-                  keymanager.loadKey()
-                  keymanager.localKey match {
-                    case Left(error) =>
-                      UiBus.post {
-                        Toast.makeText(
-                          this, error.toString, Toast.LENGTH_SHORT).show()
-                        finish()
-                      }
-                    case Right(k) =>
-                      val encdb = KeyManager.encrypt(k, db.getAbsolutePath)
-                      val encpw = KeyManager.encrypt(k, password.trim)
-                      val enckeyf = KeyManager.encrypt(k, keyfilepath)
-                      val verifier = KeyManager.encrypt(k, KeyManager.VERIFIER)
+              Try(Database.open(
+                db.getAbsolutePath,
+                Option(password.trim),
+                if (keyf.isFile) Some(keyf.getAbsolutePath) else None)) map { r =>
+                keymanager.loadKey()
+                keymanager.localKey match {
+                  case Left(error) =>
+                    UiBus.post {
+                      Toast.makeText(
+                        this, error.toString, Toast.LENGTH_SHORT).show()
+                      finish()
+                    }
+                  case Right(k) =>
+                    val encdb = KeyManager.encrypt(k, db.getAbsolutePath)
+                    val encpw = KeyManager.encrypt(k, password.trim)
+                    val enckeyf = KeyManager.encrypt(k, keyfilepath)
+                    val verifier = KeyManager.encrypt(k, KeyManager.VERIFIER)
 
-                      settings.set(Settings.VERIFY_DATA, verifier)
-                      settings.set(Settings.PASSWORD, encpw)
-                      settings.set(Settings.KEYFILE_PATH, enckeyf)
-                      settings.set(Settings.DATABASE_FILE, encdb)
-                      settings.set(Settings.KEYBOARD_TIMEOUT,
-                        findView(TR.timeout).getCheckedRadioButtonId match {
-                          case R.id.timeout_60 => 60
-                          case R.id.timeout_45 => 45
-                          case R.id.timeout_30 => 30
-                          case R.id.timeout_15 => 15
-                        })
-                      settings.set(Settings.PIN_TIMEOUT,
-                        findView(TR.service_timeout).getCheckedRadioButtonId match {
-                          case R.id.svctimeout_60 => 60
-                          case R.id.svctimeout_15 => 15
-                          case R.id.svctimeout_5  => 5
-                          case R.id.svctimeout_1  => 1
-                        })
-                      settings.set(Settings.PASSWORD_OVERRIDE,
-                        findView(TR.password_override).isChecked)
-                      UiBus.post {
-                        success(R.string.settings_saved)
-                        setResult(Activity.RESULT_OK)
-                        if (getIntent.hasExtra(EXTRA_FOR_RESULT))
-                          finish()
-                      }
-                  }
+                    settings.set(Settings.VERIFY_DATA, verifier)
+                    settings.set(Settings.PASSWORD, encpw)
+                    settings.set(Settings.KEYFILE_PATH, enckeyf)
+                    settings.set(Settings.DATABASE_FILE, encdb)
+                    settings.set(Settings.KEYBOARD_TIMEOUT,
+                      findView(TR.timeout).getCheckedRadioButtonId match {
+                        case R.id.timeout_60 => 60
+                        case R.id.timeout_45 => 45
+                        case R.id.timeout_30 => 30
+                        case R.id.timeout_15 => 15
+                      })
+                    settings.set(Settings.PIN_TIMEOUT,
+                      findView(TR.service_timeout).getCheckedRadioButtonId match {
+                        case R.id.svctimeout_60 => 60
+                        case R.id.svctimeout_15 => 15
+                        case R.id.svctimeout_5  => 5
+                        case R.id.svctimeout_1  => 1
+                      })
+                    settings.set(Settings.PASSWORD_OVERRIDE,
+                      findView(TR.password_override).isChecked)
+                    UiBus.post {
+                      success(R.string.settings_saved)
+                      setResult(Activity.RESULT_OK)
+                      if (getIntent.hasExtra(EXTRA_FOR_RESULT))
+                        finish()
+                    }
                 }
-              } catch {
-                case e: IllegalArgumentException => UiBus.post {
-                  error(R.string.keepassdroid_not_installed)
-                  RichLogger.e("failed to communicate with keepassdroid", e)
-                }
+              } recover { case e: Exception =>
+                UiBus.post {  error(e.getMessage) }
+                RichLogger.e("failed to load database", e)
               }
               UiBus.post { findView(TR.progress2).setVisibility(View.GONE) }
             }

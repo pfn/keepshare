@@ -3,6 +3,7 @@ package com.hanhuy.android.keepshare
 import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common._
 import com.hanhuy.android.common.RichLogger._
+import com.hanhuy.keepassj.{PwDefs, PwEntry, PwObjectList}
 
 import collection.JavaConversions._
 
@@ -13,13 +14,14 @@ import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.content.{ComponentName, ContentResolver, Context, Intent}
 import java.net.URI
-import android.widget.{Adapter, CursorAdapter, Toast}
+import android.widget.{BaseAdapter, Adapter, CursorAdapter, Toast}
 import android.view.{ViewGroup, View}
-import com.keepassdroid.provider.Contract
 import android.database.Cursor
 import android.view.inputmethod.InputMethodManager
 
 import TypedResource._
+
+import scala.util.Try
 
 object ShareActivity {
   implicit val TAG = LogcatTag("ShareActivity")
@@ -36,13 +38,11 @@ object ShareActivity {
       Seq(uri) ++ goUp(u)
   }
   def queryDatabase(c: Context, settings: Settings,
-                    query: Seq[String]): Cursor = {
+                    query: Seq[String]): Option[PwObjectList[PwEntry]] = {
     v("possible queries: " + query)
     val km = new KeyManager(c, settings)
-    val cr = c.getContentResolver
-    val r = cr.query(Contract.URI, null, "", null, null)
     var opened = true
-    if (r == null) {
+    if (!Database.isOpen) {
       opened = false
       val googleUser = settings.get(Settings.GOOGLE_USER)
       if (googleUser != null) {
@@ -77,21 +77,19 @@ object ShareActivity {
           }
           case Right((db, pw, keyf)) =>
             val b = new Bundle
-            b.putString(Contract.EXTRA_DATABASE, db)
-            b.putString(Contract.EXTRA_PASSWORD, pw)
-            b.putString(Contract.EXTRA_KEYFILE, keyf)
-            val res = cr.call(Contract.URI, Contract.METHOD_OPEN, null, b)
-            if (res == null || res.containsKey(Contract.EXTRA_ERROR)) {
-              Toast.makeText(c, c.getString(R.string.failed_to_open) +
-                  res.getString(Contract.EXTRA_ERROR),
-                Toast.LENGTH_LONG).show()
-              c match {
-                case a: Activity =>
-                  a.startActivityForResult(SetupActivity.intent,
-                    RequestCodes.REQUEST_SETUP)
-                case _ =>
-              }
-            } else opened = true
+            Try(Database.open(db, Option(pw), Option(keyf))) map (
+              _ => opened = true) recover {
+              case e: Exception =>
+                Toast.makeText(c, c.getString(R.string.failed_to_open) +
+                  e.getMessage,
+                  Toast.LENGTH_LONG).show()
+                c match {
+                  case a: Activity =>
+                    a.startActivityForResult(SetupActivity.intent,
+                      RequestCodes.REQUEST_SETUP)
+                  case _ =>
+                }
+            }
         }
       } else {
         c match {
@@ -103,19 +101,11 @@ object ShareActivity {
       }
     }
     if (opened) {
-      var cursor: Cursor = null
-      query find { q =>
-        cursor = cr.query(Contract.URI, null, q, null, null)
-        val hasResults = cursor.getCount > 0
-        if (!hasResults)
-          cursor.close()
-        hasResults
-      }
-      cursor
+      query collectFirst Function.unlift(Database.search)
     } else
-      null
+      None
   }
-  def selectHandler(a: Activity, settings: Settings, cursor: Cursor) = {
+  def selectHandler(a: Activity, settings: Settings, entry: PwEntry) = {
     val imm = a.systemService[InputMethodManager]
     val keyboardEnabled =  imm.getEnabledInputMethodList exists {
       _.getPackageName == "com.hanhuy.android.keepshare" }
@@ -135,11 +125,14 @@ object ShareActivity {
     } else {
       val intent = new Intent(a, classOf[CredentialHolderService])
       intent.putExtra(CredentialHolderService.EXTRA_TITLE,
-        cursor.getString(cursor.getColumnIndex(Contract.TITLE)))
+        Database.getField(entry, PwDefs.TitleField) orNull
+      )
       intent.putExtra(CredentialHolderService.EXTRA_USERNAME,
-        cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
+        Database.getField(entry, PwDefs.UserNameField) orNull
+      )
       intent.putExtra(CredentialHolderService.EXTRA_PASSWORD,
-        cursor.getString(cursor.getColumnIndex(Contract.PASSWORD)))
+        Database.getField(entry, PwDefs.PasswordField) orNull
+      )
       a.startService(intent)
       UiBus.post {
         val token = a.getWindow.getAttributes.token
@@ -204,39 +197,37 @@ class ShareActivity extends Activity with TypedViewHolder {
       val uri = new URI(url)
       val uris = ShareActivity.goUp(uri) map (_.toString)
       val subhosts = ShareActivity.subhosts(uri.getHost)
-      val cursor = ShareActivity.queryDatabase(this, settings, uris ++ subhosts)
+      val results = ShareActivity.queryDatabase(this, settings, uris ++ subhosts)
 
-      if (cursor != null) {
+      results foreach { result =>
 
         UiBus.post {
           findView(TR.flipper).showNext()
           val list = findView(TR.list)
           list.setEmptyView(findView(TR.empty))
 
-          if (!cursor.isClosed) {
+            val adapter = new BaseAdapter {
+              override def getItemId(i: Int) = i
 
-            val adapter = new CursorAdapter(this, cursor, false) {
-              def newView(p1: Context, cursor: Cursor, c: ViewGroup) = {
-                val view = getLayoutInflater.inflate(R.layout.pwitem, c, false)
-                view.findView(TR.name).setText(
-                  cursor.getString(cursor.getColumnIndex(Contract.TITLE)))
-                view.findView(TR.username).setText(
-                  cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
-                view
+              override def getCount = result.getUCount
+
+              override def getView(i: Int, view: View, c: ViewGroup) = {
+                val row = Option(view) getOrElse {
+                  getLayoutInflater.inflate(R.layout.pwitem, c, false)
+                }
+                row.findView(TR.name).setText(
+                  Database.getField(getItem(i), PwDefs.TitleField) orNull)
+                row.findView(TR.username).setText(
+                  Database.getField(getItem(i), PwDefs.UserNameField) orNull)
+                row
               }
 
-              def bindView(view: View, c: Context, cursor: Cursor) {
-                view.findView(TR.name).setText(
-                  cursor.getString(cursor.getColumnIndex(Contract.TITLE)))
-                view.findView(TR.username).setText(
-                  cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
-              }
+              override def getItem(i: Int) = result.GetAt(i)
             }
             val onClickHandler = { pos: Int =>
-              val cursor = adapter.getItem(pos).asInstanceOf[Cursor]
               findView(TR.continu).setEnabled(true)
               findView(TR.continu).onClick {
-                ShareActivity.selectHandler(this, settings, cursor)
+                ShareActivity.selectHandler(this, settings, adapter.getItem(pos))
               }
             }
             list.onItemClick(onClickHandler)
@@ -249,9 +240,6 @@ class ShareActivity extends Activity with TypedViewHolder {
                 findView(TR.continu).setEnabled(true)
               }
             }
-          } else {
-            findView(TR.select_prompt).setVisibility(View.GONE)
-          }
         }
       }
     }

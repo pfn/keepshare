@@ -54,6 +54,7 @@ class PINHolderService extends Service {
   }
 
   override def onDestroy() {
+    Database.close()
     instance = None
   }
 

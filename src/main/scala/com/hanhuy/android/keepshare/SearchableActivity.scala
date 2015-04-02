@@ -1,5 +1,6 @@
 package com.hanhuy.android.keepshare
 
+import android.view.inputmethod.InputMethodManager
 import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common.{UiBus, LogcatTag}
 import com.hanhuy.android.common.RichLogger._
@@ -10,10 +11,12 @@ import android.os.Bundle
 import android.content._
 import android.widget._
 import android.database.{AbstractCursor, Cursor}
-import com.keepassdroid.provider.Contract
 import android.net.Uri
 import android.provider.BaseColumns
 import android.view.{MenuItem, View, ViewGroup, Menu}
+import com.hanhuy.keepassj.PwDefs
+
+import scala.math.ScalaNumericAnyConversions
 
 class SearchableActivity extends Activity {
   implicit val TAG = LogcatTag("SearchableActivity")
@@ -63,6 +66,11 @@ class SearchableActivity extends Activity {
   override def onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
     setIntent(intent)
+    searchView foreach { s =>
+      UiBus.post {
+        s.setIconified(true)
+      }
+    }
   }
 
   override def onResume() {
@@ -79,7 +87,10 @@ class SearchableActivity extends Activity {
       queryInput foreach { q =>
         doSearch(q, Option(
           intent.getStringExtra(SearchManager.EXTRA_DATA_KEY)) map (_.toLong))
-        searchView foreach { _.setQuery(q, false) }
+        searchView foreach { s =>
+          s.setQuery(q, false)
+          this.systemService[InputMethodManager].hideSoftInputFromWindow(s.getWindowToken, 0)
+        }
       }
     } else {
       if (!settings.get(Settings.NEEDS_PIN) || PINHolderService.instance.isDefined)
@@ -122,53 +133,56 @@ class SearchableActivity extends Activity {
     val pd = ProgressDialog.show(this,
       getString(R.string.searching),
       getString(R.string.running_search), true, false)
+    import collection.JavaConversions._
     async {
-      val cursor = ShareActivity.queryDatabase(this, settings, query :: Nil)
-      var selected = -1
-      if (cursor != null && !cursor.isClosed) {
+      val results = ShareActivity.queryDatabase(this, settings, query :: Nil)
+      results map { result =>
+        val selected = result.zipWithIndex find { case (e, i) =>
+          id contains Database.getId(e)
+          false
+        } map { _._2 } getOrElse -1
         UiBus.post {
-          Stream.continually(cursor.moveToNext) takeWhile (
-            _ && selected == -1) foreach { _ =>
-              if (id exists (_ == cursor.getLong(0)))
-                selected = cursor.getPosition()
-            }
-          val adapter = new CursorAdapter(this, cursor, false) {
-            def newView(p1: Context, cursor: Cursor, c: ViewGroup) = {
-              val view = getLayoutInflater.inflate(R.layout.pwitem, c, false)
-              view.findView(TR.name).setText(
-                cursor.getString(cursor.getColumnIndex(Contract.TITLE)))
-              view.findView(TR.username).setText(
-                cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
-              view
+          val adapter = new BaseAdapter {
+
+            override def getCount = result.getUCount
+
+            override def getItemId(i: Int) = Database.getId(getItem(i))
+
+            override def getView(i: Int, view: View, c: ViewGroup) = {
+              val row = Option(view) getOrElse {
+                getLayoutInflater.inflate(R.layout.pwitem, c, false)
+              }
+              row.findView(TR.name).setText(
+                Database.getField(getItem(i), PwDefs.TitleField) orNull)
+              row.findView(TR.username).setText(
+                Database.getField(getItem(i), PwDefs.UserNameField) orNull)
+              row
             }
 
-            def bindView(view: View, c: Context, cursor: Cursor) {
-              view.findView(TR.name).setText(
-                cursor.getString(cursor.getColumnIndex(Contract.TITLE)))
-              view.findView(TR.username).setText(
-                cursor.getString(cursor.getColumnIndex(Contract.USERNAME)))
-            }
+            override def getItem(i: Int) = result.GetAt(i)
+
           }
           list.setAdapter(adapter)
           list.onItemClick { pos =>
             ShareActivity.selectHandler(
-              this, settings, adapter.getItem(pos).asInstanceOf[Cursor])
+              this, settings, adapter.getItem(pos))
           }
           if (adapter.getCount == 0)
             empty.setText(R.string.no_search_results)
         }
-      } else UiBus.post {
-        empty.setText(R.string.no_search_results)
-      }
-      UiBus.post {
-        pd.dismiss()
-        if (selected != -1) {
-          UiBus.post {
-            list.setItemChecked(selected, true)
-            list.smoothScrollToPosition(selected)
+        UiBus.post {
+          pd.dismiss()
+          if (selected != -1) {
+            UiBus.post {
+              list.setItemChecked(selected, true)
+              list.smoothScrollToPosition(selected)
+            }
           }
         }
+      } getOrElse UiBus.post {
+        empty.setText(R.string.no_search_results)
       }
+      UiBus.post { pd.dismiss() }
     }
   }
 
@@ -206,10 +220,23 @@ class SearchProvider extends ContentProvider {
             args: Array[String], order: String) = {
 
     v("uri is: " + u)
+    val empty = Option(u.getPath) exists(_.endsWith("/"))
+
     val q = Uri.decode(u.getLastPathSegment).trim
-    val cursor = ShareActivity.queryDatabase(getContext, settings, q :: Nil)
+    val results = if (empty)
+      None
+    else
+      ShareActivity.queryDatabase(getContext, settings, q :: Nil)
 
     new AbstractCursor {
+      def toDouble(x: Any) = x.toString.toDouble
+      def toFloat(x: Any) = x.toString.toFloat
+      def toInt(x: Any) = x.toString.toInt
+      def toLong(x: Any) = x.toString.toLong
+      def toShort(x: Any) = x.toString.toShort
+
+      var position = 0
+
       // SUGGEST_COLUMN_INTENT_DATA_ID is necessary for global search to work
       def getColumnNames = Array(
         BaseColumns._ID,
@@ -218,12 +245,18 @@ class SearchProvider extends ContentProvider {
         SearchManager.SUGGEST_COLUMN_INTENT_DATA_ID,
         SearchManager.SUGGEST_COLUMN_INTENT_EXTRA_DATA)
 
-      private lazy val columnMap = Map(
-        0 -> cursor.getColumnIndex(Contract._ID),
-        1 -> cursor.getColumnIndex(Contract.TITLE),
-        2 -> cursor.getColumnIndex(Contract.USERNAME),
-        3 -> cursor.getColumnIndex(Contract._ID),
-        4 -> cursor.getColumnIndex(Contract._ID))
+      def getId(row: Int) =
+        results map { r => Database.getId(r.GetAt(row)) } getOrElse -1L
+
+      def getStr(field: String, row: Int) =
+        results flatMap { r => Database.getField(r.GetAt(row), field) } orNull
+
+      private lazy val columnMap: Map[Int, Int => Any] = Map(
+        0 -> getId,
+        (1, getStr(PwDefs.TitleField, _: Int)),
+        (2, getStr(PwDefs.UserNameField, _: Int)),
+        3 -> getId,
+        4 -> getId)
 
       override def getType(column: Int) = column match {
         case 0 => Cursor.FIELD_TYPE_INTEGER
@@ -233,17 +266,21 @@ class SearchProvider extends ContentProvider {
         case 4 => Cursor.FIELD_TYPE_INTEGER
       }
 
-      def getCount            = if (cursor.isClosed) 0 else cursor.getCount
-      def getInt(col: Int)    = cursor.getInt(columnMap(col))
-      def getDouble(col: Int) = cursor.getDouble(columnMap(col))
-      def getFloat(col: Int)  = cursor.getFloat(columnMap(col))
-      def getLong(col: Int)   = cursor.getLong(columnMap(col))
-      def getShort(col: Int)  = cursor.getShort(columnMap(col))
-      def getString(col: Int) = cursor.getString(columnMap(col))
-      def isNull(col: Int)    = cursor.isNull(columnMap(col))
+      def getCount            = results map (_.getUCount) getOrElse 0
+      def getInt(col: Int)    = toInt(columnMap(col)(position))
+      def getDouble(col: Int) = toDouble(columnMap(col)(position))
+      def getFloat(col: Int)  = toFloat(columnMap(col)(position))
+      def getLong(col: Int)   = toLong(columnMap(col)(position))
+      def getShort(col: Int)  = toShort(columnMap(col)(position))
+      def getString(col: Int) = columnMap(col)(position).toString
+      def isNull(col: Int)    = columnMap(col)(position) == null
 
       override def onMove(oldPosition: Int, newPosition: Int) =
-        cursor.moveToPosition(newPosition)
+        if (newPosition < getCount && newPosition >= 0) {
+          position = newPosition
+          true
+        } else
+          false
     }
   }
 }
