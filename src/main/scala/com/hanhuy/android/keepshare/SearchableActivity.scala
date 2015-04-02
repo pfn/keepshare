@@ -142,7 +142,7 @@ class SearchableActivity extends Activity {
         UiBus.post {
           val adapter = new BaseAdapter {
 
-            override def getCount = result.getUCount
+            override def getCount = result.size
 
             override def getItemId(i: Int) = Database.getId(getItem(i))
 
@@ -157,7 +157,7 @@ class SearchableActivity extends Activity {
               row
             }
 
-            override def getItem(i: Int) = result.GetAt(i)
+            override def getItem(i: Int) = result(i)
 
           }
           list.setAdapter(adapter)
@@ -227,11 +227,12 @@ class SearchProvider extends ContentProvider {
       ShareActivity.queryDatabase(getContext, settings, q :: Nil)
 
     new AbstractCursor {
+      // eww
       def toDouble(x: Any) = x.toString.toDouble
-      def toFloat(x: Any) = x.toString.toFloat
-      def toInt(x: Any) = x.toString.toInt
-      def toLong(x: Any) = x.toString.toLong
-      def toShort(x: Any) = x.toString.toShort
+      def toFloat(x: Any)  = x.toString.toFloat
+      def toInt(x: Any)    = x.toString.toInt
+      def toLong(x: Any)   = x.toString.toLong
+      def toShort(x: Any)  = x.toString.toShort
 
       var position = 0
 
@@ -244,10 +245,10 @@ class SearchProvider extends ContentProvider {
         SearchManager.SUGGEST_COLUMN_INTENT_EXTRA_DATA)
 
       def getId(row: Int) =
-        results map { r => Database.getId(r.GetAt(row)) } getOrElse -1L
+        results map { r => Database.getId(r(row)) } getOrElse -1L
 
       def getStr(field: String, row: Int) =
-        results flatMap { r => Database.getField(r.GetAt(row), field) } orNull
+        results flatMap { r => Database.getField(r(row), field) } orNull
 
       private lazy val columnMap: Map[Int, Int => Any] = Map(
         0 -> getId,
@@ -264,7 +265,7 @@ class SearchProvider extends ContentProvider {
         case 4 => Cursor.FIELD_TYPE_INTEGER
       }
 
-      def getCount            = results map (_.getUCount) getOrElse 0
+      def getCount            = results map (_.size) getOrElse 0
       def getInt(col: Int)    = toInt(columnMap(col)(position))
       def getDouble(col: Int) = toDouble(columnMap(col)(position))
       def getFloat(col: Int)  = toFloat(columnMap(col)(position))
@@ -273,12 +274,12 @@ class SearchProvider extends ContentProvider {
       def getString(col: Int) = columnMap(col)(position).toString
       def isNull(col: Int)    = columnMap(col)(position) == null
 
-      override def onMove(oldPosition: Int, newPosition: Int) =
-        if (newPosition < getCount && newPosition >= 0) {
+      override def onMove(oldPosition: Int, newPosition: Int) = {
+        val r = newPosition < getCount && newPosition >= 0
+        if (r)
           position = newPosition
-          true
-        } else
-          false
+        r
+      }
     }
   }
 }

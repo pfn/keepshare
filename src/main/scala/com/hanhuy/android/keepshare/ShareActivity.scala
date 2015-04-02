@@ -3,7 +3,7 @@ package com.hanhuy.android.keepshare
 import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common._
 import com.hanhuy.android.common.RichLogger._
-import com.hanhuy.keepassj.{PwDefs, PwEntry, PwObjectList}
+import com.hanhuy.keepassj.{PwDefs, PwEntry}
 
 import collection.JavaConversions._
 
@@ -38,7 +38,7 @@ object ShareActivity {
       Seq(uri) ++ goUp(u)
   }
   def queryDatabase(c: Context, settings: Settings,
-                    query: Seq[String]): Option[PwObjectList[PwEntry]] = {
+                    query: Seq[String]): Option[List[PwEntry]] = {
     v("possible queries: " + query)
     val km = new KeyManager(c, settings)
     var opened = true
@@ -209,7 +209,7 @@ class ShareActivity extends Activity with TypedViewHolder {
             val adapter = new BaseAdapter {
               override def getItemId(i: Int) = i
 
-              override def getCount = result.getUCount
+              override def getCount = result.size
 
               override def getView(i: Int, view: View, c: ViewGroup) = {
                 val row = Option(view) getOrElse {
@@ -222,7 +222,7 @@ class ShareActivity extends Activity with TypedViewHolder {
                 row
               }
 
-              override def getItem(i: Int) = result.GetAt(i)
+              override def getItem(i: Int) = result(i)
             }
             val onClickHandler = { pos: Int =>
               findView(TR.continu).setEnabled(true)

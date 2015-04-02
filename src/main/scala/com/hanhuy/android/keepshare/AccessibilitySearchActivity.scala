@@ -55,7 +55,7 @@ class AccessibilitySearchActivity extends Activity with TypedViewHolder {
 
             val adapter = new BaseAdapter {
 
-              override def getCount = result.getUCount
+              override def getCount = result.size
 
               override def getItemId(i: Int) = Database.getId(getItem(i))
 
@@ -68,7 +68,7 @@ class AccessibilitySearchActivity extends Activity with TypedViewHolder {
                 row
               }
 
-              override def getItem(i: Int) = result.GetAt(i)
+              override def getItem(i: Int) = result(i)
 
             }
             val onClickHandler = { pos: Int =>
@@ -77,8 +77,8 @@ class AccessibilitySearchActivity extends Activity with TypedViewHolder {
               findView(TR.continu).onClick {
                 ServiceBus.send(AccessibilityFillEvent(
                   packageName, windowId, url,
-                  Database.getField(result.GetAt(pos), PwDefs.UserNameField) orNull,
-                  Database.getField(result.GetAt(pos), PwDefs.PasswordField) orNull))
+                  Database.getField(result(pos), PwDefs.UserNameField) orNull,
+                  Database.getField(result(pos), PwDefs.PasswordField) orNull))
                 finish()
               }
             }

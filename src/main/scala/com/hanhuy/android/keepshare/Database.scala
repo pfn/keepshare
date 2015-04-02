@@ -48,9 +48,11 @@ object Database {
       p.setSearchString(q)
       val results = new PwObjectList[PwEntry]
       db.getRootGroup.SearchEntries(p, results)
-      if (results.getUCount > 0)
-        Option(results)
-      else None
+      if (results.getUCount > 0) {
+        import collection.JavaConversions._
+        Option(results.toList.sortBy(
+          _.getStrings.ReadSafe(PwDefs.TitleField).toLowerCase))
+      } else None
     }
   }
 
