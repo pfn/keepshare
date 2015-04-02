@@ -2,7 +2,6 @@ package com.hanhuy.android.keepshare
 
 import java.io.FileInputStream
 import java.nio.ByteBuffer
-import java.util.UUID
 
 import com.hanhuy.keepassj._
 import com.hanhuy.keepassj.spr.{SprEngine, SprContext, SprCompileFlags}

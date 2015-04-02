@@ -16,8 +16,6 @@ import android.provider.BaseColumns
 import android.view.{MenuItem, View, ViewGroup, Menu}
 import com.hanhuy.keepassj.PwDefs
 
-import scala.math.ScalaNumericAnyConversions
-
 class SearchableActivity extends Activity {
   implicit val TAG = LogcatTag("SearchableActivity")
   val _implicit: RichActivity = this
