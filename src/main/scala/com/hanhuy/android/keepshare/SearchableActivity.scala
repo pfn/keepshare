@@ -228,12 +228,11 @@ class SearchProvider extends ContentProvider {
       ShareActivity.queryDatabase(getContext, settings, q :: Nil)
 
     new AbstractCursor {
-      // eww
-      def toDouble(x: Any) = x.toString.toDouble
-      def toFloat(x: Any)  = x.toString.toFloat
-      def toInt(x: Any)    = x.toString.toInt
-      def toLong(x: Any)   = x.toString.toLong
-      def toShort(x: Any)  = x.toString.toShort
+      def toDouble(x: Either[Long,String]) = x.fold(_.toDouble, _.toDouble)
+      def toFloat(x:  Either[Long,String]) = x.fold(_.toFloat,  _.toFloat)
+      def toInt(x:    Either[Long,String]) = x.fold(_.toInt,    _.toInt)
+      def toLong(x:   Either[Long,String]) = x.fold(identity,   _.toLong)
+      def toShort(x:  Either[Long,String]) = x.fold(_.toShort,  _.toShort)
 
       var position = 0
 
@@ -246,12 +245,12 @@ class SearchProvider extends ContentProvider {
         SearchManager.SUGGEST_COLUMN_INTENT_EXTRA_DATA)
 
       def getId(row: Int) =
-        results map { r => Database.getId(r(row)) } getOrElse -1L
+        Left(results map { r => Database.getId(r(row)) } getOrElse -1L)
 
       def getStr(field: String, row: Int) =
-        results flatMap { r => Database.getField(r(row), field) } orNull
+        Right(results flatMap { r => Database.getField(r(row), field) } orNull)
 
-      private lazy val columnMap: Map[Int, Int => Any] = Map(
+      private lazy val columnMap: Map[Int, Int => Either[Long,String]] = Map(
         0 -> getId,
         (1, getStr(PwDefs.TitleField, _: Int)),
         (2, getStr(PwDefs.UserNameField, _: Int)),
