@@ -233,6 +233,8 @@ class SearchProvider extends ContentProvider {
       def toInt(x:    Either[Long,String]) = x.fold(_.toInt,    _.toInt)
       def toLong(x:   Either[Long,String]) = x.fold(identity,   _.toLong)
       def toShort(x:  Either[Long,String]) = x.fold(_.toShort,  _.toShort)
+      def toString(x: Either[Long,String]) = x.fold(_.toString, identity)
+      def isNull(x:   Either[Long,String]) = x.fold(_ == null, _ == null)
 
       var position = 0
 
@@ -271,8 +273,8 @@ class SearchProvider extends ContentProvider {
       def getFloat(col: Int)  = toFloat(columnMap(col)(position))
       def getLong(col: Int)   = toLong(columnMap(col)(position))
       def getShort(col: Int)  = toShort(columnMap(col)(position))
-      def getString(col: Int) = columnMap(col)(position).toString
-      def isNull(col: Int)    = columnMap(col)(position) == null
+      def getString(col: Int) = toString(columnMap(col)(position))
+      def isNull(col: Int)    = isNull(columnMap(col)(position))
 
       override def onMove(oldPosition: Int, newPosition: Int) = {
         val r = newPosition < getCount && newPosition >= 0
