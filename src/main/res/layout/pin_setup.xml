@@ -50,14 +50,17 @@
             <Button android:id="@+id/pin_1"
                     android:layout_width="wrap_content"
                     android:layout_height="@dimen/pin_button_height"
+                    android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="1"/>
             <Button android:id="@+id/pin_2"
                     android:layout_width="wrap_content"
                     android:layout_height="@dimen/pin_button_height"
+                    android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="2"/>
             <Button android:id="@+id/pin_3"
                     android:layout_width="wrap_content"
                     android:layout_height="@dimen/pin_button_height"
+                    android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="3"/>
         </TableRow>
         <TableRow
@@ -66,14 +69,17 @@
             <Button android:id="@+id/pin_4"
                     android:layout_width="wrap_content"
                     android:layout_height="@dimen/pin_button_height"
+                    android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="4"/>
             <Button android:id="@+id/pin_5"
                     android:layout_width="wrap_content"
                     android:layout_height="@dimen/pin_button_height"
+                    android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="5"/>
             <Button android:id="@+id/pin_6"
                     android:layout_width="wrap_content"
                     android:layout_height="@dimen/pin_button_height"
+                    android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="6"/>
         </TableRow>
         <TableRow
@@ -82,14 +88,17 @@
             <Button android:id="@+id/pin_7"
                     android:layout_width="wrap_content"
                     android:layout_height="@dimen/pin_button_height"
+                    android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="7"/>
             <Button android:id="@+id/pin_8"
                     android:layout_width="wrap_content"
                     android:layout_height="@dimen/pin_button_height"
+                    android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="8"/>
             <Button android:id="@+id/pin_9"
                     android:layout_width="wrap_content"
                     android:layout_height="@dimen/pin_button_height"
+                    android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="9"/>
         </TableRow>
         <TableRow
@@ -102,11 +111,13 @@
             <Button android:id="@+id/pin_0"
                     android:layout_width="wrap_content"
                     android:layout_height="@dimen/pin_button_height"
+                    android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="0"/>
             <Button android:id="@+id/pin_ok"
                     android:enabled="false"
                     android:layout_width="wrap_content"
                     android:layout_height="@dimen/pin_button_height"
+                    android:textAppearance="?android:attr/textAppearanceMedium"
                     android:text="OK"/>
         </TableRow>
     </TableLayout>

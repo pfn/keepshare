@@ -13,6 +13,7 @@
     <uses-sdk android:minSdkVersion="14" android:targetSdkVersion="21"/>
     <application
             tools:replace="android:label,android:icon"
+            android:theme="@style/AppTheme"
             android:name=".Application"
             android:label="@string/appname"
             android:icon="@drawable/ic_launcher">
@@ -20,12 +21,12 @@
                    android:value="@integer/google_play_services_version"/>
         <activity android:name=".SetupActivity"
                   android:windowSoftInputMode="adjustResize"
-                  android:theme="@android:style/Theme.DeviceDefault.Light"
+                  android:theme="@style/AppTheme"
                   android:label="@string/appname">
         </activity>
         <activity android:name=".PINSetupActivity"
                   android:windowSoftInputMode="adjustResize"
-                  android:theme="@android:style/Theme.DeviceDefault.Light"
+                  android:theme="@style/AppTheme"
                   android:label="@string/appname">
         </activity>
         <activity android:name=".ShareActivity"
@@ -47,7 +48,7 @@
         </activity>
         <activity android:name=".SearchableActivity"
                   android:launchMode="singleTop"
-                  android:theme="@android:style/Theme.DeviceDefault.Light">
+                  android:theme="@style/AppTheme">
             <intent-filter>
                 <action android:name="android.intent.action.SEARCH"/>
             </intent-filter>
@@ -63,7 +64,7 @@
                   android:launchMode="singleInstance"
                   android:theme="@android:style/Theme.DeviceDefault.Light.Dialog"/>
         <activity android:name=".PINEntryActivity"
-                  android:theme="@android:style/Theme.DeviceDefault.Light"/>
+                  android:theme="@style/AppTheme"/>
         <provider android:name=".SearchProvider"
                   android:authorities="com.hanhuy.android.keepshare"
                   android:readPermission="android.permission.GLOBAL_SEARCH"

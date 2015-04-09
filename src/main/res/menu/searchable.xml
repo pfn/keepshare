@@ -4,6 +4,9 @@
     <item android:actionViewClass="android.widget.SearchView"
           android:showAsAction="always"
           android:id="@+id/menu_search"/>
+    <item android:id="@+id/menu_setup_pin"
+          android:showAsAction="never"
+          android:title="@string/setup_pin"/>
     <item android:id="@+id/menu_setup"
           android:showAsAction="never"
           android:title="@string/setup"/>

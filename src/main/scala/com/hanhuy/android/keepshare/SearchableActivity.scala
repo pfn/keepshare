@@ -100,6 +100,8 @@ class SearchableActivity extends Activity {
   override def onCreateOptionsMenu(menu: Menu) = {
     getMenuInflater.inflate(R.menu.searchable, menu)
 
+    menu.findItem(R.id.menu_setup_pin).setVisible(
+      !settings.get(Settings.NEEDS_PIN))
     searchView = Option(menu.findItem(R.id.menu_search)
       .getActionView.asInstanceOf[SearchView])
     searchView foreach { search =>
@@ -116,6 +118,14 @@ class SearchableActivity extends Activity {
       case R.id.menu_setup =>
         startActivity(new Intent(this, classOf[SetupActivity]))
         true
+      case R.id.menu_setup_pin =>
+        if (km.ready) {
+          startActivity(new Intent(this, classOf[PINSetupActivity]))
+        } else {
+          Toast.makeText(this,
+            R.string.setup_required_for_pin, Toast.LENGTH_SHORT).show()
+        }
+    true
       case _ => super.onOptionsItemSelected(item)
     }
   }
