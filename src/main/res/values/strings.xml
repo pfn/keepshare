@@ -107,6 +107,7 @@
     <string name="select_pin">Select a PIN</string>
     <string name="confirm_pin">Confirm selected PIN</string>
     <string name="try_again">Try again</string>
+    <string name="no_more_tries">Goodbye</string>
     <string name="pin_unlock_required">: PIN unlock required</string>
     <string name="confirm_clear_data">
         Are you sure you want to clear your configuration?</string>

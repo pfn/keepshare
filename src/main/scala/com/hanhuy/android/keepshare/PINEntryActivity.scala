@@ -35,7 +35,9 @@ class PINEntryActivity extends Activity with TypedViewHolder {
       error.setText("")
     }
 
+    var verifyCount = 0
     def verifyPin() {
+      verifyCount += 1
       val pinKey = PINHolderService.keyFor(pin)
       val verifier = settings.get(Settings.PIN_VERIFIER)
 
@@ -64,6 +66,11 @@ class PINEntryActivity extends Activity with TypedViewHolder {
           pin = ""
           UiBus.handler.removeCallbacks(clearError)
           UiBus.handler.postDelayed(clearError, 1000)
+          if (verifyCount > 2) {
+            error.setText(R.string.no_more_tries)
+            setResult(Activity.RESULT_CANCELED)
+            finish()
+          }
         }
       }
 
