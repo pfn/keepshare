@@ -34,7 +34,7 @@ class SearchableActivity extends Activity {
     setContentView(R.layout.searchable_activity)
     list.setEmptyView(empty)
 
-    if (settings.get(Settings.GOOGLE_USER) == null) {
+    if (settings.get(Settings.FIRST_RUN)) {
       startActivityForResult(SetupActivity.intent, RequestCodes.REQUEST_SETUP)
     } else if (!km.ready) {
       if (settings.get(Settings.NEEDS_PIN) && PINHolderService.instance.isEmpty)
@@ -42,11 +42,10 @@ class SearchableActivity extends Activity {
           RequestCodes.REQUEST_PIN)
       else
         startActivityForResult(SetupActivity.intent, RequestCodes.REQUEST_SETUP)
-    } else if (KeyManager.cloudKey == null) {
+    } else if (KeyManager.cloudKey.isEmpty) {
       val p = ProgressDialog.show(this, getString(R.string.loading),
         getString(R.string.please_wait), true, false)
       async {
-        km.accountName = settings.get(Settings.GOOGLE_USER)
         km.loadKey()
         km.getConfig match {
           case Left(x) =>
@@ -77,22 +76,24 @@ class SearchableActivity extends Activity {
   }
 
   private def handleIntent(intent: Intent) {
-    if (Intent.ACTION_SEARCH == intent.getAction) {
-      queryInput = Option(intent.getStringExtra(SearchManager.QUERY)) orElse
-        Option(intent.getCharSequenceExtra(SearchManager.USER_QUERY)) map (
-        _.toString)
-      v("extras: " + intent.getExtras)
-      queryInput foreach { q =>
-        doSearch(q, Option(
-          intent.getStringExtra(SearchManager.EXTRA_DATA_KEY)) map (_.toLong))
-        searchView foreach { s =>
-          s.setQuery(q, false)
-          this.systemService[InputMethodManager].hideSoftInputFromWindow(s.getWindowToken, 0)
+    if (km.ready) {
+      if (Intent.ACTION_SEARCH == intent.getAction) {
+        queryInput = Option(intent.getStringExtra(SearchManager.QUERY)) orElse
+          Option(intent.getCharSequenceExtra(SearchManager.USER_QUERY)) map (
+          _.toString)
+        v("extras: " + intent.getExtras)
+        queryInput foreach { q =>
+          doSearch(q, Option(
+            intent.getStringExtra(SearchManager.EXTRA_DATA_KEY)) map (_.toLong))
+          searchView foreach { s =>
+            s.setQuery(q, false)
+            this.systemService[InputMethodManager].hideSoftInputFromWindow(s.getWindowToken, 0)
+          }
         }
+      } else {
+        if (!settings.get(Settings.NEEDS_PIN) || PINHolderService.instance.isDefined)
+          doSearch("", None)
       }
-    } else {
-      if (!settings.get(Settings.NEEDS_PIN) || PINHolderService.instance.isDefined)
-        doSearch("", None)
     }
   }
 
@@ -196,6 +197,7 @@ class SearchableActivity extends Activity {
           false
         }
       case RequestCodes.REQUEST_PIN => result == Activity.RESULT_OK
+      case RequestCodes.REQUEST_SIGN_IN => false
     }
     if (!success)
       finish()
@@ -234,7 +236,7 @@ class SearchProvider extends ContentProvider {
       def toLong(x:   Either[Long,String]) = x.fold(identity,   _.toLong)
       def toShort(x:  Either[Long,String]) = x.fold(_.toShort,  _.toShort)
       def toString(x: Either[Long,String]) = x.fold(_.toString, identity)
-      def isNull(x:   Either[Long,String]) = x.fold(_ == null, _ == null)
+      def isNull(x:   Either[Long,String]) = x.fold(_ => false, _ == null)
 
       var position = 0
 

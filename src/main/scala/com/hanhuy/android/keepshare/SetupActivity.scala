@@ -2,14 +2,12 @@ package com.hanhuy.android.keepshare
 
 import com.hanhuy.android.common._
 import AndroidConversions._
-import RichLogger._
 
 import collection.JavaConversions._
 
 import android.app.{AlertDialog, ProgressDialog, Activity}
 import android.os.Bundle
 import android.content.{ComponentName, ActivityNotFoundException, Intent}
-import android.accounts.AccountManager
 import android.view.{View, MenuItem, Menu}
 import android.widget.{CompoundButton, Toast}
 import java.io.{FileOutputStream, File}
@@ -27,6 +25,8 @@ object RequestCodes {
   val BROWSE_KEYFILE         = 4
   val REQUEST_SETUP          = 5
   val REQUEST_PIN            = 6
+  val REQUEST_SIGN_IN        = 7
+  val REQUEST_SETUP_PIN      = 8
 
   val EXTRA_FOR_RESULT = "com.hanhuy.android.keepshare.extra.FOR_RESULT"
 }
@@ -51,12 +51,6 @@ class SetupActivity extends Activity with TypedViewHolder {
   lazy val keymanager = new KeyManager(this, settings)
   lazy val keyboardToggle = findViewById(
     R.id.toggle_keyboard).asInstanceOf[CompoundButton]
-
-  private def pickAccount() {
-    settings.set(Settings.GOOGLE_USER, null)
-    startActivityForResult(
-      keymanager.newChooseAccountIntent, REQUEST_ACCOUNT_PICKER)
-  }
 
   override def onCreateOptionsMenu(menu: Menu) = {
     super.onCreateOptionsMenu(menu)
@@ -86,7 +80,8 @@ class SetupActivity extends Activity with TypedViewHolder {
         true
       case R.id.menu_setup_pin =>
         if (keymanager.ready) {
-          startActivity(new Intent(this, classOf[PINSetupActivity]))
+          startActivityForResult(new Intent(this, classOf[PINSetupActivity]),
+            RequestCodes.REQUEST_SETUP_PIN)
         } else {
           Toast.makeText(this,
             R.string.setup_required_for_pin, Toast.LENGTH_SHORT).show()
@@ -145,13 +140,28 @@ class SetupActivity extends Activity with TypedViewHolder {
       }
     }
 
-    val user = Option(settings.get(Settings.GOOGLE_USER))
     val connect = findView(TR.connect)
-    if (user.isEmpty)
+    if (settings.get(Settings.FIRST_RUN)) {
+      settings.clear()
+      KeyManager.clear()
       flipper.setDisplayedChild(1)
+    }
+    def onNext(): Unit = {
+      findView(TR.progress).setVisibility(View.VISIBLE)
+      async {
+        val k = keymanager.loadKey()
+        if (k.nonEmpty) UiBus.post {
+          settings.set(Settings.FIRST_RUN, false)
+          flipper.setDisplayedChild(0)
+          findView(TR.save).setEnabled(true)
+          findView(TR.progress2).setVisibility(View.GONE)
+        }
+      }
+    }
     connect onClick {
       connect.setEnabled(false)
-      pickAccount()
+      onNext()
+      // go to next step!
     }
 
     val browseHandler = { v: View =>
@@ -295,59 +305,40 @@ class SetupActivity extends Activity with TypedViewHolder {
       }
     }
 
-    user foreach { name =>
-      keymanager.accountName = name
-      async {
-        val ckey = keymanager.loadKey()
-        (Option(settings.get(Settings.DATABASE_FILE))
-          , Option(settings.get(Settings.PASSWORD))
-          , Option(settings.get(Settings.KEYFILE_PATH))
-          , Option(settings.get(Settings.VERIFY_DATA))) match {
-          case (Some(encdb), Some(encpw), Some(enckeyf), Some(encverifier)) =>
-            keymanager.getConfig match {
-              case Left(error) =>
-                UiBus.post {
-                  Toast.makeText(this,
-                    R.string.decrypt_saved_failed, Toast.LENGTH_SHORT).show()
-                  finish()
-                }
-              case Right((db,pw,keyf)) =>
-                UiBus.post {
-                  findView(TR.file_name).setText(db)
-                  findView(TR.password).setText(pw)
-                  findView(TR.key_file_name).setText(keyf)
-                  success(R.string.ready_to_use)
-                  findView(TR.save).setEnabled(false)
-                }
-            }
-          case _ =>
-        }
-        if (ckey != null) UiBus.post {
-          findView(TR.progress2).setVisibility(View.GONE)
-        }
+    if (!settings.get(Settings.FIRST_RUN)) async {
+      val ckey = keymanager.loadKey()
+      (Option(settings.get(Settings.DATABASE_FILE))
+        , Option(settings.get(Settings.PASSWORD))
+        , Option(settings.get(Settings.KEYFILE_PATH))
+        , Option(settings.get(Settings.VERIFY_DATA))) match {
+        case (Some(encdb), Some(encpw), Some(enckeyf), Some(encverifier)) =>
+          keymanager.getConfig match {
+            case Left(error) =>
+              UiBus.post {
+                Toast.makeText(this,
+                  R.string.decrypt_saved_failed, Toast.LENGTH_SHORT).show()
+                finish()
+              }
+            case Right((db,pw,keyf)) =>
+              UiBus.post {
+                findView(TR.file_name).setText(db)
+                findView(TR.password).setText(pw)
+                findView(TR.key_file_name).setText(keyf)
+                success(R.string.ready_to_use)
+                findView(TR.save).setEnabled(false)
+              }
+          }
+        case _ =>
+      }
+      if (ckey != null) UiBus.post {
+        findView(TR.progress2).setVisibility(View.GONE)
       }
     }
   }
 
+
   override def onActivityResult(request: Int, result: Int, data: Intent) {
     request match {
-      case REQUEST_ACCOUNT_PICKER =>
-        if (result == Activity.RESULT_OK) {
-          Option(data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)) foreach {
-            n =>
-            keymanager.accountName = n
-            settings.set(Settings.GOOGLE_USER, n)
-            findView(TR.progress).setVisibility(View.VISIBLE)
-            async {
-              val k = keymanager.loadKey()
-              if (k != null) UiBus.post {
-                flipper.setDisplayedChild(0)
-                findView(TR.save).setEnabled(true)
-                findView(TR.progress2).setVisibility(View.GONE)
-              }
-            }
-          }
-        } else finish()
       case REQUEST_AUTHORIZATION =>
         if (result == Activity.RESULT_OK) {
           flipper.setDisplayedChild(0)
@@ -358,8 +349,12 @@ class SetupActivity extends Activity with TypedViewHolder {
             }
             case _ =>
           }
-        } else {
-          pickAccount()
+        } else finish()
+      case REQUEST_SIGN_IN =>
+        if (result != Activity.RESULT_OK)
+          finish()
+        else {
+          keymanager.makeApiClient()
         }
       case BROWSE_DATABASE =>
         if (result == Activity.RESULT_OK) {
@@ -421,7 +416,8 @@ class SetupActivity extends Activity with TypedViewHolder {
           findView(TR.key_file_name).setText(data.getData.getPath)
       case REQUEST_PIN => // for change pin
         if (result == Activity.RESULT_OK)
-          startActivity(new Intent(this, classOf[PINSetupActivity]))
+          startActivityForResult(new Intent(this, classOf[PINSetupActivity]), RequestCodes.REQUEST_SETUP_PIN)
+      case REQUEST_SETUP_PIN => finish()
     }
   }
 }

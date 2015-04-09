@@ -44,9 +44,7 @@ object ShareActivity {
     var opened = true
     if (!Database.isOpen) {
       opened = false
-      val googleUser = settings.get(Settings.GOOGLE_USER)
-      if (googleUser != null) {
-        km.accountName = settings.get(Settings.GOOGLE_USER)
+      if (!settings.get(Settings.FIRST_RUN)) {
         km.loadKey()
         km.getConfig match {
           case Left(err) => err match {

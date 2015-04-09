@@ -28,7 +28,7 @@ class PINEntryActivity extends Activity with TypedViewHolder {
 
     def validatePin() {
       pinEntry.setText(pin)
-      ok.setEnabled(pin.size > 0)
+      ok.setEnabled(pin.length > 0)
     }
 
     val clearError: Runnable = () => {
@@ -41,15 +41,17 @@ class PINEntryActivity extends Activity with TypedViewHolder {
 
       val withKey = () => {
         val decrypted = try {
-          Some(KeyManager.decryptToString(pinKey,
-            KeyManager.decryptToString(KeyManager.cloudKey, verifier)))
+          KeyManager.cloudKey map { key =>
+            KeyManager.decryptToString(pinKey,
+              KeyManager.decryptToString(key, verifier))
+          }
         } catch {
           case e: Exception =>
             v("Failed to decrypt", e)
             None
         }
 
-        if (decrypted exists {_ == PINHolderService.PIN_VERIFIER }) {
+        if (decrypted contains PINHolderService.PIN_VERIFIER) {
           val intent = new Intent(this, classOf[PINHolderService])
           intent.putExtra(PINHolderService.EXTRA_PIN, pin)
           startService(intent)
@@ -65,11 +67,10 @@ class PINEntryActivity extends Activity with TypedViewHolder {
         }
       }
 
-      if (KeyManager.cloudKey == null) {
+      if (KeyManager.cloudKey.isEmpty) {
         val pd = ProgressDialog.show(this, getString(R.string.loading),
           getString(R.string.fetching_key), true, false)
         async {
-          km.accountName = settings.get(Settings.GOOGLE_USER)
           km.loadKey()
           UiBus.post {
             pd.dismiss()

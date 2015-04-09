@@ -99,7 +99,7 @@ class AccessibilitySearchActivity extends Activity with TypedViewHolder {
 
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
-    if (settings.get(Settings.GOOGLE_USER) == null) {
+    if (settings.get(Settings.FIRST_RUN)) {
       startActivityForResult(
         SetupActivity.intent, RequestCodes.REQUEST_SETUP)
     } else {

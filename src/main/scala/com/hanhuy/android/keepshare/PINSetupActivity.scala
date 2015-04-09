@@ -22,7 +22,7 @@ class PINSetupActivity extends Activity with TypedViewHolder {
     error.setVisibility(View.INVISIBLE)
   }
 
-  private def verifyMatch {
+  private def verifyMatch() {
     if (pin == selectedPin) {
       val intent = new Intent(this, classOf[PINHolderService])
       val thePin = pin mkString ""
@@ -31,13 +31,16 @@ class PINSetupActivity extends Activity with TypedViewHolder {
       val km = new KeyManager(this, settings)
       val ckey = km.loadKey()
       val pinKey = PINHolderService.keyFor(thePin)
-      km.localKey.right map { localKey =>
-        val newkey = KeyManager.encrypt(ckey, KeyManager.encrypt(
+      for {
+        localKey <- km.localKey.right.toOption
+        key      <- ckey
+      } {
+        val newkey = KeyManager.encrypt(key, KeyManager.encrypt(
           pinKey, localKey.getEncoded))
         settings.set(Settings.LOCAL_KEY, newkey)
         settings.set(Settings.NEEDS_PIN, true)
         settings.set(Settings.PIN_VERIFIER,
-          KeyManager.encrypt(KeyManager.cloudKey,  KeyManager.encrypt(pinKey,
+          KeyManager.encrypt(key,  KeyManager.encrypt(pinKey,
             PINHolderService.PIN_VERIFIER)))
       }
       finish()
@@ -52,7 +55,7 @@ class PINSetupActivity extends Activity with TypedViewHolder {
     }
   }
 
-  private def validatePin {
+  private def validatePin() {
     clearError()
     pinEntry.setText(pin mkString "")
     if (selectedPin.size > 0) {
@@ -71,34 +74,34 @@ class PINSetupActivity extends Activity with TypedViewHolder {
 
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
-    setTitle(getTitle() + getString(R.string.setup_pin_subtitle))
+    setTitle(getTitle + getString(R.string.setup_pin_subtitle))
     setContentView(R.layout.pin_setup)
 
     val onClick = { view: View =>
       view.getId match {
         case R.id.pin_9    => pin :+= "9"
-          validatePin
+          validatePin()
         case R.id.pin_8    => pin :+= "8"
-          validatePin
+          validatePin()
         case R.id.pin_7    => pin :+= "7"
-          validatePin
+          validatePin()
         case R.id.pin_6    => pin :+= "6"
-          validatePin
+          validatePin()
         case R.id.pin_5    => pin :+= "5"
-          validatePin
+          validatePin()
         case R.id.pin_4    => pin :+= "4"
-          validatePin
+          validatePin()
         case R.id.pin_3    => pin :+= "3"
-          validatePin
+          validatePin()
         case R.id.pin_2    => pin :+= "2"
-          validatePin
+          validatePin()
         case R.id.pin_1    => pin :+= "1"
-          validatePin
+          validatePin()
         case R.id.pin_0    => pin :+= "0"
-          validatePin
+          validatePin()
         case R.id.pin_ok   =>
           if (selectedPin.size > 0) {
-            verifyMatch
+            verifyMatch()
           } else {
             selectedPin = pin
             pin = Seq.empty
@@ -108,7 +111,7 @@ class PINSetupActivity extends Activity with TypedViewHolder {
           }
         case R.id.pin_back =>
           pin = pin.dropRight(1)
-          validatePin
+          validatePin()
       }
     }
 

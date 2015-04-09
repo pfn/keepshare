@@ -25,7 +25,7 @@ public class KeyManagerTest extends ActivityUnitTestCase {
         assertNotNull(getActivity());
         Settings settings = new Settings(getActivity());
         KeyManager km = new KeyManager(getActivity(), settings);
-        SecretKey key = km.loadKey();
+        SecretKey key = km.loadKey().get();
         assertNotNull("Key cannot be null", key);
         assertEquals("improper key length", 32, key.getEncoded().length);
     }

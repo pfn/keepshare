@@ -1,8 +1,10 @@
 package com.hanhuy.android.keepshare
 
+import android.os.Bundle
 import com.google.android.gms.auth.UserRecoverableAuthException
-import com.google.android.gms.common.AccountPicker
+import com.google.android.gms.common.{ConnectionResult, AccountPicker}
 import com.google.android.gms.common.api.GoogleApiClient
+import com.google.android.gms.common.api.GoogleApiClient.{ConnectionCallbacks, OnConnectionFailedListener}
 import com.google.android.gms.drive.{DriveFile, MetadataChangeSet, Drive}
 import com.google.android.gms.drive.query.{Query, SearchableField, Filters}
 import com.hanhuy.android.common.{UiBus, LogcatTag}
@@ -19,6 +21,10 @@ import android.content.Context
 import java.io.IOException
 import android.widget.Toast
 
+import scala.concurrent.{Await, Promise}
+import scala.concurrent.duration._
+import scala.util.Try
+
 object KeyManager {
   val VERIFIER = "KeepShare Verifier"
 
@@ -32,12 +38,12 @@ object KeyManager {
   lazy val sha1 = MessageDigest.getInstance("SHA1")
   def sha1(b: Array[Byte]): String = hex(sha1.digest(b))
 
-  private var _cloudKey: SecretKey = _
+  private var _cloudKey = Option.empty[SecretKey]
 
   def cloudKey = _cloudKey
 
   def clear() {
-    _cloudKey = null
+    _cloudKey = None
   }
 
   // prefix with 01 and strip it off, otherwise
@@ -45,7 +51,7 @@ object KeyManager {
   // this inserts a sign byte at the beginning
   // if the first byte is > 0x7f strip it off
   def bytes(hex: String) =
-    BigInt("01" + hex, 16).toByteArray.takeRight(hex.size / 2)
+    BigInt("01" + hex, 16).toByteArray.takeRight(hex.length / 2)
   //def bytes(hex: String): Array[Byte] =
   //  hex.grouped(2).map (Integer.parseInt(_, 16).asInstanceOf[Byte]).toArray
 
@@ -94,18 +100,13 @@ class KeyManager(c: Context, settings: Settings) {
   import KeyManager._
   implicit val TAG = LogcatTag("KeyManager")
 
-  private var nameSelected = true
 //  def accountName = credential.getSelectedAccountName
 //  def accountName_=(a: String) = {
 //    nameSelected = true
 //    credential.setSelectedAccountName(a)
 //  }
-  var accountName: String = _
 
-  def newChooseAccountIntent = AccountPicker.newChooseAccountIntent(null, null,
-    Array("com.google"), false, null, null, null, null)
-
-  def ready = (Seq(Settings.GOOGLE_USER,
+  def ready = (Seq(
     Settings.DATABASE_FILE,
     Settings.PASSWORD,
     Settings.KEYFILE_PATH,
@@ -131,79 +132,98 @@ class KeyManager(c: Context, settings: Settings) {
     }
   }
 
-  lazy val apiClient = {
+  lazy val googleClient = {
     val client = new GoogleApiClient.Builder(c)
       .addApi(Drive.API)
       .addScope(Drive.SCOPE_APPFOLDER)
       .build
-    val result = client.blockingConnect()
-    if (!result.isSuccess) throw new IOException(result.toString)
+    client.registerConnectionCallbacks(new ConnectionCallbacks {
+      override def onConnectionSuspended(i: Int) = {}
+
+      override def onConnected(bundle: Bundle) = clientPromise.success(client)
+    })
+    client.registerConnectionFailedListener(new OnConnectionFailedListener {
+      override def onConnectionFailed(r: ConnectionResult) = {
+        if (r.getErrorCode == ConnectionResult.RESOLUTION_REQUIRED || r.getErrorCode == ConnectionResult.SIGN_IN_REQUIRED) {
+          c match {
+            case a: Activity => r.startResolutionForResult(a, RequestCodes.REQUEST_SIGN_IN)
+            case _ => ()
+          }
+        }
+      }
+    })
     client
   }
+  val clientPromise = Promise[GoogleApiClient]()
+  def makeApiClient() = {
+    googleClient.connect()
+  }
+  lazy val apiClient = {
+    makeApiClient()
+    Await.result(clientPromise.future, Duration.Inf)
+  }
 
-  def loadKey(): SecretKey = {
+  def loadKey(): Option[SecretKey] = {
 
-    Option(KeyManager.cloudKey) getOrElse {
-      if (!nameSelected)
-        throw new IllegalStateException("account name has not been set")
-      val appFolder = Drive.DriveApi.getAppFolder(apiClient)
-      try {
-        val result = appFolder.queryChildren(apiClient,
-          new Query.Builder()
-            .addFilter(Filters.eq(SearchableField.TITLE, KEY_FILE))
-            .build())
-          .await().getMetadataBuffer
-        result find (_ != null) map { metadata =>
-          val dfile = Drive.DriveApi.getFile(apiClient, metadata.getDriveId)
-            .open(apiClient, DriveFile.MODE_READ_ONLY, null)
-            .await().getDriveContents
-          val buf = Array.ofDim[Byte](32)
-          val in = dfile.getInputStream
-          val b = ByteBuffer.allocate(32)
-          Stream.continually(in.read(buf)).takeWhile(_ != -1) foreach { r =>
-            b.put(buf, 0, r)
-          }
-          in.close()
-          dfile.discard(apiClient)
-          b.flip()
-          if (b.remaining != 32) {
-            e("wrong buffer size: " + b.remaining)
-            return null
-          }
-          b.get(buf)
-          val hash = settings.get(Settings.CLOUD_KEY_HASH)
-          if (hash != null && sha1(buf) != hash) {
-            e("cloud key has changed")
-            return null
-          }
-          _cloudKey = new SecretKeySpec(buf, ALG)
-          v("Loaded cloud key")
-        } getOrElse createKey()
-        result.release()
-      } catch {
-        case e: UserRecoverableAuthException =>
-          UiBus.post {
-            Toast.makeText(Application.instance,
-              Application.instance.getString(
-                R.string.toast_unable_load_key, e.getMessage),
-              Toast.LENGTH_SHORT).show()
-          }
-          requestAuthz(e, STATE_LOAD)
-        case ex: IOException =>
-          e("IO error loading cloud key", ex)
-          UiBus.post {
-            Toast.makeText(Application.instance,
-              Application.instance.getString(
-                R.string.toast_unable_load_key, ex.getMessage),
-              Toast.LENGTH_SHORT).show()
-          }
-          loadKey()
-      }
+    KeyManager.cloudKey orElse {
+        val appFolder = Drive.DriveApi.getAppFolder(apiClient)
+        try {
+          val result = appFolder.queryChildren(apiClient,
+            new Query.Builder()
+              .addFilter(Filters.eq(SearchableField.TITLE, KEY_FILE))
+              .build())
+            .await().getMetadataBuffer
+          result find (_ != null) map { metadata =>
+            val dfile = Drive.DriveApi.getFile(apiClient, metadata.getDriveId)
+              .open(apiClient, DriveFile.MODE_READ_ONLY, null)
+              .await().getDriveContents
+            val buf = Array.ofDim[Byte](32)
+            val in = dfile.getInputStream
+            val b = ByteBuffer.allocate(32)
+            Stream.continually(in.read(buf)).takeWhile(_ != -1) foreach { r =>
+              b.put(buf, 0, r)
+            }
+            in.close()
+            dfile.discard(apiClient)
+            b.flip()
+            if (b.remaining != 32) {
+              e("wrong buffer size: " + b.remaining)
+              return None
+            }
+            b.get(buf)
+            val hash = settings.get(Settings.CLOUD_KEY_HASH)
+            if (hash != null && sha1(buf) != hash) {
+              e("cloud key has changed")
+              return None
+            }
+            _cloudKey = Option(new SecretKeySpec(buf, ALG))
+            v("Loaded cloud key")
+          } getOrElse createKey()
+          result.release()
+        } catch {
+          case e: UserRecoverableAuthException =>
+            UiBus.post {
+              Toast.makeText(Application.instance,
+                Application.instance.getString(
+                  R.string.toast_unable_load_key, e.getMessage),
+                Toast.LENGTH_SHORT).show()
+            }
+            requestAuthz(e, STATE_LOAD)
+          case ex: IOException =>
+            e("IO error loading cloud key", ex)
+            UiBus.post {
+              Toast.makeText(Application.instance,
+                Application.instance.getString(
+                  R.string.toast_unable_load_key, ex.getMessage),
+                Toast.LENGTH_SHORT).show()
+            }
+            loadKey()
+        }
       KeyManager.cloudKey
     }
   }
 
-  def createKey(): SecretKey = {
+  def createKey(): Option[SecretKey] = {
     try {
 
       val keybuf = Array.ofDim[Byte](32)
@@ -218,43 +238,48 @@ class KeyManager(c: Context, settings: Settings) {
       val written = out.write(keybuf)
       out.close()
       appFolder.createFile(apiClient, metadata, contents)
-
       loadKey()
     } catch {
       case e: UserRecoverableAuthException =>
         requestAuthz(e, STATE_SAVE)
-        null
+        None
     }
   }
 
   def localKey: Either[KeyError,SecretKey] = {
-    if (cloudKey == null)
-      throw new IllegalStateException("Cloud Key must be loaded first")
+    cloudKey map { ck =>
 
-    val k = settings.get(Settings.LOCAL_KEY)
+      val k = settings.get(Settings.LOCAL_KEY)
 
-    val needsPin = settings.get(Settings.NEEDS_PIN)
-    if (needsPin && PINHolderService.instance.isEmpty) {
-      Left(KeyError.NeedPin)
-    } else if (k == null) {
-      val keybuf = Array.ofDim[Byte](32)
-      random.nextBytes(keybuf)
+      val needsPin = settings.get(Settings.NEEDS_PIN)
+      if (needsPin && PINHolderService.instance.isEmpty) {
+        Left(KeyError.NeedPin)
+      } else if (k == null) {
+        val keybuf = Array.ofDim[Byte](32)
+        random.nextBytes(keybuf)
 
-      val saved = PINHolderService.instance map { s =>
-        bytes(encrypt(s.pinKey, keybuf)) } getOrElse keybuf
+        val saved = PINHolderService.instance map { s =>
+          bytes(encrypt(s.pinKey, keybuf))
+        } getOrElse keybuf
 
-      val k = encrypt(cloudKey, saved)
+        val k = encrypt(ck, saved)
 
-      settings.set(Settings.LOCAL_KEY, k)
-      Right(new SecretKeySpec(keybuf, ALG))
-    } else {
-      val key = decrypt(cloudKey, k)
-      val actual = PINHolderService.instance map { s =>
-        val st = new String(key, "utf-8")
-        decrypt(s.pinKey, st)
-      } getOrElse key
-      Right(new SecretKeySpec(actual, ALG))
-    }
+        settings.set(Settings.LOCAL_KEY, k)
+        Right(new SecretKeySpec(keybuf, ALG))
+      } else {
+        val okey = Try(decrypt(ck, k)).toOption
+        val actual = (for {
+          s <- PINHolderService.instance
+          key <- okey
+        } yield {
+          val st = new String(key, "utf-8")
+          decrypt(s.pinKey, st)
+        }) orElse okey
+        actual map { a =>
+          Right(new SecretKeySpec(a, ALG))
+        } getOrElse Left(KeyError.NeedClear)
+      }
+    } getOrElse Left(KeyError.NeedLoad)
   }
 
   private def requestAuthz(e: UserRecoverableAuthException, state: String) {
@@ -272,4 +297,6 @@ sealed trait KeyError
 object KeyError {
   case object NeedPin extends KeyError
   case class VerifyFailure(error: String) extends KeyError
+  case object NeedLoad extends KeyError
+  case object NeedClear extends KeyError
 }

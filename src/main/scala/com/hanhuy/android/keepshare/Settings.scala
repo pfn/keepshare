@@ -3,6 +3,8 @@ package com.hanhuy.android.keepshare
 import android.content.Context
 import android.preference.PreferenceManager
 
+import scala.reflect.ClassTag
+
 object Setting {
   def keys = settings.values
   private var settings = Map.empty[String,Setting[_]]
@@ -18,7 +20,7 @@ class Setting[A](val key: String, val default: A, val defaultRes: Option[Int]) {
 object Settings {
   val KEYBOARD_TIMEOUT = new Setting[Int]("timeout", 60, None)
   val PIN_TIMEOUT = new Setting[Int]("pin_timeout", 1, None)
-  val GOOGLE_USER = Setting[String]("google_account", null)
+  val FIRST_RUN = Setting[Boolean]("first_run", true)
   val CLOUD_KEY_HASH = Setting[String]("cloud_key_hash", null)
   val LOCAL_KEY = Setting[String]("local_key", null)
   val VERIFY_DATA = Setting[String]("verify_data", null)
@@ -38,36 +40,36 @@ object Settings {
 class Settings(val context: Context) {
     val p = PreferenceManager.getDefaultSharedPreferences(context)
 
-  def get[A](setting: Setting[A])(implicit m: ClassManifest[A]): A = {
+  def get[A](setting: Setting[A])(implicit m: ClassTag[A]): A = {
     // :Any is necessary, or else Int turns into Float?!
-    val result: Any = if (classOf[String] == m.erasure) {
+    val result: Any = if (classOf[String] == m.runtimeClass) {
       val default: String = setting.defaultRes map {
         context.getString
       } getOrElse setting.default.asInstanceOf[String]
       p.getString(setting.key, default)
-    } else if (classOf[Boolean] == m.erasure) {
+    } else if (classOf[Boolean] == m.runtimeClass) {
       p.getBoolean(setting.key, setting.default.asInstanceOf[Boolean])
-    } else if (classOf[Float] == m.erasure) {
+    } else if (classOf[Float] == m.runtimeClass) {
       p.getFloat(setting.key, setting.default.asInstanceOf[Float])
-    } else if (classOf[Long] == m.erasure) {
+    } else if (classOf[Long] == m.runtimeClass) {
       p.getLong(setting.key, setting.default.asInstanceOf[Long])
-    } else if (classOf[Int] == m.erasure) {
+    } else if (classOf[Int] == m.runtimeClass) {
       p.getInt(setting.key, setting.default.asInstanceOf[Int])
     } else {
-      throw new IllegalArgumentException("Unknown type: " + m.erasure)
+      throw new IllegalArgumentException("Unknown type: " + m.runtimeClass)
     }
     result.asInstanceOf[A]
   }
-  def set[A](setting: Setting[A], value: A)(implicit m: ClassManifest[A]) {
+  def set[A](setting: Setting[A], value: A)(implicit m: ClassTag[A]) {
     val editor = p.edit()
-    if (classOf[Boolean] == m.erasure) {
+    if (classOf[Boolean] == m.runtimeClass) {
       editor.putBoolean(setting.key, value.asInstanceOf[Boolean])
-    } else if (classOf[String] == m.erasure) {
+    } else if (classOf[String] == m.runtimeClass) {
         editor.putString(setting.key, value.asInstanceOf[String])
-    } else if (classOf[Int] == m.erasure) {
+    } else if (classOf[Int] == m.runtimeClass) {
       editor.putInt(setting.key, value.asInstanceOf[Int])
     } else {
-      throw new IllegalArgumentException("Unknown type: " + m.erasure)
+      throw new IllegalArgumentException("Unknown type: " + m.runtimeClass)
     }
     editor.commit()
   }
