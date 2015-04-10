@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Base.AppTheme" parent="android:Theme.DeviceDefault.Light"/>
+    <style name="Base.AppTheme" parent="Theme.AppCompat.Light">
+        <item name="colorAccent">#f4870e</item>
+        <item name="colorPrimary">#f30000</item>
+        <item name="colorPrimaryDark">#a50000</item>
+    </style>
+    <style name="Base.AppTheme.Dialog" parent="android:Theme.DeviceDefault.Light.Dialog">
+        <item name="colorAccent">#f4870e</item>
+        <item name="colorPrimary">#f30000</item>
+        <item name="colorPrimaryDark">#a50000</item>
+    </style>
     <style name="AppTheme" parent="Base.AppTheme"/>
+    <style name="AppTheme.Dialog" parent="Base.AppTheme.Dialog"/>
 </resources>

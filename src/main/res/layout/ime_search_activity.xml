@@ -20,16 +20,16 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_margin="4dp"
+            android:layout_alignRight="@+id/centerline"
             android:layout_alignParentBottom="true"
             android:layout_alignParentLeft="true"
-            android:layout_alignRight="@+id/centerline"
             android:text="@android:string/no"/>
     <Button android:id="@+id/confirm"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_margin="4dp"
+            android:layout_alignLeft="@+id/centerline"
             android:layout_alignParentBottom="true"
             android:layout_alignParentRight="true"
-            android:layout_alignLeft="@+id/centerline"
             android:text="@android:string/yes"/>
 </RelativeLayout>

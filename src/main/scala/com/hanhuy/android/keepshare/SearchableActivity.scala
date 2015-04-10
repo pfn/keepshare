@@ -1,5 +1,6 @@
 package com.hanhuy.android.keepshare
 
+import android.support.v7.app.ActionBarActivity
 import android.view.inputmethod.InputMethodManager
 import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common.{UiBus, LogcatTag}
@@ -16,7 +17,7 @@ import android.provider.BaseColumns
 import android.view.{MenuItem, View, ViewGroup, Menu}
 import com.hanhuy.keepassj.PwDefs
 
-class SearchableActivity extends Activity {
+class SearchableActivity extends ActionBarActivity {
   implicit val TAG = LogcatTag("SearchableActivity")
   val _implicit: RichActivity = this
   import _implicit._

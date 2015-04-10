@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="AppTheme" parent="Base.AppTheme">
+        <item name="android:navigationBarColor">#a50000</item>
+        <item name="android:textColorPrimary">@android:color/black</item>
+    </style>
+    <style name="AppTheme.Dialog" parent="Base.AppTheme.Dialog">
+        <item name="android:navigationBarColor">#a50000</item>
+        <item name="android:textColorPrimary">@android:color/black</item>
         <item name="android:colorAccent">#f4870e</item>
         <item name="android:colorPrimary">#f30000</item>
         <item name="android:colorPrimaryDark">#a50000</item>
-        <item name="android:navigationBarColor">#a50000</item>
-        <item name="android:textColorPrimary">@android:color/black</item>
     </style>
 </resources>

@@ -12,7 +12,6 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-sdk android:minSdkVersion="14" android:targetSdkVersion="21"/>
     <application
-            tools:replace="android:label,android:icon"
             android:theme="@style/AppTheme"
             android:name=".Application"
             android:label="@string/appname"
@@ -30,7 +29,7 @@
                   android:label="@string/appname">
         </activity>
         <activity android:name=".ShareActivity"
-                  android:theme="@android:style/Theme.DeviceDefault.Light.Dialog"
+                  android:theme="@style/AppTheme.Dialog"
                   android:windowSoftInputMode="adjustResize"
                   android:label="@string/appname">
             <intent-filter>
@@ -40,7 +39,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".AccessibilitySearchActivity"
-                  android:theme="@android:style/Theme.DeviceDefault.Light.Dialog"
+                  android:theme="@style/AppTheme.Dialog"
                   android:windowSoftInputMode="adjustResize"
                   android:allowTaskReparenting="true"
                   android:launchMode="singleInstance"
@@ -62,7 +61,7 @@
         <activity android:name=".IMESearchActivity"
                   android:allowTaskReparenting="true"
                   android:launchMode="singleInstance"
-                  android:theme="@android:style/Theme.DeviceDefault.Light.Dialog"/>
+                  android:theme="@style/AppTheme.Dialog"/>
         <activity android:name=".PINEntryActivity"
                   android:theme="@style/AppTheme"/>
         <provider android:name=".SearchProvider"

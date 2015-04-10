@@ -1,5 +1,6 @@
 package com.hanhuy.android.keepshare
 
+import android.support.v7.app.ActionBarActivity
 import com.hanhuy.android.common._
 import AndroidConversions._
 
@@ -39,7 +40,7 @@ object SetupActivity {
     intent
   }
 }
-class SetupActivity extends Activity with TypedViewHolder {
+class SetupActivity extends ActionBarActivity with TypedViewHolder {
   implicit val TAG = LogcatTag("SetupActivity")
   import KeyManager._
   import RequestCodes._
@@ -165,7 +166,8 @@ class SetupActivity extends Activity with TypedViewHolder {
     }
 
     val browseHandler = { v: View =>
-      val intent = new Intent(Intent.ACTION_GET_CONTENT)
+      val intent = new Intent(if (kitkatAndNewer)
+        Intent.ACTION_OPEN_DOCUMENT else Intent.ACTION_GET_CONTENT)
       intent.addCategory(Intent.CATEGORY_OPENABLE)
       intent.setType(if (kitkatAndNewer) "application/*" else "file/*")
 

@@ -6,6 +6,7 @@ import android.app.Activity
 import android.content.{Intent, Context}
 import android.database.Cursor
 import android.os.Bundle
+import android.support.v7.app.ActionBarActivity
 import android.view.{View, ViewGroup}
 import android.widget.{BaseAdapter, CursorAdapter}
 import com.hanhuy.android.common.{ServiceBus, UiBus}
