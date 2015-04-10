@@ -101,8 +101,8 @@ class SearchableActivity extends ActionBarActivity {
   override def onCreateOptionsMenu(menu: Menu) = {
     getMenuInflater.inflate(R.menu.searchable, menu)
 
-    menu.findItem(R.id.menu_setup_pin).setVisible(
-      !settings.get(Settings.NEEDS_PIN))
+    if (settings.get(Settings.NEEDS_PIN))
+      menu.removeItem(R.id.menu_setup_pin)
     searchView = Option(menu.findItem(R.id.menu_search)
       .getActionView.asInstanceOf[SearchView])
     searchView foreach { search =>
