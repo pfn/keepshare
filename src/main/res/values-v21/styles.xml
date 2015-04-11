@@ -3,6 +3,7 @@
     <style name="AppTheme" parent="Base.AppTheme">
         <item name="android:navigationBarColor">#a50000</item>
         <item name="android:textColorPrimary">@android:color/black</item>
+        <item name="android:colorAccent">#f4870e</item>
     </style>
     <style name="AppTheme.Dialog" parent="Base.AppTheme.Dialog">
         <item name="android:navigationBarColor">#a50000</item>

@@ -4,11 +4,20 @@
         <item name="colorAccent">#f4870e</item>
         <item name="colorPrimary">#f30000</item>
         <item name="colorPrimaryDark">#a50000</item>
+        <item name="actionBarStyle">@style/Base.ActionBar</item>
     </style>
     <style name="Base.AppTheme.Dialog" parent="android:Theme.DeviceDefault.Light.Dialog">
         <item name="colorAccent">#f4870e</item>
         <item name="colorPrimary">#f30000</item>
         <item name="colorPrimaryDark">#a50000</item>
+    </style>
+    <style name="Base.ActionBar" parent="Widget.AppCompat.ActionBar">
+        <item name="titleTextStyle">@style/Base.ActionBar.TitleText</item>
+        <item name="background">?attr/colorPrimary</item>
+    </style>
+    <style name="Base.ActionBar.TitleText" parent="TextAppearance.AppCompat.Widget.ActionBar.Title">
+        <item name="android:textColor">@android:color/white</item>
+        <!-- The textColor property is backward compatible with the Support Library -->
     </style>
     <style name="AppTheme" parent="Base.AppTheme"/>
     <style name="AppTheme.Dialog" parent="Base.AppTheme.Dialog"/>
