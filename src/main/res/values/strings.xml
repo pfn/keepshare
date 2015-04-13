@@ -88,7 +88,7 @@
     <string name="override_password_input">Overriding password input</string>
     <string name="off">Off</string>
     <string name="on">On</string>
-    <string name="keyboard_status">Custom keyboard status</string>
+    <string name="keyboard_status">Enable custom keyboard</string>
     <string name="enable_password_override">Enable override for non-password
         inputs
     </string>

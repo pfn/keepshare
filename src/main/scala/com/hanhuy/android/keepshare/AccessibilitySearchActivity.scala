@@ -4,11 +4,10 @@ import java.net.URI
 
 import android.app.Activity
 import android.content.{Intent, Context}
-import android.database.Cursor
 import android.os.Bundle
 import android.support.v7.app.ActionBarActivity
 import android.view.{View, ViewGroup}
-import android.widget.{BaseAdapter, CursorAdapter}
+import android.widget.BaseAdapter
 import com.hanhuy.android.common.{ServiceBus, UiBus}
 
 import com.hanhuy.android.common.AndroidConversions._
@@ -73,7 +72,6 @@ class AccessibilitySearchActivity extends Activity with TypedViewHolder {
 
             }
             val onClickHandler = { pos: Int =>
-              val cursor = adapter.getItem(pos).asInstanceOf[Cursor]
               findView(TR.continu).setEnabled(true)
               findView(TR.continu).onClick {
                 ServiceBus.send(AccessibilityFillEvent(

@@ -10,7 +10,7 @@ import android.app.{AlertDialog, ProgressDialog, Activity}
 import android.os.Bundle
 import android.content.{ComponentName, ActivityNotFoundException, Intent}
 import android.view.{View, MenuItem, Menu}
-import android.widget.{CompoundButton, Toast}
+import android.widget.{CheckBox, CompoundButton, Toast}
 import java.io.{FileOutputStream, File}
 import android.text.{Editable, TextWatcher}
 import android.view.inputmethod.InputMethodManager
@@ -51,7 +51,7 @@ class SetupActivity extends ActionBarActivity with TypedViewHolder {
   lazy val settings = Settings(this)
   lazy val keymanager = new KeyManager(this, settings)
   lazy val keyboardToggle = findViewById(
-    R.id.toggle_keyboard).asInstanceOf[CompoundButton]
+    R.id.toggle_keyboard).asInstanceOf[CheckBox]
 
   override def onCreateOptionsMenu(menu: Menu) = {
     super.onCreateOptionsMenu(menu)

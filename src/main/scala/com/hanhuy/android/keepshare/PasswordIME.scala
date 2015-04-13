@@ -1,6 +1,7 @@
 package com.hanhuy.android.keepshare
 
 import android.support.v7.app.ActionBarActivity
+import android.view.ViewGroup
 import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common._
 import com.hanhuy.android.common.RichLogger._
@@ -41,6 +42,11 @@ with EventBus.RefOwner {
   }
 
   override def onCreateInputView() = {
+    inputView.getParent match {
+      case v: ViewGroup =>
+        v.removeView(inputView)
+      case _ =>
+    }
     inputView.setOnKeyboardActionListener(this)
     inputView.setKeyboard(input)
     inputView
