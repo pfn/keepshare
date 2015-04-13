@@ -140,7 +140,10 @@ class KeyManager(c: Context, settings: Settings) {
     client.registerConnectionCallbacks(new ConnectionCallbacks {
       override def onConnectionSuspended(i: Int) = {}
 
-      override def onConnected(bundle: Bundle) = clientPromise.success(client)
+      override def onConnected(bundle: Bundle) = {
+        if (!clientPromise.isCompleted)
+          clientPromise.success(client)
+      }
     })
     client.registerConnectionFailedListener(new OnConnectionFailedListener {
       override def onConnectionFailed(r: ConnectionResult) = {

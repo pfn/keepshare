@@ -28,6 +28,7 @@ object RequestCodes {
   val REQUEST_PIN            = 6
   val REQUEST_SIGN_IN        = 7
   val REQUEST_SETUP_PIN      = 8
+  val REQUEST_PIN_ENTRY      = 9
 
   val EXTRA_FOR_RESULT = "com.hanhuy.android.keepshare.extra.FOR_RESULT"
 }
@@ -121,7 +122,10 @@ class SetupActivity extends ActionBarActivity with TypedViewHolder {
     keyboardToggle.setChecked(enabled)
     findView(TR.password_override).setChecked(
       settings.get(Settings.PASSWORD_OVERRIDE))
-
+    if (settings.get(Settings.NEEDS_PIN) && PINHolderService.instance.isEmpty) {
+      startActivityForResult(new Intent(this, classOf[PINEntryActivity]),
+        RequestCodes.REQUEST_PIN_ENTRY)
+    }
   }
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
@@ -419,6 +423,9 @@ class SetupActivity extends ActionBarActivity with TypedViewHolder {
       case REQUEST_PIN => // for change pin
         if (result == Activity.RESULT_OK)
           startActivityForResult(new Intent(this, classOf[PINSetupActivity]), RequestCodes.REQUEST_SETUP_PIN)
+      case REQUEST_PIN_ENTRY =>
+        if (result != Activity.RESULT_OK)
+          finish()
       case REQUEST_SETUP_PIN => finish()
     }
   }
