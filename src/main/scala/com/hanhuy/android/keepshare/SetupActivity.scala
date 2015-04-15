@@ -411,6 +411,7 @@ class SetupFragment extends android.preference.PreferenceFragment {
   lazy val kf = findPreference("database_key").asInstanceOf[BrowsableTextPreference]
   lazy val p = findPreference("database_pass").asInstanceOf[TextPreference]
   lazy val kt = findPreference("keyboard_enable").asInstanceOf[CheckBoxPreference]
+  lazy val ae = findPreference("accessibility_enable").asInstanceOf[CheckBoxPreference]
   lazy val ktimeout = findPreference("keyboard_timeout").asInstanceOf[ListPreference]
   lazy val ptimeout = findPreference("pin_timeout").asInstanceOf[ListPreference]
   lazy val pwoverride = findPreference("keyboard_override").asInstanceOf[CheckBoxPreference]
@@ -453,23 +454,17 @@ class SetupFragment extends android.preference.PreferenceFragment {
 
   override def onStart() = {
     super.onStart()
+    ae.setIntent(new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
     df.onPreferenceChange(onPrefChange)
     kf.onPreferenceChange(onPrefChange)
     p.onPreferenceChange(onPrefChange)
-    kt.onPreferenceChange { (p, b) =>
-      prefChanged(p,b)
-      val imm = getActivity.systemService[InputMethodManager]
-      val list = imm.getEnabledInputMethodList
-      val enabled = list exists (
-        _.getPackageName == "com.hanhuy.android.keepshare")
+    kt.setIntent(Intent.makeMainActivity(
+      new ComponentName("com.android.settings",
+        "com.android.settings.LanguageSettings")))
+    import android.provider.Settings.Secure
+    val services = Secure.getString(getActivity.getContentResolver, Secure.ENABLED_ACCESSIBILITY_SERVICES)
+    ae.setChecked(services contains "com.hanhuy.android.keepshare")
 
-      if (b != enabled) {
-        startActivity(Intent.makeMainActivity(
-          new ComponentName("com.android.settings",
-            "com.android.settings.LanguageSettings")))
-      }
-      true
-    }
     val imm = getActivity.systemService[InputMethodManager]
     val list = imm.getEnabledInputMethodList
     val enabled = list exists (
@@ -489,14 +484,16 @@ class SetupFragment extends android.preference.PreferenceFragment {
     ptimeout.setValue(settings.get(Settings.PIN_TIMEOUT).toString)
     ptimeout.setSummary(settings.get(Settings.PIN_TIMEOUT).toString)
 
-    ptimeout.onPreferenceChange { (p, v) =>
-      prefChanged(p, v)
+    ptimeout.onPreferenceChange { (pref, v) =>
+      prefChanged(pref, v)
       ptimeout.setSummary(v.toString)
+      p.text = ""
       true
     }
-    ktimeout.onPreferenceChange { (p, v) =>
-      prefChanged(p, v)
+    ktimeout.onPreferenceChange { (pref, v) =>
+      prefChanged(pref, v)
       ktimeout.setSummary(v.toString)
+      p.text = ""
       true
     }
   }

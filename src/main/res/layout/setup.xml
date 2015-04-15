@@ -27,7 +27,7 @@
                 android:layout_height="wrap_content"
                 android:textColor="#ff0000"
                 android:textAppearance="?android:attr/textAppearanceMedium"
-                android:layout_marginBottom="12dp"
+                android:layout_marginTop="8dp"
                 android:gravity="center_horizontal"/>
         <TextView
                 android:visibility="gone"
@@ -35,7 +35,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceMedium"
-                android:layout_marginBottom="12dp"
+                android:layout_marginTop="8dp"
                 android:gravity="center_horizontal"/>
         <ProgressBar
                 style="@android:style/Widget.ProgressBar.Small"

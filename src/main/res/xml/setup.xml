@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
-    <PreferenceCategory
-            android:title="Keyboard">
+    <PreferenceCategory android:title="General">
 
         <CheckBoxPreference
                 android:key="keyboard_enable"
                 android:title="Enable custom keyboard"
+                android:persistent="false"
+                />
+        <CheckBoxPreference
+                android:key="accessibility_enable"
+                android:title="Enable form filling"
+                android:action="android.settings.ACCESSIBILITY_SETTINGS"
                 android:persistent="false"
                 />
 
