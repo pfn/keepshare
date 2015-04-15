@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory
+            android:title="Keyboard">
+
+        <CheckBoxPreference
+                android:key="keyboard_enable"
+                android:title="Enable custom keyboard"
+                android:persistent="false"
+                />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+            android:title="KeePass Information">
+
+        <com.hanhuy.android.keepshare.BrowsableTextPreference
+                android:key="database_file"
+                android:persistent="false"
+                android:title="Database File"
+                />
+        <com.hanhuy.android.keepshare.TextPreference
+                android:key="database_pass"
+                android:persistent="false"
+                android:title="Password"
+                />
+        <com.hanhuy.android.keepshare.BrowsableTextPreference
+                android:key="database_key"
+                android:persistent="false"
+                android:title="Key File"
+                />
+
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+            android:title="Security Options">
+
+        <CheckBoxPreference
+                android:key="keyboard_override"
+                android:title="Input override"
+                android:dependency="keyboard_enable"
+                android:summary="Enable long-press override for non-password fields"
+                android:persistent="false"
+                />
+
+        <ListPreference
+                android:key="keyboard_timeout"
+                android:title="Keyboard Timeout (seconds)"
+                android:persistent="false"
+                android:defaultValue="60"
+                android:summary="60"
+                android:entryValues="@array/keyboard_timeouts"
+                android:entries="@array/keyboard_timeouts"/>
+        <ListPreference
+                android:key="pin_timeout"
+                android:title="PIN Unlock Timeout (minutes)"
+                android:persistent="false"
+                android:defaultValue="1"
+                android:summary="1"
+                android:entryValues="@array/pin_timeouts"
+                android:entries="@array/pin_timeouts"/>
+    </PreferenceCategory>
+</PreferenceScreen>

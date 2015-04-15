@@ -127,4 +127,16 @@
         Username and password form filling service. Automatically pulls data
         from your KeePass database to fill credential forms.
     </string>
+    <string-array name="keyboard_timeouts">
+        <item>60</item>
+        <item>45</item>
+        <item>30</item>
+        <item>15</item>
+    </string-array>
+    <string-array name="pin_timeouts">
+        <item>60</item>
+        <item>15</item>
+        <item>5</item>
+        <item>1</item>
+    </string-array>
 </resources>
