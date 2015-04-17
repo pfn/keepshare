@@ -1,6 +1,6 @@
 package com.hanhuy.android.keepshare
 
-import com.hanhuy.android.common.{LogcatTag, AndroidConversions, RichLogger}
+import com.hanhuy.android.common.{ServiceBus, LogcatTag, AndroidConversions, RichLogger}
 import RichLogger._
 import AndroidConversions._
 
@@ -39,10 +39,13 @@ class PINHolderService extends Service {
 
   lazy val settings = Settings(this)
 
-  def pinKey: SecretKey =  {
+  def ping(): Unit = {
     handler.removeCallbacks(finishRunner)
     handler.postDelayed(finishRunner,
       settings.get(Settings.PIN_TIMEOUT) * 60 * 1000)
+  }
+  def pinKey: SecretKey =  {
+    ping()
     _key
   }
   private var _key: SecretKey = _
@@ -51,11 +54,13 @@ class PINHolderService extends Service {
 
   override def onCreate() {
     instance = Some(this)
+    ServiceBus.send(PINServiceStart)
   }
 
   override def onDestroy() {
     Database.close()
     instance = None
+    ServiceBus.send(PINServiceExit)
   }
 
   val finishRunner: Runnable = () => {
@@ -67,7 +72,6 @@ class PINHolderService extends Service {
   override def onStartCommand(intent: Intent, flags: Int, startId: Int) = {
     val pin = intent.getStringExtra(EXTRA_PIN)
     _key = keyFor(pin)
-    handler.removeCallbacks(finishRunner)
     val builder = new NotificationCompat.Builder(this)
       .setPriority(Notification.PRIORITY_MIN)
       .setContentText(getString(R.string.pin_holder_notif_text))
@@ -75,8 +79,7 @@ class PINHolderService extends Service {
       .setSmallIcon(R.drawable.ic_lock)
       .setContentIntent(PendingIntent.getBroadcast(
       this, 0, new Intent(ACTION_CANCEL), PendingIntent.FLAG_UPDATE_CURRENT))
-    handler.postDelayed(finishRunner,
-      settings.get(Settings.PIN_TIMEOUT) * 60 * 1000)
+    ping()
     startForeground(1, builder.build)
     registerReceiver(receiver, ACTION_CANCEL)
     Service.START_NOT_STICKY

@@ -81,7 +81,8 @@ class PINEntryActivity extends ActionBarActivity with TypedViewHolder {
         async {
           km.loadKey()
           UiBus.post {
-            pd.dismiss()
+            if (pd.isShowing)
+              pd.dismiss()
             withKey()
           }
         }

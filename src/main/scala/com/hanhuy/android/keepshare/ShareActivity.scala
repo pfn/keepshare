@@ -142,9 +142,6 @@ object ShareActivity {
           settings.set(Settings.IME, ime)
           UiBus.handler.delayed(500) { imm.showInputMethodPicker() }
         }
-        UiBus.post {
-          a.finish()
-        }
       }
     }
   }
@@ -227,6 +224,7 @@ class ShareActivity extends Activity with TypedViewHolder {
               findView(TR.continu).setEnabled(true)
               findView(TR.continu).onClick {
                 ShareActivity.selectHandler(this, settings, adapter.getItem(pos))
+                finish()
               }
             }
             list.onItemClick(onClickHandler)

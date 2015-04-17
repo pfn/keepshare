@@ -15,15 +15,13 @@ import android.database.{AbstractCursor, Cursor}
 import android.net.Uri
 import android.provider.BaseColumns
 import android.view.{MenuItem, View, ViewGroup, Menu}
-import com.hanhuy.keepassj.PwDefs
+import com.hanhuy.keepassj.{PwUuid, PwDefs}
 
-class SearchableActivity extends ActionBarActivity {
+class SearchableActivity extends AuthorizedActivity {
   implicit val TAG = LogcatTag("SearchableActivity")
   val _implicit: RichActivity = this
   import _implicit._
 
-  lazy val settings = Settings(this)
-  lazy val km = new KeyManager(this, settings)
   lazy val empty = findViewById(android.R.id.empty).asInstanceOf[TextView]
   lazy val list = findViewById(android.R.id.list).asInstanceOf[ListView]
 
@@ -34,31 +32,6 @@ class SearchableActivity extends ActionBarActivity {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.searchable_activity)
     list.setEmptyView(empty)
-
-    if (settings.get(Settings.FIRST_RUN)) {
-      startActivityForResult(SetupActivity.intent, RequestCodes.REQUEST_SETUP)
-    } else if (!km.ready) {
-      if (settings.get(Settings.NEEDS_PIN) && PINHolderService.instance.isEmpty)
-        startActivityForResult(new Intent(this, classOf[PINEntryActivity]),
-          RequestCodes.REQUEST_PIN)
-      else
-        startActivityForResult(SetupActivity.intent, RequestCodes.REQUEST_SETUP)
-    } else if (KeyManager.cloudKey.isEmpty) {
-      val p = ProgressDialog.show(this, getString(R.string.loading),
-        getString(R.string.please_wait), true, false)
-      async {
-        km.loadKey()
-        km.getConfig match {
-          case Left(x) =>
-            startActivityForResult(
-              SetupActivity.intent, RequestCodes.REQUEST_SETUP)
-          case _ =>
-        }
-        UiBus.post {
-          p.dismiss()
-        }
-      }
-    }
   }
 
   override def onNewIntent(intent: Intent) {
@@ -99,10 +72,9 @@ class SearchableActivity extends ActionBarActivity {
   }
 
   override def onCreateOptionsMenu(menu: Menu) = {
+    super.onCreateOptionsMenu(menu)
     getMenuInflater.inflate(R.menu.searchable, menu)
 
-    if (settings.get(Settings.NEEDS_PIN))
-      menu.removeItem(R.id.menu_setup_pin)
     searchView = Option(menu.findItem(R.id.menu_search)
       .getActionView.asInstanceOf[SearchView])
     searchView foreach { search =>
@@ -114,22 +86,8 @@ class SearchableActivity extends ActionBarActivity {
     true
   }
 
-  override def onOptionsItemSelected(item: MenuItem) = {
-    item.getItemId match {
-      case R.id.menu_setup =>
-        startActivity(new Intent(this, classOf[SetupActivity]))
-        true
-      case R.id.menu_setup_pin =>
-        if (km.ready) {
-          startActivity(new Intent(this, classOf[PINSetupActivity]))
-        } else {
-          Toast.makeText(this,
-            R.string.setup_required_for_pin, Toast.LENGTH_SHORT).show()
-        }
-    true
-      case _ => super.onOptionsItemSelected(item)
-    }
-  }
+  override def onOptionsItemSelected(item: MenuItem) =
+    super.onOptionsItemSelected(item)
 
   private def doSearch(query: String, id: Option[Long]) {
     v("Query is: " + query)
@@ -163,6 +121,9 @@ class SearchableActivity extends ActionBarActivity {
               val row = Option(view) getOrElse {
                 getLayoutInflater.inflate(R.layout.pwitem, c, false)
               }
+
+              if (PwUuid.Zero == getItem(i).getCustomIconUuid)
+                row.findView(TR.entry_image).setImageResource(Database.Icons(getItem(i).getIconId.ordinal))
               row.findView(TR.name).setText(
                 Database.getField(getItem(i), PwDefs.TitleField) orNull)
               row.findView(TR.username).setText(
@@ -175,14 +136,14 @@ class SearchableActivity extends ActionBarActivity {
           }
           list.setAdapter(adapter)
           list.onItemClick { pos =>
-            ShareActivity.selectHandler(
-              this, settings, adapter.getItem(pos))
+            EntryViewActivity.show(this, adapter.getItem(pos))
           }
           if (adapter.getCount == 0)
             empty.setText(R.string.no_search_results)
         }
         UiBus.post {
-          pd.dismiss()
+          if (pd.isShowing)
+            pd.dismiss()
           if (selected != -1) {
             UiBus.post {
               list.setItemChecked(selected, true)
@@ -193,25 +154,19 @@ class SearchableActivity extends ActionBarActivity {
       } getOrElse UiBus.post {
         empty.setText(R.string.no_search_results)
       }
-      UiBus.post { pd.dismiss() }
+      UiBus.post { if (pd.isShowing) pd.dismiss() }
     }
   }
 
   override def onActivityResult(request: Int, result: Int, data: Intent) {
+    super.onActivityResult(request, result, data)
 
-    val success = request match {
+    request match {
       case RequestCodes.REQUEST_SETUP =>
-        if (result == Activity.RESULT_OK) {
+        if (result == Activity.RESULT_OK)
           handleIntent(getIntent)
-          true
-        } else {
-          false
-        }
-      case RequestCodes.REQUEST_PIN => result == Activity.RESULT_OK
-      case RequestCodes.REQUEST_SIGN_IN => false
+      case _ =>
     }
-    if (!success)
-      finish()
   }
 }
 

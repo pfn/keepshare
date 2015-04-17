@@ -44,6 +44,7 @@ class PINSetupActivity extends ActionBarActivity with TypedViewHolder {
           KeyManager.encrypt(key,  KeyManager.encrypt(pinKey,
             PINHolderService.PIN_VERIFIER)))
       }
+      setResult(Activity.RESULT_OK)
       finish()
     }
     else {

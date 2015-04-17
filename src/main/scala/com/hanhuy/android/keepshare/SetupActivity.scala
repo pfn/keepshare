@@ -19,7 +19,7 @@ import android.widget._
 import java.io.{FileOutputStream, File}
 import android.text.{InputType, Editable, TextWatcher}
 import android.view.inputmethod.InputMethodManager
-import android.provider.OpenableColumns
+import android.provider.{DocumentsContract, OpenableColumns}
 
 import scala.util.Try
 
@@ -65,6 +65,10 @@ class SetupActivity extends ActionBarActivity with TypedViewHolder {
       menu.findItem(R.id.menu_setup_pin).setVisible(false)
     } else {
       menu.findItem(R.id.menu_change_pin).setVisible(false)
+    }
+    if (settings.get(Settings.FIRST_RUN)) {
+      menu.findItem(R.id.menu_change_pin).setVisible(false)
+      menu.findItem(R.id.menu_setup_pin).setVisible(false)
     }
     true
   }
@@ -141,6 +145,7 @@ class SetupActivity extends ActionBarActivity with TypedViewHolder {
         val k = keymanager.loadKey()
         if (k.nonEmpty) UiBus.post {
           settings.set(Settings.FIRST_RUN, false)
+          supportInvalidateOptionsMenu()
           flipper.setDisplayedChild(0)
           findView(TR.save).setEnabled(true)
           findView(TR.progress2).setVisibility(View.GONE)
@@ -321,6 +326,7 @@ class SetupActivity extends ActionBarActivity with TypedViewHolder {
               val c = getContentResolver.query(uri, null, null, null, null)
               var name = uri.getLastPathSegment
               var size = 100
+              var lastModified = Option.empty[Long]
               val cName = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
               val cSize = c.getColumnIndex(OpenableColumns.SIZE)
               if (cName != -1) {
@@ -328,6 +334,12 @@ class SetupActivity extends ActionBarActivity with TypedViewHolder {
                   if (!c.isNull(cName)) {
                     name = c.getString(cName)
                     size = c.getInt(cSize) // oh well, overflow don't care
+                    if (kitkatAndNewer) {
+                      val cLastModified = c.getColumnIndex(
+                        DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+                      if (cLastModified != -1 && !c.isNull(cLastModified))
+                        lastModified = Some(c.getLong(cLastModified))
+                    }
                   }
                 }
               }
@@ -462,8 +474,8 @@ class SetupFragment extends android.preference.PreferenceFragment {
       new ComponentName("com.android.settings",
         "com.android.settings.LanguageSettings")))
     import android.provider.Settings.Secure
-    val services = Secure.getString(getActivity.getContentResolver, Secure.ENABLED_ACCESSIBILITY_SERVICES)
-    ae.setChecked(services contains "com.hanhuy.android.keepshare")
+    val services = Option(Secure.getString(getActivity.getContentResolver, Secure.ENABLED_ACCESSIBILITY_SERVICES))
+    ae.setChecked(services exists (_ contains "com.hanhuy.android.keepshare"))
 
     val imm = getActivity.systemService[InputMethodManager]
     val list = imm.getEnabledInputMethodList
@@ -560,7 +572,7 @@ class TextPreference(ctx: Context, attrs: AttributeSet, res: Int)
     }
     edit.onFocusChange { f =>
       if (f) wasfocused = true
-      edit.setSelection(_text.length)
+      edit.setSelection(edit.getText.length)
     }
     wasfocused = false
   }

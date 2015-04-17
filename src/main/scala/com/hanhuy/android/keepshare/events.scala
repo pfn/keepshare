@@ -5,6 +5,8 @@ import com.hanhuy.android.common.BusEvent
 /**
  * @author pfnguyen
  */
+case object PINServiceExit extends BusEvent
+case object PINServiceStart extends BusEvent
 case object ServiceExit extends BusEvent
 case object KeyboardExit extends BusEvent
 case object IMESearchOk extends BusEvent
