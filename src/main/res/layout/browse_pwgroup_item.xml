@@ -3,14 +3,14 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:orientation="horizontal"
               android:background="@drawable/pwitem_selector"
-              android:minHeight="36dp"
+              android:minHeight="48dp"
               android:paddingLeft="8dp"
               android:paddingRight="8dp"
               android:layout_width="match_parent"
               android:layout_height="wrap_content">
     <ImageView
             android:id="@+id/folder_image"
-            android:src="@drawable/i48_folder"
+            android:src="@drawable/ic_folder_open_black_24dp"
             android:layout_marginRight="8dp"
             android:visibility="invisible"
             android:layout_gravity="center"
@@ -28,6 +28,7 @@
             />
     <TextView android:id="@+id/name"
               android:paddingLeft="12dp"
+              android:textAppearance="?android:textAppearanceMedium"
               android:layout_width="0dp"
               android:maxLines="1"
               android:layout_gravity="center"

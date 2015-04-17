@@ -10,6 +10,7 @@ import com.hanhuy.keepassj.spr.{SprEngine, SprContext, SprCompileFlags}
  * @author pfnguyen
  */
 object Database {
+  def rootGroupid = database map (_.getRootGroup.getUuid)
   private var database = Option.empty[PwDatabase]
   def pwdatabase = database.get
 
@@ -44,8 +45,11 @@ object Database {
   def search(q: String) = {
     database flatMap { db =>
       val p = SearchParameters.getNone
+      p.setSearchInUserNames(true)
       p.setSearchInTitles(true)
       p.setSearchInUrls(true)
+      p.setSearchInNotes(true)
+      p.setSearchInTags(true)
       p.setSearchString(q)
       val results = new PwObjectList[PwEntry]
       db.getRootGroup.SearchEntries(p, results)

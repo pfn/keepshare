@@ -46,7 +46,6 @@
                   android:label="@string/appname">
         </activity>
         <activity android:name=".BrowseActivity"
-                  android:launchMode="singleTop"
                   android:theme="@style/AppTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -60,7 +59,6 @@
             </intent-filter>
         </activity>
         <activity android:name=".SearchableActivity"
-                  android:launchMode="singleTop"
                   android:theme="@style/AppTheme">
             <intent-filter>
                 <action android:name="android.intent.action.SEARCH"/>

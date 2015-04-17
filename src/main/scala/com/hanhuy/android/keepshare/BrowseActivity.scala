@@ -6,9 +6,9 @@ import android.graphics.drawable.{BitmapDrawable, LayerDrawable}
 import android.os.Bundle
 import com.hanhuy.android.common.AndroidConversions._
 
-import android.app.SearchManager
+import android.app.{Activity, SearchManager}
 import android.view._
-import android.widget.{BaseAdapter, SearchView}
+import android.widget.{SearchView, BaseAdapter}
 import com.hanhuy.keepassj._
 
 import collection.JavaConverters._
@@ -21,14 +21,24 @@ import BrowseActivity._
 object BrowseActivity {
   val EXTRA_GROUP_ID = "keepshare.extra.GROUP_ID"
   val EXTRA_STACK = "keepshare.extra.STACK"
+  def browse(a: Activity, group: PwGroup): Unit = {
+    val intent = new Intent(a, classOf[BrowseActivity])
+    intent.putExtra(BrowseActivity.EXTRA_GROUP_ID, KeyManager.hex(group.getUuid.getUuidBytes))
+    a.startActivity(intent)
+  }
+  def open(a: Activity): Unit = {
+    val intent = new Intent(a, classOf[BrowseActivity])
+    a.startActivity(intent)
+  }
 }
 class BrowseActivity extends AuthorizedActivity with TypedActivity {
   lazy val list = findView(TR.list)
+  private var searchView = Option.empty[SearchView]
   override def onCreateOptionsMenu(menu: Menu) = {
     super.onCreateOptionsMenu(menu)
     getMenuInflater.inflate(R.menu.browse, menu)
-    Option(menu.findItem(R.id.menu_search)
-      .getActionView.asInstanceOf[SearchView]) foreach { search =>
+    searchView = Option(menu.findItem(R.id.menu_search).getActionView.asInstanceOf[SearchView])
+    searchView foreach { search =>
       search.setIconifiedByDefault(getResources.getBoolean(R.bool.is_phone))
       search.setSearchableInfo(
         this.systemService[SearchManager].getSearchableInfo(
@@ -44,7 +54,7 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
 
   override def onOptionsItemSelected(item: MenuItem) = item.getItemId match {
     case android.R.id.home =>
-      navigateUp()
+      onBackPressed()
       true
     case _ => super.onOptionsItemSelected(item)
   }
@@ -56,25 +66,32 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
 
 
   override def onBackPressed() = {
-    navigateUp()
+//    navigateUp()
+    val shouldBack = searchView exists (_.isIconified)
+    searchView foreach (_.setIconified(true))
+    if (shouldBack) {
+      super.onBackPressed()
+      if (Option(getIntent) exists (_.hasExtra(EXTRA_GROUP_ID)))
+        overridePendingTransition(0, 0)
+    }
   }
 
   private def navigateUp(): Unit = {
-    stack match {
-      case x :: xs =>
-        stack = xs
-        navigateTo(xs.headOption)
-      case Nil =>
-        Option(getIntent) foreach { _.putExtra(EXTRA_GROUP_ID, null: String) }
-        finish()
-    }
-    for {
-      intent <- Option(getIntent)
-      extras <- Option(intent.getExtras)
-      head   <- stack.headOption
-    } {
-      intent.putExtra(EXTRA_GROUP_ID, head.ToHexString)
-    }
+//    stack match {
+//      case x :: xs =>
+//        stack = xs
+//        navigateTo(xs.headOption)
+//      case Nil =>
+//        Option(getIntent) foreach { _.putExtra(EXTRA_GROUP_ID, null: String) }
+//        finish()
+//    }
+//    for {
+//      intent <- Option(getIntent)
+//      extras <- Option(intent.getExtras)
+//      head   <- stack.headOption
+//    } {
+//      intent.putExtra(EXTRA_GROUP_ID, head.ToHexString)
+//    }
   }
 
   private def navigateTo(groupId: Option[PwUuid]): Unit = {
@@ -97,11 +114,13 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
       val entries = group.GetEntries(false).asScala.toList
 
       val adapter = new GroupAdapter(groups, entries)
+      list.setDividerHeight(0)
       list.setAdapter(adapter)
       list.onItemClick { row =>
         val item = adapter.getItem(row)
         item.left foreach { grp =>
-          browse(grp.getUuid)
+          browse(this, grp)
+          overridePendingTransition(0, 0)
         }
         item.right foreach { entry =>
           EntryViewActivity.show(this, entry)
@@ -112,7 +131,7 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
     }
   }
 
-  private var stack = List.empty[PwUuid]
+//  private var stack = List.empty[PwUuid]
 
   private def handleIntent(): Unit = {
     val groupId = for {
@@ -121,15 +140,17 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
       id     <- Option(extras.getString(BrowseActivity.EXTRA_GROUP_ID))
     } yield new PwUuid(KeyManager.bytes(id))
 
-    for {
-      id   <- groupId
-      head <- stack.headOption orElse Some(PwUuid.Zero)
-    } {
-      if (head != id)
-        stack = id :: stack
-    }
+//    for {
+//      id   <- groupId
+//      head <- stack.headOption orElse Some(PwUuid.Zero)
+//      root <- Database.rootGroupid orElse Some(PwUuid.Zero)
+//    } {
+//      if (head != id && id != root)
+//        stack = id :: stack
+//    }
 
-    navigateTo(stack.headOption)
+//    navigateTo(stack.headOption)
+    navigateTo(groupId)
   }
 
   override def onStart() = {
@@ -143,15 +164,15 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
 
   override def onSaveInstanceState(outState: Bundle) = {
     super.onSaveInstanceState(outState)
-    outState.putStringArray(EXTRA_STACK,
-      stack.map (u => u.ToHexString()).toArray)
+//    outState.putStringArray(EXTRA_STACK,
+//      stack.map (u => u.ToHexString()).toArray)
   }
 
   override def onRestoreInstanceState(savedInstanceState: Bundle) = {
     super.onRestoreInstanceState(savedInstanceState)
-    Option(savedInstanceState.getStringArray(EXTRA_STACK)) foreach { ss =>
-      stack = ss map (s => new PwUuid(KeyManager.bytes(s))) toList
-    }
+//    Option(savedInstanceState.getStringArray(EXTRA_STACK)) foreach { ss =>
+//      stack = ss map (s => new PwUuid(KeyManager.bytes(s))) toList
+//    }
   }
 
   class GroupAdapter(groups: Seq[PwGroup], entries: Seq[PwEntry]) extends BaseAdapter {
@@ -189,12 +210,4 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
     override def getItemViewType(position: Int) = if (data(position).isLeft) 0 else 1
     override def getViewTypeCount = 2
   }
-
-  def browse(id: PwUuid): Unit = {
-    val intent = new Intent
-    intent.setComponent(getComponentName)
-    intent.putExtra(BrowseActivity.EXTRA_GROUP_ID, KeyManager.hex(id.getUuidBytes))
-    startActivity(intent)
-  }
-
 }

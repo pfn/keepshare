@@ -4,6 +4,8 @@
         <item name="android:navigationBarColor">#a50000</item>
         <item name="android:textColorPrimary">@android:color/black</item>
         <item name="android:colorAccent">#f4870e</item>
+        <!-- https://code.google.com/p/android/issues/detail?id=78346#c5 -->
+        <item name="homeAsUpIndicator">@drawable/abc_ic_ab_back_mtrl_am_alpha</item>
     </style>
     <style name="AppTheme.Dialog" parent="Base.AppTheme.Dialog">
         <item name="android:navigationBarColor">#a50000</item>

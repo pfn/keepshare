@@ -1,6 +1,5 @@
 package com.hanhuy.android.keepshare
 
-import android.support.v7.app.ActionBarActivity
 import android.view.inputmethod.InputMethodManager
 import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common.{UiBus, LogcatTag}
@@ -32,6 +31,7 @@ class SearchableActivity extends AuthorizedActivity {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.searchable_activity)
     list.setEmptyView(empty)
+    getSupportActionBar.setDisplayHomeAsUpEnabled(true)
   }
 
   override def onNewIntent(intent: Intent) {
@@ -86,8 +86,12 @@ class SearchableActivity extends AuthorizedActivity {
     true
   }
 
-  override def onOptionsItemSelected(item: MenuItem) =
-    super.onOptionsItemSelected(item)
+  override def onOptionsItemSelected(item: MenuItem) = item.getItemId match {
+    case android.R.id.home =>
+      BrowseActivity.open(this)
+      true
+    case _ => super.onOptionsItemSelected(item)
+  }
 
   private def doSearch(query: String, id: Option[Long]) {
     v("Query is: " + query)
@@ -137,6 +141,8 @@ class SearchableActivity extends AuthorizedActivity {
           list.setAdapter(adapter)
           list.onItemClick { pos =>
             EntryViewActivity.show(this, adapter.getItem(pos))
+            overridePendingTransition(R.anim.slide_in_right,
+              R.anim.slide_out_left)
           }
           if (adapter.getCount == 0)
             empty.setText(R.string.no_search_results)
