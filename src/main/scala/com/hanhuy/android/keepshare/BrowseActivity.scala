@@ -136,8 +136,7 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
   private def handleIntent(): Unit = {
     val groupId = for {
       intent <- Option(getIntent)
-      extras <- Option(intent.getExtras)
-      id     <- Option(extras.getString(BrowseActivity.EXTRA_GROUP_ID))
+      id     <- Option(intent.getStringExtra(BrowseActivity.EXTRA_GROUP_ID))
     } yield new PwUuid(KeyManager.bytes(id))
 
 //    for {
@@ -178,7 +177,10 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
   class GroupAdapter(groups: Seq[PwGroup], entries: Seq[PwEntry]) extends BaseAdapter {
     import TypedResource._
     val data = (groups map(Left(_))) ++ (entries map(Right(_)))
-    override def getItemId(position: Int) = data(position).fold(Database.getId, Database.getId)
+
+    override def hasStableIds = true
+    override def getItemId(position: Int) =
+      data(position).fold(Database.getId, Database.getId)
     override def getCount = data.size
     override def getView(position: Int, convertView: View, parent: ViewGroup) = {
       val view = if (convertView == null) {
@@ -207,7 +209,7 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
       view
     }
     override def getItem(position: Int) = data(position)
-    override def getItemViewType(position: Int) = if (data(position).isLeft) 0 else 1
-    override def getViewTypeCount = 2
+//    override def getItemViewType(position: Int) = if (data(position).isLeft) 0 else 1
+//    override def getViewTypeCount = 2
   }
 }

@@ -15,6 +15,7 @@
             android:theme="@style/AppTheme"
             android:name=".Application"
             android:label="@string/appname"
+            android:taskAffinity="com.hanhuy.android.keepshare.browsing"
             android:icon="@drawable/ic_launcher">
         <meta-data android:name="com.google.android.gms.version"
                    android:value="@integer/google_play_services_version"/>
@@ -30,7 +31,11 @@
         </activity>
         <activity android:name=".ShareActivity"
                   android:theme="@style/AppTheme.Dialog"
+                  android:allowTaskReparenting="true"
                   android:windowSoftInputMode="adjustResize"
+                  android:launchMode="singleTop"
+                  android:noHistory="true"
+                  android:taskAffinity="com.hanhuy.android.keepshare.share"
                   android:label="@string/appname">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
@@ -42,7 +47,10 @@
                   android:theme="@style/AppTheme.Dialog"
                   android:windowSoftInputMode="adjustResize"
                   android:allowTaskReparenting="true"
-                  android:launchMode="singleInstance"
+                  android:launchMode="singleTop"
+                  android:noHistory="true"
+                  android:excludeFromRecents="true"
+                  android:taskAffinity="com.hanhuy.android.keepshare.fill_search"
                   android:label="@string/appname">
         </activity>
         <activity android:name=".BrowseActivity"
@@ -71,7 +79,10 @@
         </activity>
         <activity android:name=".IMESearchActivity"
                   android:allowTaskReparenting="true"
-                  android:launchMode="singleInstance"
+                  android:launchMode="singleTop"
+                  android:noHistory="true"
+                  android:taskAffinity="com.hanhuy.android.keepshare.ime_search"
+                  android:excludeFromRecents="true"
                   android:theme="@style/AppTheme.Dialog"/>
         <activity android:name=".PINEntryActivity"
                   android:theme="@style/AppTheme"/>

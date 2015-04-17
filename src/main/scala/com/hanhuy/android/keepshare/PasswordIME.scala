@@ -105,7 +105,7 @@ with EventBus.RefOwner {
         }
         val intent = new Intent(this, classOf[IMESearchActivity])
         intent.addFlags(
-          Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+          Intent.FLAG_ACTIVITY_NEW_TASK)
         intent.putExtra(PasswordIME.EXTRA_PACKAGE, info.packageName)
         startActivity(intent)
       }

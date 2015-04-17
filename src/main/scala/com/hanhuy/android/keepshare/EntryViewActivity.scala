@@ -115,10 +115,10 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
       first = false
       linkfield.hint = "URL"
       linkfield.icon = R.drawable.ic_link_black_36dp
-      linkfield.text = strings.ReadSafeEx(PwDefs.UrlField)
+      linkfield.textfield.setMovementMethod(LinkMovementMethod.getInstance)
       linkfield.textfield.setLinksClickable(true)
       linkfield.textfield.setAutoLinkMask(Linkify.WEB_URLS)
-      linkfield.textfield.setMovementMethod(LinkMovementMethod.getInstance)
+      linkfield.text = strings.ReadSafeEx(PwDefs.UrlField)
 
       fieldlist.addView(linkfield)
     }
@@ -134,11 +134,11 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
       notesfield.hint = "Notes"
       notesfield.textfield.setMinLines(8)
       notesfield.icon = R.drawable.ic_speaker_notes_black_36dp
-      notesfield.text = strings.ReadSafeEx(PwDefs.NotesField)
+      notesfield.textfield.setMovementMethod(LinkMovementMethod.getInstance)
       notesfield.textfield.setLinksClickable(true)
       notesfield.textfield.setAutoLinkMask(Linkify.WEB_URLS |
         Linkify.EMAIL_ADDRESSES | Linkify.PHONE_NUMBERS | Linkify.MAP_ADDRESSES)
-      notesfield.textfield.setMovementMethod(LinkMovementMethod.getInstance)
+      notesfield.text = strings.ReadSafeEx(PwDefs.NotesField)
       fieldlist.addView(notesfield)
     }
 
