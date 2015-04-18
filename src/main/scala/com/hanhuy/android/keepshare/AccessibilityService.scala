@@ -2,9 +2,10 @@ package com.hanhuy.android.keepshare
 
 import java.net.URI
 
-import android.app.{KeyguardManager, PendingIntent, Notification, NotificationManager}
+import android.app.{Notification, KeyguardManager, PendingIntent, NotificationManager}
 import android.content._
 import android.os.{Handler, HandlerThread, Bundle}
+import android.support.v4.app.NotificationCompat
 import android.view.accessibility.{AccessibilityNodeInfo, AccessibilityEvent}
 import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common._
@@ -190,12 +191,15 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
 
                   searchURI foreach { uri =>
                     if (lastFoundWindowId != Option(windowId)) {
-                      val builder = new Notification.Builder(this)
+                      val builder = new NotificationCompat.Builder(this)
                       val extras = new Bundle()
                       extras.putString(EXTRA_PACKAGE, packageName)
                       extras.putString(EXTRA_URI, uri.toString)
                       extras.putInt(EXTRA_WINDOWID, windowId)
                       builder.setSmallIcon(R.drawable.ic_lock)
+                        .setPriority(Notification.PRIORITY_HIGH)
+                        .setCategory(Notification.CATEGORY_SYSTEM)
+                        .setVibrate(Array(0l))
                         .setContentTitle(getString(R.string.form_fill_notif_title, getString(R.string.appname)))
                         .setContentText(getString(R.string.form_fill_notif_text, uri.getHost))
                         .setTicker(getString(R.string.form_fill_notif_text, uri.getHost))
