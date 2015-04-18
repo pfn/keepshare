@@ -3,7 +3,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:orientation="horizontal"
               android:background="@drawable/pwitem_selector"
-              android:minHeight="36dp"
+              android:minHeight="48dp"
               android:layout_width="match_parent"
               android:layout_height="wrap_content">
     <ImageView
@@ -23,6 +23,7 @@
               android:singleLine="true"
               android:layout_centerVertical="true"
               android:layout_height="wrap_content"
+              android:textAppearance="?android:textAppearanceMedium"
               android:layout_toLeftOf="@+id/centerline"
               android:layout_toRightOf="@+id/entry_image"
               />
@@ -36,6 +37,7 @@
     <TextView android:id="@+id/username"
               android:layout_width="0dp"
               android:singleLine="true"
+              android:textAppearance="?android:textAppearanceMedium"
               android:layout_centerVertical="true"
               android:layout_height="wrap_content"
               android:layout_toRightOf="@+id/centerline"
