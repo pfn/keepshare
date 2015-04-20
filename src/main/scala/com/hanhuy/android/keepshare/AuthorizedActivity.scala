@@ -25,7 +25,7 @@ class AuthorizedActivity extends ActionBarActivity with EventBus.RefOwner {
   private var running = false
 
   private var dbPromise = Promise[PwDatabase]()
-  var database = dbPromise.future
+  def database = dbPromise.future
   override def onCreate(savedInstanceState: Bundle) = {
     super.onCreate(savedInstanceState)
     if (settings.get(Settings.FIRST_RUN)) {
@@ -67,8 +67,6 @@ class AuthorizedActivity extends ActionBarActivity with EventBus.RefOwner {
     if (!success)
       finish()
     else {
-      dbPromise = Promise[PwDatabase]()
-      database = dbPromise.future
       openDatabase()
       database.onFailureMain { case _ => finish() }
     }
@@ -112,6 +110,7 @@ class AuthorizedActivity extends ActionBarActivity with EventBus.RefOwner {
   ServiceBus += {
     case PINServiceStart => serviceExited = false
     case PINServiceExit  => serviceExited = true
+      dbPromise = Promise[PwDatabase]()
       if (running)
         startActivityForResult(new Intent(this, classOf[PINEntryActivity]),
           RequestCodes.REQUEST_PIN)
