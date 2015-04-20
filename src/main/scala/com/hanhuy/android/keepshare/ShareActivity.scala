@@ -15,20 +15,21 @@ import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.content.{ComponentName, ContentResolver, Context, Intent}
 import java.net.URI
-import android.widget.{BaseAdapter, Adapter, CursorAdapter, Toast}
+import android.widget.{BaseAdapter, Toast}
 import android.view.{ViewGroup, View}
-import android.database.Cursor
 import android.view.inputmethod.InputMethodManager
 
 import TypedResource._
+import Futures._
 
-import scala.util.Try
+import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
 
 object ShareActivity {
   implicit val TAG = LogcatTag("ShareActivity")
 
   def subhosts(host: String): Seq[String] =
-    host.split("""\.""").tails.toList filter (_.size > 1) map (_ mkString ".")
+    host.split("""\.""").tails.toList filter (_.length > 1) map (_ mkString ".")
 
   //@tailrec -- can't be due to concat
   def goUp(uri: URI): Seq[URI] = {
@@ -39,15 +40,12 @@ object ShareActivity {
       Seq(uri) ++ goUp(u)
   }
   def queryDatabase(c: Context, settings: Settings,
-                    query: Seq[String]): Option[List[PwEntry]] = {
+                    query: Seq[String]): Future[List[PwEntry]] = {
     v("possible queries: " + query)
     val km = new KeyManager(c, settings)
-    var opened = true
-    if (!Database.isOpen) {
-      opened = false
+    val f: Future[Unit] = if (!Database.isOpen) {
       if (!settings.get(Settings.FIRST_RUN)) {
-        km.loadKey()
-        km.getConfig match {
+        km.config flatMap {
           case Left(err) => err match {
             case KeyError.NeedPin =>
               c match {
@@ -74,11 +72,13 @@ object ShareActivity {
                 case _ =>
               }
           }
+          Future.failed(new Exception("key error: " + err))
           case Right((db, pw, keyf)) =>
             val b = new Bundle
-            Try(Database.open(db, Option(pw), Option(keyf))) map (
-              _ => opened = true) recover {
-              case e: Exception =>
+            Try(Database.open(db, Option(pw), Option(keyf))) match {
+              case Success(r) =>
+                Future.successful(())
+              case Failure(e) =>
                 Toast.makeText(c, c.getString(R.string.failed_to_open) +
                   e.getMessage,
                   Toast.LENGTH_LONG).show()
@@ -88,6 +88,7 @@ object ShareActivity {
                       RequestCodes.REQUEST_SETUP)
                   case _ =>
                 }
+                Future.failed(e)
             }
         }
       } else {
@@ -97,12 +98,13 @@ object ShareActivity {
               RequestCodes.REQUEST_SETUP)
           case _ =>
         }
+        Future.failed(new IllegalStateException("first run"))
       }
+    } else Future.successful(())
+
+    f map { _ =>
+      query collectFirst Function.unlift(Database.search) getOrElse List.empty
     }
-    if (opened) {
-      query collectFirst Function.unlift(Database.search)
-    } else
-      None
   }
   def selectHandler(a: Activity, settings: Settings, entry: PwEntry) = {
     val imm = a.systemService[InputMethodManager]

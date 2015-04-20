@@ -14,6 +14,7 @@ import com.hanhuy.android.common.AndroidConversions._
 
 import TypedResource._
 import com.hanhuy.keepassj.PwDefs
+import Futures._
 
 /**
  * @author pfnguyen

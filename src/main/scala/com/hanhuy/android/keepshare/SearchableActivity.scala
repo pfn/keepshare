@@ -15,6 +15,11 @@ import android.net.Uri
 import android.provider.BaseColumns
 import android.view.{MenuItem, View, ViewGroup, Menu}
 import com.hanhuy.keepassj.{PwUuid, PwDefs}
+import Futures._
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.util.Try
 
 class SearchableActivity extends AuthorizedActivity {
   implicit val TAG = LogcatTag("SearchableActivity")
@@ -105,62 +110,54 @@ class SearchableActivity extends AuthorizedActivity {
     val pd = ProgressDialog.show(this,
       getString(R.string.searching),
       getString(R.string.running_search), true, false)
-    async {
-      val results = ShareActivity.queryDatabase(this, settings, query :: Nil)
-      results map { result =>
-        val selected = (for {
-          i <- id
-          f <- result.zipWithIndex find { case (e, _) =>
-            i == Database.getId(e)
-          }
-        } yield f._2) getOrElse -1
-        UiBus.post {
-          val adapter = new BaseAdapter {
-
-            override def getCount = result.size
-
-            override def getItemId(i: Int) = Database.getId(getItem(i))
-
-            override def getView(i: Int, view: View, c: ViewGroup) = {
-              val row = Option(view) getOrElse {
-                getLayoutInflater.inflate(R.layout.pwitem, c, false)
-              }
-
-              if (PwUuid.Zero == getItem(i).getCustomIconUuid)
-                row.findView(TR.entry_image).setImageResource(Database.Icons(getItem(i).getIconId.ordinal))
-              row.findView(TR.name).setText(
-                Database.getField(getItem(i), PwDefs.TitleField) orNull)
-              row.findView(TR.username).setText(
-                Database.getField(getItem(i), PwDefs.UserNameField) orNull)
-              row
-            }
-
-            override def getItem(i: Int) = result(i)
-
-          }
-          list.setAdapter(adapter)
-          list.onItemClick { pos =>
-            EntryViewActivity.show(this, adapter.getItem(pos))
-            overridePendingTransition(R.anim.slide_in_right,
-              R.anim.slide_out_left)
-          }
-          if (adapter.getCount == 0)
-            empty.setText(R.string.no_search_results)
+    val results = ShareActivity.queryDatabase(this, settings, query :: Nil)
+    results onSuccessMain { case result =>
+      val selected = (for {
+        i <- id
+        f <- result.zipWithIndex find { case (e, _) =>
+          i == Database.getId(e)
         }
-        UiBus.post {
-          if (pd.isShowing)
-            pd.dismiss()
-          if (selected != -1) {
-            UiBus.post {
-              list.setItemChecked(selected, true)
-              list.smoothScrollToPosition(selected)
-            }
+      } yield f._2) getOrElse -1
+      val adapter = new BaseAdapter {
+
+        override def getCount = result.size
+
+        override def getItemId(i: Int) = Database.getId(getItem(i))
+
+        override def getView(i: Int, view: View, c: ViewGroup) = {
+          val row = Option(view) getOrElse {
+            getLayoutInflater.inflate(R.layout.pwitem, c, false)
           }
+
+          if (PwUuid.Zero == getItem(i).getCustomIconUuid)
+            row.findView(TR.entry_image).setImageResource(Database.Icons(getItem(i).getIconId.ordinal))
+          row.findView(TR.name).setText(
+            Database.getField(getItem(i), PwDefs.TitleField) orNull)
+          row.findView(TR.username).setText(
+            Database.getField(getItem(i), PwDefs.UserNameField) orNull)
+          row
         }
-      } getOrElse UiBus.post {
-        empty.setText(R.string.no_search_results)
+
+        override def getItem(i: Int) = result(i)
+
       }
-      UiBus.post { if (pd.isShowing) pd.dismiss() }
+      list.setAdapter(adapter)
+      list.onItemClick { pos =>
+        EntryViewActivity.show(this, adapter.getItem(pos))
+        overridePendingTransition(R.anim.slide_in_right,
+          R.anim.slide_out_left)
+      }
+      if (!isFinishing && pd.isShowing)
+        pd.dismiss()
+      if (selected != -1) {
+        UiBus.post {
+          list.setItemChecked(selected, true)
+          list.smoothScrollToPosition(selected)
+        }
+      }
+    }
+    results onFailureMain { case e =>
+    if (!isFinishing && pd.isShowing) pd.dismiss()
     }
   }
 
@@ -198,8 +195,9 @@ class SearchProvider extends ContentProvider {
     val q = Uri.decode(u.getLastPathSegment).trim
     val results = if (empty)
       None
-    else
-      ShareActivity.queryDatabase(getContext, settings, q :: Nil)
+    else {
+      Try(Await.result(ShareActivity.queryDatabase(getContext, settings, q :: Nil), Duration.Inf)).toOption
+    }
 
     new AbstractCursor {
       def toDouble(x: Either[Long,String]) = x.fold(_.toDouble, _.toDouble)

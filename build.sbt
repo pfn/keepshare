@@ -12,6 +12,8 @@ scalaVersion in Global := "2.11.6"
 
 retrolambdaEnable in Android := false
 
+debugIncludesTests in Android := false
+
 libraryDependencies ++= Seq(
   "ch.acra" % "acra" % "4.6.1",
   "com.rengwuxian.materialedittext" % "library" % "2.0.3",

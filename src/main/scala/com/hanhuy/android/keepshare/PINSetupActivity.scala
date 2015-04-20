@@ -9,6 +9,8 @@ import android.view.View
 import android.content.Intent
 import com.hanhuy.android.common.UiBus
 
+import Futures._
+
 class PINSetupActivity extends ActionBarActivity with TypedViewHolder {
 
   lazy val pinEntry = findView(TR.pin)
@@ -30,22 +32,22 @@ class PINSetupActivity extends ActionBarActivity with TypedViewHolder {
       intent.putExtra(PINHolderService.EXTRA_PIN, thePin)
       startService(intent)
       val km = new KeyManager(this, settings)
-      val ckey = km.loadKey()
-      val pinKey = PINHolderService.keyFor(thePin)
       for {
-        localKey <- km.localKey.right.toOption
-        key      <- ckey
+        key <- km.fetchCloudKey()
+        lk1 <- km.localKey
+        localKey <- lk1.right.toOption
       } {
+        val pinKey = PINHolderService.keyFor(thePin)
         val newkey = KeyManager.encrypt(key, KeyManager.encrypt(
           pinKey, localKey.getEncoded))
         settings.set(Settings.LOCAL_KEY, newkey)
         settings.set(Settings.NEEDS_PIN, true)
         settings.set(Settings.PIN_VERIFIER,
-          KeyManager.encrypt(key,  KeyManager.encrypt(pinKey,
+          KeyManager.encrypt(key, KeyManager.encrypt(pinKey,
             PINHolderService.PIN_VERIFIER)))
+        setResult(Activity.RESULT_OK)
+        finish()
       }
-      setResult(Activity.RESULT_OK)
-      finish()
     }
     else {
       error.setVisibility(View.VISIBLE)

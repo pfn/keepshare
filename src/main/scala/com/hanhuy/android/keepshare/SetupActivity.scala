@@ -21,7 +21,9 @@ import android.text.{InputType, Editable, TextWatcher}
 import android.view.inputmethod.InputMethodManager
 import android.provider.{DocumentsContract, OpenableColumns}
 
+import scala.concurrent.Future
 import scala.util.Try
+import Futures._
 
 object RequestCodes {
 
@@ -141,15 +143,12 @@ class SetupActivity extends ActionBarActivity with TypedViewHolder {
     }
     def onNext(): Unit = {
       findView(TR.progress).setVisibility(View.VISIBLE)
-      async {
-        val k = keymanager.loadKey()
-        if (k.nonEmpty) UiBus.post {
-          settings.set(Settings.FIRST_RUN, false)
-          supportInvalidateOptionsMenu()
-          flipper.setDisplayedChild(0)
-          findView(TR.save).setEnabled(true)
-          findView(TR.progress2).setVisibility(View.GONE)
-        }
+      keymanager.fetchCloudKey() onSuccessMain { case _ =>
+        settings.set(Settings.FIRST_RUN, false)
+        supportInvalidateOptionsMenu()
+        flipper.setDisplayedChild(0)
+        findView(TR.save).setEnabled(true)
+        findView(TR.progress2).setVisibility(View.GONE)
       }
     }
     connect onClick {
@@ -213,46 +212,49 @@ class SetupActivity extends ActionBarActivity with TypedViewHolder {
             error(R.string.database_no_exist)
           } else {
             findView(TR.progress2).setVisibility(View.VISIBLE)
-            async {
-              val b = new Bundle
-              val keyfilepath = if (keyf.isFile) keyf.getAbsolutePath else ""
-              Try(Database.open(
+            val keyfilepath = if (keyf.isFile) keyf.getAbsolutePath else ""
+            val f = Future {
+              Database.open(
                 db.getAbsolutePath,
                 Option(password.trim),
-                if (keyf.isFile) Some(keyf.getAbsolutePath) else None)) map { r =>
-                keymanager.loadKey()
-                keymanager.localKey match {
-                  case Left(error) =>
-                    UiBus.post {
-                      Toast.makeText(
-                        this, error.toString, Toast.LENGTH_SHORT).show()
-                      finish()
-                    }
-                  case Right(k) =>
-                    val encdb = KeyManager.encrypt(k, db.getAbsolutePath)
-                    val encpw = KeyManager.encrypt(k, password.trim)
-                    val enckeyf = KeyManager.encrypt(k, keyfilepath)
-                    val verifier = KeyManager.encrypt(k, KeyManager.VERIFIER)
+                if (keyf.isFile) Some(keyf.getAbsolutePath) else None)
+            } flatMap { _ => keymanager.localKey }
 
-                    settings.set(Settings.VERIFY_DATA, verifier)
-                    settings.set(Settings.PASSWORD, encpw)
-                    settings.set(Settings.KEYFILE_PATH, enckeyf)
-                    settings.set(Settings.DATABASE_FILE, encdb)
-                    settings.set(Settings.KEYBOARD_TIMEOUT, fragment.kbtimeo)
-                    settings.set(Settings.PIN_TIMEOUT, fragment.pintimeo)
-                    settings.set(Settings.PASSWORD_OVERRIDE, fragment.kboverride)
-                    UiBus.post {
-                      success(R.string.settings_saved)
-                      setResult(Activity.RESULT_OK)
-                      if (getIntent.hasExtra(EXTRA_FOR_RESULT))
-                        finish()
-                    }
-                }
-              } recover { case e: Exception =>
-                UiBus.post { error("Unable to open database") }
-                RichLogger.e("failed to load database", e)
-              }
-              UiBus.post { findView(TR.progress2).setVisibility(View.GONE) }
+            f onSuccessMain {
+                case Left(error) =>
+                  UiBus.post {
+                    Toast.makeText(
+                      this, error.toString, Toast.LENGTH_SHORT).show()
+                    finish()
+                  }
+                case Right(k) =>
+                  val encdb = KeyManager.encrypt(k, db.getAbsolutePath)
+                  val encpw = KeyManager.encrypt(k, password.trim)
+                  val enckeyf = KeyManager.encrypt(k, keyfilepath)
+                  val verifier = KeyManager.encrypt(k, KeyManager.VERIFIER)
+
+                  settings.set(Settings.VERIFY_DATA, verifier)
+                  settings.set(Settings.PASSWORD, encpw)
+                  settings.set(Settings.KEYFILE_PATH, enckeyf)
+                  settings.set(Settings.DATABASE_FILE, encdb)
+                  settings.set(Settings.KEYBOARD_TIMEOUT, fragment.kbtimeo)
+                  settings.set(Settings.PIN_TIMEOUT, fragment.pintimeo)
+                  settings.set(Settings.PASSWORD_OVERRIDE, fragment.kboverride)
+                  UiBus.post {
+                    success(R.string.settings_saved)
+                    setResult(Activity.RESULT_OK)
+                    if (getIntent.hasExtra(EXTRA_FOR_RESULT))
+                      finish()
+                  }
+            }
+
+            f onFailureMain { case e =>
+              UiBus.post { error("Unable to open database") }
+              RichLogger.e("failed to load database", e)
+            }
+
+            f onCompleteMain { _ =>
+              findView(TR.progress2).setVisibility(View.GONE)
             }
           }
         }
@@ -261,14 +263,13 @@ class SetupActivity extends ActionBarActivity with TypedViewHolder {
       }
     }
 
-    if (!settings.get(Settings.FIRST_RUN)) async {
-      val ckey = keymanager.loadKey()
+    if (!settings.get(Settings.FIRST_RUN)) {
       (Option(settings.get(Settings.DATABASE_FILE))
         , Option(settings.get(Settings.PASSWORD))
         , Option(settings.get(Settings.KEYFILE_PATH))
         , Option(settings.get(Settings.VERIFY_DATA))) match {
         case (Some(encdb), Some(encpw), Some(enckeyf), Some(encverifier)) =>
-          keymanager.getConfig match {
+          keymanager.config onSuccessMain {
             case Left(error) =>
               UiBus.post {
                 Toast.makeText(this,
@@ -286,7 +287,7 @@ class SetupActivity extends ActionBarActivity with TypedViewHolder {
           }
         case _ =>
       }
-      if (ckey != null) UiBus.post {
+      keymanager.fetchCloudKey() onSuccessMain { case _ =>
         findView(TR.progress2).setVisibility(View.GONE)
       }
     }
@@ -299,7 +300,7 @@ class SetupActivity extends ActionBarActivity with TypedViewHolder {
         if (result == Activity.RESULT_OK) {
           flipper.setDisplayedChild(0)
           data.getStringExtra(EXTRA_STATE) match {
-            case STATE_LOAD =>
+            case STATE_LOAD => KeyManager.clear()
             case STATE_SAVE => async {
               keymanager.createKey()
             }

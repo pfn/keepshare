@@ -10,6 +10,16 @@ import android.os.Bundle
 import android.view.{MenuItem, Menu, View}
 import android.content.Intent
 
+import Futures._
+
+import scala.util.Try
+
+object PINEntryActivity {
+  def requestPIN(a: Activity): Unit = {
+    a.startActivityForResult(new Intent(a, classOf[PINEntryActivity]),
+      RequestCodes.REQUEST_PIN)
+  }
+}
 class PINEntryActivity extends ActionBarActivity with TypedViewHolder {
   private implicit val TAG = LogcatTag("PINEntryActivity")
   lazy val prompt = findView(TR.pin_prompt)
@@ -26,6 +36,7 @@ class PINEntryActivity extends ActionBarActivity with TypedViewHolder {
     setContentView(R.layout.pin_setup)
     prompt.setText(R.string.verify_pin)
     setResult(Activity.RESULT_CANCELED)
+    val cloudKey = km.fetchCloudKey()
 
     def validatePin() {
       pinEntry.setText(pin)
@@ -42,17 +53,9 @@ class PINEntryActivity extends ActionBarActivity with TypedViewHolder {
       val pinKey = PINHolderService.keyFor(pin)
       val verifier = settings.get(Settings.PIN_VERIFIER)
 
-      val withKey = () => {
-        val decrypted = try {
-          KeyManager.cloudKey map { key =>
-            KeyManager.decryptToString(pinKey,
-              KeyManager.decryptToString(key, verifier))
-          }
-        } catch {
-          case e: Exception =>
-            v("Failed to decrypt", e)
-            None
-        }
+      cloudKey onSuccessMain { case key =>
+        val decrypted = Try(KeyManager.decryptToString(pinKey,
+            KeyManager.decryptToString(key, verifier))).toOption
 
         if (decrypted contains PINHolderService.PIN_VERIFIER) {
           val intent = new Intent(this, classOf[PINHolderService])
@@ -75,19 +78,13 @@ class PINEntryActivity extends ActionBarActivity with TypedViewHolder {
         }
       }
 
-      if (KeyManager.cloudKey.isEmpty) {
-        val pd = ProgressDialog.show(this, getString(R.string.loading),
+      if (!cloudKey.isCompleted) {
+        val pd = ProgressDialog.show(this, getString(R.string.loading_key),
           getString(R.string.fetching_key), true, false)
-        async {
-          km.loadKey()
-          UiBus.post {
-            if (!isFinishing && pd.isShowing)
-              pd.dismiss()
-            withKey()
-          }
+        cloudKey onSuccessMain { case _ =>
+          if (!isFinishing && pd.isShowing)
+            pd.dismiss()
         }
-      } else {
-        withKey()
       }
     }
     val onClick = { view: View =>

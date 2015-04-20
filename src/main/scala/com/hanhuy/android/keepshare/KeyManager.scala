@@ -2,7 +2,7 @@ package com.hanhuy.android.keepshare
 
 import android.os.Bundle
 import com.google.android.gms.auth.UserRecoverableAuthException
-import com.google.android.gms.common.{ConnectionResult, AccountPicker}
+import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.common.api.GoogleApiClient.{ConnectionCallbacks, OnConnectionFailedListener}
 import com.google.android.gms.drive.{DriveFile, MetadataChangeSet, Drive}
@@ -21,9 +21,11 @@ import android.content.Context
 import java.io.IOException
 import android.widget.Toast
 
-import scala.concurrent.{Await, Promise}
+import scala.concurrent.{Future, Await, Promise}
 import scala.concurrent.duration._
 import scala.util.Try
+
+import Futures._
 
 object KeyManager {
   val VERIFIER = "KeepShare Verifier"
@@ -38,12 +40,10 @@ object KeyManager {
   lazy val sha1 = MessageDigest.getInstance("SHA1")
   def sha1(b: Array[Byte]): String = hex(sha1.digest(b))
 
-  private var _cloudKey = Option.empty[SecretKey]
-
-  def cloudKey = _cloudKey
+  private var _cloudFutureKey = Option.empty[Future[SecretKey]]
 
   def clear() {
-    _cloudKey = None
+    _cloudFutureKey = None
   }
 
   // prefix with 01 and strip it off, otherwise
@@ -113,8 +113,8 @@ class KeyManager(c: Context, settings: Settings) {
     Settings.VERIFY_DATA) forall (settings.get(_) != null)) &&
     (!settings.get(Settings.NEEDS_PIN) || PINHolderService.instance.isDefined)
 
-  def getConfig: Either[KeyError,(String,String,String)] = {
-    localKey match {
+  def config: Future[Either[KeyError,(String,String,String)]] = {
+    localKey map {
       case Left(error) => Left(error)
       case Right(key) =>
         val db = KeyManager.decryptToString(
@@ -166,67 +166,74 @@ class KeyManager(c: Context, settings: Settings) {
     Await.result(clientPromise.future, Duration.Inf)
   }
 
-  def loadKey(): Option[SecretKey] = {
-
-    KeyManager.cloudKey orElse {
-        val appFolder = Drive.DriveApi.getAppFolder(apiClient)
-        try {
-          val result = appFolder.queryChildren(apiClient,
-            new Query.Builder()
-              .addFilter(Filters.eq(SearchableField.TITLE, KEY_FILE))
-              .build())
-            .await().getMetadataBuffer
-          result find (_ != null) map { metadata =>
-            val dfile = Drive.DriveApi.getFile(apiClient, metadata.getDriveId)
-              .open(apiClient, DriveFile.MODE_READ_ONLY, null)
-              .await().getDriveContents
-            val buf = Array.ofDim[Byte](32)
-            val in = dfile.getInputStream
-            val b = ByteBuffer.allocate(32)
-            Stream.continually(in.read(buf)).takeWhile(_ != -1) foreach { r =>
-              b.put(buf, 0, r)
-            }
-            in.close()
-            dfile.discard(apiClient)
-            b.flip()
-            if (b.remaining != 32) {
-              e("wrong buffer size: " + b.remaining)
-              return None
-            }
-            b.get(buf)
-            val hash = settings.get(Settings.CLOUD_KEY_HASH)
-            if (hash != null && sha1(buf) != hash) {
-              e("cloud key has changed")
-              return None
-            }
-            _cloudKey = Option(new SecretKeySpec(buf, ALG))
-            v("Loaded cloud key")
-          } getOrElse createKey()
-          result.release()
-        } catch {
-          case e: UserRecoverableAuthException =>
-            UiBus.post {
-              Toast.makeText(Application.instance,
-                Application.instance.getString(
-                  R.string.toast_unable_load_key, e.getMessage),
-                Toast.LENGTH_SHORT).show()
-            }
-            requestAuthz(e, STATE_LOAD)
-          case ex: IOException =>
-            e("IO error loading cloud key", ex)
-            UiBus.post {
-              Toast.makeText(Application.instance,
-                Application.instance.getString(
-                  R.string.toast_unable_load_key, ex.getMessage),
-                Toast.LENGTH_SHORT).show()
-            }
-            loadKey()
+  private def _loadKey(): SecretKey = {
+    val appFolder = Drive.DriveApi.getAppFolder(apiClient)
+    try {
+      val result = appFolder.queryChildren(apiClient,
+        new Query.Builder()
+          .addFilter(Filters.eq(SearchableField.TITLE, KEY_FILE))
+          .build())
+        .await().getMetadataBuffer
+      val k = result find (_ != null) map { metadata =>
+        val dfile = Drive.DriveApi.getFile(apiClient, metadata.getDriveId)
+          .open(apiClient, DriveFile.MODE_READ_ONLY, null)
+          .await().getDriveContents
+        val buf = Array.ofDim[Byte](32)
+        val in = dfile.getInputStream
+        val b = ByteBuffer.allocate(32)
+        Stream.continually(in.read(buf)).takeWhile(r => r != -1 && b.remaining >= r) foreach { r =>
+          b.put(buf, 0, r)
         }
-      KeyManager.cloudKey
+        in.close()
+        dfile.discard(apiClient)
+        b.flip()
+        if (b.remaining != 32) {
+          e("wrong buffer size: " + b.remaining)
+          throw KeyError.LoadFailed("wrong buffer size: " + b.remaining)
+        }
+        b.get(buf)
+        val hash = settings.get(Settings.CLOUD_KEY_HASH)
+        if (hash != null && sha1(buf) != hash) {
+          e("cloud key has changed")
+          throw KeyError.LoadFailed("cloud key has changed")
+        }
+        v("Loaded cloud key")
+        new SecretKeySpec(buf, ALG)
+      } getOrElse createKey()
+      result.release()
+      k
+    } catch {
+      case e: UserRecoverableAuthException =>
+        UiBus.post {
+          Toast.makeText(Application.instance,
+            Application.instance.getString(
+              R.string.toast_unable_load_key, e.getMessage),
+            Toast.LENGTH_SHORT).show()
+        }
+        requestAuthz(e, STATE_LOAD)
+        throw KeyError.LoadFailed("need authz")
+      case ex: IOException =>
+        e("IO error loading cloud key", ex)
+        UiBus.post {
+          Toast.makeText(Application.instance,
+            Application.instance.getString(
+              R.string.toast_unable_load_key, ex.getMessage),
+            Toast.LENGTH_SHORT).show()
+        }
+        _loadKey()
     }
   }
 
-  def createKey(): Option[SecretKey] = {
+  def fetchCloudKey(): Future[SecretKey] = {
+    val p = KeyManager._cloudFutureKey getOrElse {
+      Future { _loadKey() }
+    }
+    KeyManager._cloudFutureKey = Some(p)
+
+    p
+  }
+
+  def createKey(): SecretKey = {
     try {
 
       val keybuf = Array.ofDim[Byte](32)
@@ -241,16 +248,16 @@ class KeyManager(c: Context, settings: Settings) {
       val written = out.write(keybuf)
       out.close()
       appFolder.createFile(apiClient, metadata, contents)
-      loadKey()
+      _loadKey()
     } catch {
       case e: UserRecoverableAuthException =>
         requestAuthz(e, STATE_SAVE)
-        None
+        throw KeyError.CreateFailed("need authz")
     }
   }
 
-  def localKey: Either[KeyError,SecretKey] = {
-    cloudKey map { ck =>
+  def localKey: Future[Either[KeyError,SecretKey]] = {
+    fetchCloudKey() map { ck =>
 
       val k = settings.get(Settings.LOCAL_KEY)
 
@@ -282,7 +289,7 @@ class KeyManager(c: Context, settings: Settings) {
           Right(new SecretKeySpec(a, ALG))
         } getOrElse Left(KeyError.NeedClear)
       }
-    } getOrElse Left(KeyError.NeedLoad)
+    }
   }
 
   private def requestAuthz(e: UserRecoverableAuthException, state: String) {
@@ -298,8 +305,11 @@ class KeyManager(c: Context, settings: Settings) {
 
 sealed trait KeyError
 object KeyError {
-  case object NeedPin extends KeyError
+  case object NeedPin extends Exception with KeyError
   case class VerifyFailure(error: String) extends KeyError
   case object NeedLoad extends KeyError
   case object NeedClear extends KeyError
+  case object NeedSetup extends Exception with KeyError
+  case class LoadFailed(s: String) extends Exception(s) with KeyError
+  case class CreateFailed(s: String) extends Exception(s) with KeyError
 }

@@ -24,31 +24,29 @@ class AuthorizedActivity extends ActionBarActivity with EventBus.RefOwner {
   private var serviceExited = false
   private var running = false
 
-  private var dbPromise = Promise[PwDatabase]()
-  def database = dbPromise.future
+  private var dbFuture = Option.empty[Future[PwDatabase]]
+  private val readyPromise = Promise[Unit]()
+  def database = dbFuture getOrElse openDatabase()
   override def onCreate(savedInstanceState: Bundle) = {
     super.onCreate(savedInstanceState)
     if (settings.get(Settings.FIRST_RUN)) {
       startActivityForResult(SetupActivity.intent, RequestCodes.REQUEST_SETUP)
     } else if (!km.ready) {
       if (settings.get(Settings.NEEDS_PIN) && PINHolderService.instance.isEmpty)
-        startActivityForResult(new Intent(this, classOf[PINEntryActivity]),
-          RequestCodes.REQUEST_PIN)
+        PINEntryActivity.requestPIN(this)
       else
         startActivityForResult(SetupActivity.intent, RequestCodes.REQUEST_SETUP)
-    } else if (KeyManager.cloudKey.isEmpty) {
-      val p = ProgressDialog.show(this, getString(R.string.loading),
+    } else {
+      readyPromise.trySuccess()
+      val p = ProgressDialog.show(this, getString(R.string.loading_key),
         getString(R.string.please_wait), true, false)
-      Future {
-        km.loadKey()
-        km.getConfig.left map { x =>
+      km.config flatMap {
+        case Left(_) =>
           startActivityForResult(
             SetupActivity.intent, RequestCodes.REQUEST_SETUP)
-        }
-      }.onCompleteMain(_=> if (!isFinishing && p.isShowing) p.dismiss())
-    } else if (km.ready) {
-      openDatabase()
-      database.onFailureMain { case _ => finish() }
+          Future.failed(KeyError.LoadFailed("need setup"))
+        case Right(_) => database
+      } onCompleteMain(_=> if (!isFinishing && p.isShowing) p.dismiss())
     }
   }
 
@@ -67,16 +65,15 @@ class AuthorizedActivity extends ActionBarActivity with EventBus.RefOwner {
     if (!success)
       finish()
     else {
-      openDatabase()
-      database.onFailureMain { case _ => finish() }
+      readyPromise.trySuccess()
+      dbFuture foreach (_.onFailure { case _ => dbFuture = None })
     }
   }
   override def onResume() = {
     super.onResume()
     running = true
     if (serviceExited)
-      startActivityForResult(new Intent(this, classOf[PINEntryActivity]),
-        RequestCodes.REQUEST_PIN)
+      PINEntryActivity.requestPIN(this)
     PINHolderService.instance foreach (_.ping())
   }
   override def onPause() = {
@@ -110,55 +107,51 @@ class AuthorizedActivity extends ActionBarActivity with EventBus.RefOwner {
   ServiceBus += {
     case PINServiceStart => serviceExited = false
     case PINServiceExit  => serviceExited = true
-      dbPromise = Promise[PwDatabase]()
+      dbFuture = None
       if (running)
-        startActivityForResult(new Intent(this, classOf[PINEntryActivity]),
-          RequestCodes.REQUEST_PIN)
+        PINEntryActivity.requestPIN(this)
   }
 
-  private def openDatabase() = {
-    if (Database.isOpen && !dbPromise.isCompleted)
-      dbPromise.success(Database.pwdatabase)
-    else if (!dbPromise.isCompleted) {
+  private def openDatabase(): Future[PwDatabase] = {
+    if (!readyPromise.isCompleted) {
+      Future.failed(KeyError.NeedPin)
+    } else if (Database.isOpen)
+      Future.successful(Database.pwdatabase)
+    else {
 
-      val p = ProgressDialog.show(this, getString(R.string.loading),
-        getString(R.string.please_wait), true, false)
-      Future {
-        if (!settings.get(Settings.FIRST_RUN)) {
-          km.loadKey()
-          km.getConfig match {
-            case Left(err) => err match {
-              case KeyError.NeedPin =>
-                startActivityForResult(
-                  new Intent(this, classOf[PINEntryActivity]),
-                  RequestCodes.REQUEST_PIN)
-              case _ =>
-                UiBus.post {
-                  Toast.makeText(this,
-                    R.string.failed_verify, Toast.LENGTH_LONG).show()
-                }
-                startActivityForResult(SetupActivity.intent,
-                  RequestCodes.REQUEST_SETUP)
+      val f = km.config flatMap {
+        case Left(err) => err match {
+          case KeyError.NeedPin =>
+            // ignore this case as it should be handled earlier by readyPromise
+            Future.failed(KeyError.NeedPin)
+          case _ =>
+            UiBus.post {
+              Toast.makeText(this,
+                R.string.failed_verify, Toast.LENGTH_LONG).show()
             }
-            case Right((db, pw, keyf)) =>
-              val b = new Bundle
-              Try(Database.open(db, Option(pw), Option(keyf))) map (
-                _ => dbPromise.trySuccess(Database.pwdatabase)) recover {
-                case e: Exception =>
-                  Toast.makeText(this, getString(R.string.failed_to_open) +
-                    e.getMessage,
-                    Toast.LENGTH_LONG).show()
-                  startActivityForResult(SetupActivity.intent,
-                    RequestCodes.REQUEST_SETUP)
-              }
-          }
-        } else {
-          startActivityForResult(SetupActivity.intent,
-            RequestCodes.REQUEST_SETUP)
+            startActivityForResult(SetupActivity.intent,
+              RequestCodes.REQUEST_SETUP)
+            Future.failed(KeyError.NeedSetup)
         }
-        dbPromise.tryFailure(new IllegalAccessException)
-        UiBus.post(if (running && p.isShowing) p.dismiss())
+        case Right((db, pw, keyf)) =>
+          val b = new Bundle
+          Try(Database.open(db, Option(pw), Option(keyf))) map (_ =>
+            Future.successful(Database.pwdatabase)) recover {
+            case e =>
+              Toast.makeText(this, getString(R.string.failed_to_open) +
+                e.getMessage, Toast.LENGTH_LONG).show()
+              startActivityForResult(SetupActivity.intent,
+                RequestCodes.REQUEST_SETUP)
+              Future.failed(KeyError.NeedSetup)
+          } get
       }
+      if (!f.isCompleted) {
+        val p = ProgressDialog.show(this, getString(R.string.loading_database),
+          getString(R.string.please_wait), true, false)
+        f onCompleteMain (_ => if (running && p.isShowing) p.dismiss())
+      }
+      dbFuture = Some(f)
+      f
     }
   }
 }
