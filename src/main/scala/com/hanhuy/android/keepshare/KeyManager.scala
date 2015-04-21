@@ -312,4 +312,5 @@ object KeyError {
   case object NeedSetup extends Exception with KeyError
   case class LoadFailed(s: String) extends Exception(s) with KeyError
   case class CreateFailed(s: String) extends Exception(s) with KeyError
+  case object NotReady extends Exception with KeyError
 }

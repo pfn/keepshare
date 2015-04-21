@@ -114,7 +114,7 @@ class AuthorizedActivity extends ActionBarActivity with EventBus.RefOwner {
 
   private def openDatabase(): Future[PwDatabase] = {
     if (!readyPromise.isCompleted) {
-      Future.failed(KeyError.NeedPin)
+      Future.failed(KeyError.NotReady)
     } else if (Database.isOpen)
       Future.successful(Database.pwdatabase)
     else {
