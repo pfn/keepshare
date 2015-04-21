@@ -84,7 +84,7 @@ class CredentialHolderService extends Service with EventBus.RefOwner {
     handler.postDelayed(finishRunnable,
       settings.get(Settings.KEYBOARD_TIMEOUT) * 1000)
 
-    startForeground(1, builder.build)
+    startForeground(Notifications.NOTIF_CREDENTIALS_READY, builder.build)
     Service.START_STICKY
   }
 

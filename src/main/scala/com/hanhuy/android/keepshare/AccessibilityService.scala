@@ -32,7 +32,6 @@ object AccessibilityService {
   var filling: Boolean = false
   var fillInfo = Option.empty[AccessibilityFillEvent]
 
-  val NOTIF_FOUND = 0
   val ACTION_CANCEL = "com.hanhuy.android.keepshare.action.CANCEL_FILL"
   val ACTION_SEARCH = "com.hanhuy.android.keepshare.action.SEARCH_FILL"
 
@@ -212,7 +211,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
                         PendingIntent.FLAG_UPDATE_CURRENT))
 
                       systemService[NotificationManager].notify(
-                        NOTIF_FOUND, builder.build())
+                        Notifications.NOTIF_FOUND, builder.build())
                     }
                   }
                 }
@@ -220,7 +219,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
                 lastFoundWindowId = Some(windowId)
               } else {
                 if (lastFoundWindowId != Option(windowId)) {
-                  systemService[NotificationManager].cancel(NOTIF_FOUND)
+                  systemService[NotificationManager].cancel(Notifications.NOTIF_FOUND)
                 }
               }
             }
@@ -252,14 +251,14 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
     d("Exiting accessibility service")
     thread.quit()
     unregisterReceiver(receiver)
-    systemService[NotificationManager].cancel(NOTIF_FOUND)
+    systemService[NotificationManager].cancel(Notifications.NOTIF_FOUND)
   }
 
   val receiver: BroadcastReceiver = (c: Context, intent: Intent) =>
     intent.getAction match {
       case Intent.ACTION_SCREEN_OFF =>
         filling = false
-        systemService[NotificationManager].cancel(NOTIF_FOUND)
+        systemService[NotificationManager].cancel(Notifications.NOTIF_FOUND)
       case Intent.ACTION_USER_PRESENT => filling = true
       case ACTION_CANCEL =>
       case ACTION_SEARCH =>

@@ -11,6 +11,11 @@ import javax.crypto.{SecretKey, SecretKeyFactory}
 import android.os.Handler
 import android.support.v4.app.NotificationCompat
 
+object Notifications {
+  val NOTIF_FOUND = 0
+  val NOTIF_DATABASE_UNLOCKED = 1
+  val NOTIF_CREDENTIALS_READY = 2
+}
 object PINHolderService {
   var instance = Option.empty[PINHolderService]
 
@@ -44,7 +49,7 @@ class PINHolderService extends Service {
     handler.postDelayed(finishRunner,
       settings.get(Settings.PIN_TIMEOUT) * 60 * 1000)
   }
-  def pinKey: SecretKey =  {
+  def pinKey: SecretKey = {
     ping()
     _key
   }
@@ -80,7 +85,7 @@ class PINHolderService extends Service {
       .setContentIntent(PendingIntent.getBroadcast(
       this, 0, new Intent(ACTION_CANCEL), PendingIntent.FLAG_UPDATE_CURRENT))
     ping()
-    startForeground(1, builder.build)
+    startForeground(Notifications.NOTIF_DATABASE_UNLOCKED, builder.build)
     registerReceiver(receiver, ACTION_CANCEL)
     Service.START_NOT_STICKY
   }
