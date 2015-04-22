@@ -6,7 +6,7 @@ import AndroidConversions._
 import RichLogger._
 
 import android.app.{ProgressDialog, AlertDialog, Activity}
-import android.os.Bundle
+import android.os.{Vibrator, Bundle}
 import android.view.{MenuItem, Menu, View}
 import android.content.Intent
 
@@ -28,6 +28,7 @@ class PINEntryActivity extends ActionBarActivity with TypedViewHolder {
   lazy val error = findView(TR.pin_error)
   lazy val settings = Settings(this)
   lazy val km = new KeyManager(this, settings)
+  lazy val vibrator = this.systemService[Vibrator]
 
   private var pin = ""
   override def onCreate(savedInstanceState: Bundle) {
@@ -40,6 +41,7 @@ class PINEntryActivity extends ActionBarActivity with TypedViewHolder {
 
     def validatePin() {
       pinEntry.setText(pin)
+      vibrator.vibrate(20)
       ok.setEnabled(pin.length > 0)
     }
 
