@@ -48,7 +48,7 @@ object SetupActivity {
     intent
   }
 }
-class SetupActivity extends ActionBarActivity with TypedViewHolder {
+class SetupActivity extends ActionBarActivity with TypedViewHolder with EventBus.RefOwner {
   implicit val TAG = LogcatTag("SetupActivity")
   import KeyManager._
   import RequestCodes._
@@ -122,13 +122,6 @@ class SetupActivity extends ActionBarActivity with TypedViewHolder {
   }
   def success(msg: Int): Unit = success(getString(msg))
 
-  override def onResume() {
-    super.onResume()
-    if (settings.get(Settings.NEEDS_PIN) && PINHolderService.instance.isEmpty) {
-      startActivityForResult(new Intent(this, classOf[PINEntryActivity]),
-        RequestCodes.REQUEST_PIN_ENTRY)
-    }
-  }
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
     setTitle(getTitle + getString(R.string.setup_subtitle))
@@ -291,6 +284,10 @@ class SetupActivity extends ActionBarActivity with TypedViewHolder {
         findView(TR.progress2).setVisibility(View.GONE)
       }
     }
+    if (settings.get(Settings.NEEDS_PIN) && PINHolderService.instance.isEmpty) {
+      startActivityForResult(new Intent(this, classOf[PINEntryActivity]),
+        RequestCodes.REQUEST_PIN_ENTRY)
+    }
   }
 
 
@@ -389,6 +386,9 @@ class SetupActivity extends ActionBarActivity with TypedViewHolder {
     } else {
       setProperty(uri.getPath)
     }
+  }
+  ServiceBus += {
+    case PINServiceExit  => finish()
   }
 }
 
