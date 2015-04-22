@@ -21,7 +21,6 @@ import scala.util.Try
 class AuthorizedActivity extends ActionBarActivity with EventBus.RefOwner {
   lazy val settings = Settings(this)
   lazy val km = new KeyManager(this, settings)
-  private var serviceExited = false
   private var running = false
 
   private var dbFuture = Option.empty[Future[PwDatabase]]
@@ -72,8 +71,6 @@ class AuthorizedActivity extends ActionBarActivity with EventBus.RefOwner {
   override def onResume() = {
     super.onResume()
     running = true
-    if (serviceExited)
-      PINEntryActivity.requestPIN(this)
     PINHolderService.instance foreach (_.ping())
   }
   override def onPause() = {
@@ -105,11 +102,12 @@ class AuthorizedActivity extends ActionBarActivity with EventBus.RefOwner {
     case _ => super.onOptionsItemSelected(item)
   }
   ServiceBus += {
-    case PINServiceStart => serviceExited = false
-    case PINServiceExit  => serviceExited = true
+    case PINServiceExit  =>
       dbFuture = None
       if (running)
-        PINEntryActivity.requestPIN(this)
+        Toast.makeText(this, "Your KeepShare session has timed out, exiting",
+          Toast.LENGTH_LONG).show()
+      finish()
   }
 
   private def openDatabase(): Future[PwDatabase] = {
