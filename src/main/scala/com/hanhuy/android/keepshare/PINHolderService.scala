@@ -4,11 +4,11 @@ import com.hanhuy.android.common.{ServiceBus, LogcatTag, AndroidConversions, Ric
 import RichLogger._
 import AndroidConversions._
 
-import android.app.{Notification, PendingIntent, Service}
+import android.app.{NotificationManager, Notification, PendingIntent, Service}
 import android.content.{IntentFilter, Context, BroadcastReceiver, Intent}
 import javax.crypto.spec.{PBEKeySpec, SecretKeySpec}
 import javax.crypto.{SecretKey, SecretKeyFactory}
-import android.os.Handler
+import android.os.{SystemClock, Handler}
 import android.support.v4.app.NotificationCompat
 
 object Notifications {
@@ -42,13 +42,18 @@ class PINHolderService extends Service {
 
   private val handler = new Handler
 
+  lazy val nm = this.systemService[NotificationManager]
   lazy val settings = Settings(this)
+  private var shutdownAt = SystemClock.uptimeMillis
 
   def ping(): Unit = {
     handler.removeCallbacks(finishRunner)
-    handler.postDelayed(finishRunner,
-      settings.get(Settings.PIN_TIMEOUT) * 60 * 1000)
+    val pinTimeout = settings.get(Settings.PIN_TIMEOUT) * 60 * 1000
+    shutdownAt = SystemClock.uptimeMillis + pinTimeout
+    handler.postAtTime(finishRunner, shutdownAt)
+    nm.notify(Notifications.NOTIF_DATABASE_UNLOCKED, notification)
   }
+
   def pinKey: SecretKey = {
     ping()
     _key
@@ -68,24 +73,39 @@ class PINHolderService extends Service {
     ServiceBus.send(PINServiceExit)
   }
 
+  val notificationRunner: Runnable = () => {
+    nm.notify(Notifications.NOTIF_DATABASE_UNLOCKED, notification)
+    handler.postDelayed(notificationRunner, 1000)
+  }
+
   val finishRunner: Runnable = () => {
     unregisterReceiver(receiver)
+    handler.removeCallbacks(notificationRunner)
     stopForeground(true)
     stopSelf()
+  }
+
+  def notification = {
+    val remaining = (shutdownAt - SystemClock.uptimeMillis) / 1000
+    val minutes = remaining / 60
+    val seconds = remaining % 60
+    val ms = f"($minutes%d:$seconds%02d)"
+    new NotificationCompat.Builder(this)
+      .setPriority(Notification.PRIORITY_MIN)
+      .setContentText(getString(R.string.pin_holder_notif_text) + " " + ms)
+      .setContentTitle(getString(R.string.pin_holder_notif_title, getString(R.string.appname)))
+      .setSmallIcon(R.drawable.ic_lock)
+      .setContentIntent(PendingIntent.getBroadcast(
+      this, 0, new Intent(ACTION_CANCEL), PendingIntent.FLAG_UPDATE_CURRENT))
+    .build
   }
 
   override def onStartCommand(intent: Intent, flags: Int, startId: Int) = {
     val pin = intent.getStringExtra(EXTRA_PIN)
     _key = keyFor(pin)
-    val builder = new NotificationCompat.Builder(this)
-      .setPriority(Notification.PRIORITY_MIN)
-      .setContentText(getString(R.string.pin_holder_notif_text))
-      .setContentTitle(getString(R.string.pin_holder_notif_title, getString(R.string.appname)))
-      .setSmallIcon(R.drawable.ic_lock)
-      .setContentIntent(PendingIntent.getBroadcast(
-      this, 0, new Intent(ACTION_CANCEL), PendingIntent.FLAG_UPDATE_CURRENT))
     ping()
-    startForeground(Notifications.NOTIF_DATABASE_UNLOCKED, builder.build)
+    handler.postDelayed(notificationRunner, 1000)
+    startForeground(Notifications.NOTIF_DATABASE_UNLOCKED, notification)
     registerReceiver(receiver, ACTION_CANCEL)
     Service.START_NOT_STICKY
   }
