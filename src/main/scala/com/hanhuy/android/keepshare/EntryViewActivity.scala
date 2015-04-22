@@ -21,10 +21,17 @@ import scala.collection.JavaConverters._
  */
 object EntryViewActivity {
   val EXTRA_ENTRY_ID = "keepshare.extra.ENTRY_ID"
+  val EXTRA_HISTORY_IDX = "keepshare.extra.HISTORY_IDX"
 
   def show(a: Activity, e: PwEntry): Unit = {
     val intent = new Intent(a, classOf[EntryViewActivity])
     intent.putExtra(EXTRA_ENTRY_ID, e.getUuid.ToHexString)
+    a.startActivity(intent)
+  }
+  def show(a: Activity, e: PwEntry, historyIndex: Int): Unit = {
+    val intent = new Intent(a, classOf[EntryViewActivity])
+    intent.putExtra(EXTRA_ENTRY_ID, e.getUuid.ToHexString)
+    intent.putExtra(EXTRA_HISTORY_IDX, historyIndex)
     a.startActivity(intent)
   }
 }
@@ -69,14 +76,21 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
     case _ => super.onOptionsItemSelected(item)
   }
 
-  private def showEntry(entry: PwEntry): Unit = {
+  private def showEntry(e: PwEntry): Unit = {
+    val histIdx = for {
+      intent <- Option(getIntent)
+      extra  <- Option(intent.getIntExtra(EXTRA_HISTORY_IDX, -1)) if extra != -1
+    } yield extra
+    val entry = histIdx map (i => e.getHistory.GetAt(i)) getOrElse e
     pwentry = Some(entry)
 
     val ab = getSupportActionBar
     val strings = entry.getStrings
     ab.setSubtitle(strings.ReadSafe(PwDefs.TitleField))
     if (PwUuid.Zero == entry.getCustomIconUuid) {
-      val bm = BitmapFactory.decodeResource(getResources, Database.Icons(entry.getIconId.ordinal))
+      val bm = BitmapFactory.decodeResource(getResources,
+        if (histIdx.nonEmpty) R.drawable.ic_history_black_36dp
+        else Database.Icons(entry.getIconId.ordinal))
       val bd = new BitmapDrawable(getResources, bm)
       bd.setGravity(Gravity.CENTER)
       val layers = new LayerDrawable(Array(bd, getDrawable(R.drawable.logo_frame)))
@@ -123,13 +137,18 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
       fieldlist.addView(linkfield)
     }
 
-    val groupfield = new GroupFieldView(this, entry.getParentGroup)
-    groupfield.first = first
-    first = false
-    fieldlist.addView(groupfield)
+    if (histIdx.isEmpty) {
+      val groupfield = new GroupFieldView(this, e.getParentGroup)
+      groupfield.first = first
+      groupfield.setBackgroundResource(R.drawable.list_selector_background)
+      first = false
+      fieldlist.addView(groupfield)
+    }
 
     if (Option(strings.Get(PwDefs.NotesField)) exists (_.Length > 0)) {
       val notesfield = new StandardFieldView(this)
+      notesfield.first = first
+      first = false
       notesfield.long = true
       notesfield.hint = "Notes"
       notesfield.textfield.setMinLines(8)
@@ -145,11 +164,56 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
     strings.asScala map { e => (e.getKey,e.getValue) } foreach { case (k,v) =>
       if (!PwDefs.IsStandardField(k)) {
         val field = new CustomField(this)
+        field.first = first
+        first = false
         field.hint = k
         field.text = v.ReadString
         field.password = v.isProtected
         fieldlist.addView(field)
       }
+    }
+
+    val fmt = android.text.format.DateFormat.getMediumDateFormat(this)
+    val fmt2 = android.text.format.DateFormat.getTimeFormat(this)
+    val ctime, mtime = new CustomField(this)
+    mtime.icon = R.drawable.ic_access_time_black_36dp
+    mtime.iconfield.setContentDescription("Access Times")
+    mtime.hint = "Last Modified"
+    mtime.text = fmt.format(entry.getLastModificationTime) + " " + fmt2.format(entry.getLastModificationTime)
+    mtime.textfield.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].bottomMargin = (getResources.getDisplayMetrics.density * 2).toInt
+    ctime.first = true
+    ctime.iconfield.setVisibility(View.INVISIBLE)
+    ctime.hint = "Created On"
+    ctime.textfield.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].topMargin = (getResources.getDisplayMetrics.density * 2).toInt
+    ctime.text = fmt.format(entry.getCreationTime) + " " + fmt2.format(entry.getCreationTime)
+    entry.getCreationTime
+    fieldlist.addView(mtime)
+    fieldlist.addView(ctime)
+
+    if (histIdx.isEmpty) {
+      val history = entry.getHistory.asScala.toList.zipWithIndex.sortBy(
+        _._1.getLastModificationTime).reverseMap { case (h, i) =>
+        val field = new CustomField(this)
+        field.hint = fmt.format(h.getLastModificationTime) + " " + fmt2.format(h.getLastModificationTime)
+        field.text = Database.getField(h, PwDefs.TitleField) getOrElse "<no title>"
+        field.textfield.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].topMargin = (getResources.getDisplayMetrics.density * 1).toInt
+        field.textfield.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].bottomMargin = (getResources.getDisplayMetrics.density * 1).toInt
+        field.textfield.setTextIsSelectable(false)
+        field.setBackgroundResource(R.drawable.list_selector_background)
+        field.onClick(EntryViewActivity.show(this, h, i))
+        field.iconfield.setVisibility(View.GONE)
+        field.icon = R.drawable.ic_history_black_36dp
+        field.first = true
+        field
+      }
+
+      (history.take(1).map { f =>
+        f.first = false
+        f.textfield.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].topMargin = (getResources.getDisplayMetrics.density * 12).toInt
+        f.iconfield.setVisibility(View.VISIBLE)
+        f.iconfield.setContentDescription("History")
+        f
+      } ::: history.drop(1)) foreach fieldlist.addView
     }
   }
 }
@@ -228,8 +292,11 @@ class GroupFieldView(a: AuthorizedActivity, g: PwGroup) extends StandardFieldVie
   lazy val imagefield = findView(TR.field_image)
 
   text = g.getName
-  textfield onClick openGroup()
-  imagefield onClick openGroup()
+  textfield.setTextIsSelectable(false)
+
+//  textfield onClick openGroup()
+//  imagefield onClick openGroup()
+  this onClick openGroup()
 
   if (PwUuid.Zero == g.getCustomIconUuid) {
     imagefield.setImageResource(

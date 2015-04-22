@@ -22,4 +22,6 @@
     </style>
     <style name="AppTheme" parent="Base.AppTheme"/>
     <style name="AppTheme.Dialog" parent="Base.AppTheme.Dialog"/>
+    <drawable name="list_selector_background">@android:drawable/list_selector_background</drawable>
+    <drawable name="list_selector_background_impl">@android:drawable/list_selector_background</drawable>
 </resources>
