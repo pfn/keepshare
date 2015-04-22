@@ -314,70 +314,11 @@ class SetupActivity extends ActionBarActivity with TypedViewHolder {
           keymanager.makeApiClient()
         }
       case BROWSE_DATABASE =>
-        if (result == Activity.RESULT_OK) {
-          val uri = data.getData
-          if (uri.getScheme == "content") {
-            val progress = ProgressDialog.show(this,
-              "Downloading", "Please Wait", false, true)
-            var canceled = false
-            progress.onCancel {
-              canceled = true
-            }
-            async {
-              val c = getContentResolver.query(uri, null, null, null, null)
-              var name = uri.getLastPathSegment
-              var size = 100
-              var lastModified = Option.empty[Long]
-              val cName = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-              val cSize = c.getColumnIndex(OpenableColumns.SIZE)
-              if (cName != -1) {
-                Stream.continually(c.moveToNext) takeWhile identity foreach { _ =>
-                  if (!c.isNull(cName)) {
-                    name = c.getString(cName)
-                    size = c.getInt(cSize) // oh well, overflow don't care
-                    if (kitkatAndNewer) {
-                      val cLastModified = c.getColumnIndex(
-                        DocumentsContract.Document.COLUMN_LAST_MODIFIED)
-                      if (cLastModified != -1 && !c.isNull(cLastModified))
-                        lastModified = Some(c.getLong(cLastModified))
-                    }
-                  }
-                }
-              }
-              c.close()
-              UiBus.post {
-                progress.setMax(size)
-              }
-              val external = getExternalFilesDir(null)
-              val input = getContentResolver.openInputStream(uri)
-              val dest = new java.io.File(external, name)
-              val out = new FileOutputStream(dest)
-
-              UiBus.post { fragment.datafile = dest.getAbsolutePath }
-              try {
-                var total = 0
-                val buf = Array.ofDim[Byte](32768)
-                Stream.continually(input.read(buf, 0, 32768)) takeWhile (
-                  _ != -1 && !canceled) foreach { read =>
-                  total += read
-                  out.write(buf, 0, read)
-                  UiBus.post { progress.setProgress(total) }
-                }
-                if (canceled)
-                  dest.delete()
-              } finally {
-                input.close()
-                out.close()
-              }
-              UiBus.post { progress.dismiss() }
-            }
-          } else {
-            fragment.datafile = uri.getPath
-          }
-        }
+        if (result == Activity.RESULT_OK)
+          setDataPath(data, fragment.datafile_=)
       case BROWSE_KEYFILE =>
         if (result == Activity.RESULT_OK)
-          fragment.keyfile = data.getData.getPath
+          setDataPath(data, fragment.keyfile_=)
       case REQUEST_PIN => // for change pin
         if (result == Activity.RESULT_OK)
           startActivityForResult(new Intent(this, classOf[PINSetupActivity]), RequestCodes.REQUEST_SETUP_PIN)
@@ -385,6 +326,68 @@ class SetupActivity extends ActionBarActivity with TypedViewHolder {
         if (result != Activity.RESULT_OK)
           finish()
       case REQUEST_SETUP_PIN => finish()
+    }
+  }
+
+  def setDataPath(data: Intent, setProperty: String => Unit): Unit = {
+    val uri = data.getData
+    if (uri.getScheme == "content") {
+      val progress = ProgressDialog.show(this,
+        "Downloading", "Please Wait", false, true)
+      var canceled = false
+      progress.onCancel {
+        canceled = true
+      }
+      async {
+        val c = getContentResolver.query(uri, null, null, null, null)
+        var name = uri.getLastPathSegment
+        var size = 100
+        var lastModified = Option.empty[Long]
+        val cName = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+        val cSize = c.getColumnIndex(OpenableColumns.SIZE)
+        if (cName != -1) {
+          Stream.continually(c.moveToNext) takeWhile identity foreach { _ =>
+            if (!c.isNull(cName)) {
+              name = c.getString(cName)
+              size = c.getInt(cSize) // oh well, overflow don't care
+              if (kitkatAndNewer) {
+                val cLastModified = c.getColumnIndex(
+                  DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+                if (cLastModified != -1 && !c.isNull(cLastModified))
+                  lastModified = Some(c.getLong(cLastModified))
+              }
+            }
+          }
+        }
+        c.close()
+        UiBus.post {
+          progress.setMax(size)
+        }
+        val external = getExternalFilesDir(null)
+        val input = getContentResolver.openInputStream(uri)
+        val dest = new java.io.File(external, name)
+        val out = new FileOutputStream(dest)
+
+        UiBus.post { setProperty(dest.getAbsolutePath) }
+        try {
+          var total = 0
+          val buf = Array.ofDim[Byte](32768)
+          Stream.continually(input.read(buf, 0, 32768)) takeWhile (
+            _ != -1 && !canceled) foreach { read =>
+            total += read
+            out.write(buf, 0, read)
+            UiBus.post { progress.setProgress(total) }
+          }
+          if (canceled)
+            dest.delete()
+        } finally {
+          input.close()
+          out.close()
+        }
+        UiBus.post { progress.dismiss() }
+      }
+    } else {
+      setProperty(uri.getPath)
     }
   }
 }
