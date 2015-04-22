@@ -44,8 +44,10 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
   }
 
   override def onCreate(savedInstanceState: Bundle) = {
-    getWindow.setFlags(WindowManager.LayoutParams.FLAG_SECURE,
-      WindowManager.LayoutParams.FLAG_SECURE)
+    if (!BuildConfig.DEBUG) {
+      getWindow.setFlags(WindowManager.LayoutParams.FLAG_SECURE,
+        WindowManager.LayoutParams.FLAG_SECURE)
+    }
     super.onCreate(savedInstanceState)
     setContentView(R.layout.entry_view)
 
