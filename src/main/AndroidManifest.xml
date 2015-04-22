@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           xmlns:tools="http://schemas.android.com/tools"
       package="com.hanhuy.android.keepshare"
-      android:versionCode="16"
-      android:versionName="2.1.2">
+      android:versionCode="17"
+      android:versionName="3.0.0">
 
     <!-- used to save file selection from a content provider -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
