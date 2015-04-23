@@ -95,7 +95,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
         else Database.Icons(entry.getIconId.ordinal))
       val bd = new BitmapDrawable(getResources, bm)
       bd.setGravity(Gravity.CENTER)
-      val layers = new LayerDrawable(Array(bd, getDrawable(R.drawable.logo_frame)))
+      val layers = new LayerDrawable(Array(bd, getResources.getDrawable(R.drawable.logo_frame)))
       ab.setIcon(layers)
       ab.setDisplayShowHomeEnabled(true)
       ab.setDisplayHomeAsUpEnabled(true)

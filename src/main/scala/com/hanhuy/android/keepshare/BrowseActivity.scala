@@ -105,7 +105,7 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
         val bm = BitmapFactory.decodeResource(getResources, Database.Icons(group.getIconId.ordinal))
         val bd = new BitmapDrawable(getResources, bm)
         bd.setGravity(Gravity.CENTER)
-        val layers = new LayerDrawable(Array(bd, getDrawable(R.drawable.logo_frame)))
+        val layers = new LayerDrawable(Array(bd, getResources.getDrawable(R.drawable.logo_frame)))
         ab.setIcon(layers)
         ab.setDisplayShowHomeEnabled(true)
         ab.setDisplayHomeAsUpEnabled(group != root)
