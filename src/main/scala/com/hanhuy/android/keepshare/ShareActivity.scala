@@ -1,6 +1,5 @@
 package com.hanhuy.android.keepshare
 
-import android.support.v7.app.ActionBarActivity
 import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common._
 import com.hanhuy.android.common.RichLogger._

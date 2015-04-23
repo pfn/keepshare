@@ -1,6 +1,6 @@
 package com.hanhuy.android.keepshare
 
-import android.support.v7.app.ActionBarActivity
+import android.support.v7.app.AppCompatActivity
 import com.hanhuy.android.common.{UiBus, RichLogger, AndroidConversions, LogcatTag}
 import AndroidConversions._
 import RichLogger._
@@ -20,7 +20,7 @@ object PINEntryActivity {
       RequestCodes.REQUEST_PIN)
   }
 }
-class PINEntryActivity extends ActionBarActivity with TypedViewHolder {
+class PINEntryActivity extends AppCompatActivity with TypedViewHolder {
   private implicit val TAG = LogcatTag("PINEntryActivity")
   lazy val prompt = findView(TR.pin_prompt)
   lazy val pinEntry = findView(TR.pin)

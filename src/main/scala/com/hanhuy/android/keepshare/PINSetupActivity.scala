@@ -1,6 +1,6 @@
 package com.hanhuy.android.keepshare
 
-import android.support.v7.app.ActionBarActivity
+import android.support.v7.app.AppCompatActivity
 import com.hanhuy.android.common.AndroidConversions._
 
 import android.app.Activity
@@ -11,7 +11,7 @@ import com.hanhuy.android.common.UiBus
 
 import Futures._
 
-class PINSetupActivity extends ActionBarActivity with TypedViewHolder {
+class PINSetupActivity extends AppCompatActivity with TypedViewHolder {
 
   lazy val pinEntry = findView(TR.pin)
   lazy val ok = findView(TR.pin_ok)

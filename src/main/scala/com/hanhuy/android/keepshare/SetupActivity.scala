@@ -2,7 +2,7 @@ package com.hanhuy.android.keepshare
 
 import android.preference.{ListPreference, CheckBoxPreference, Preference}
 import android.preference.Preference.{OnPreferenceChangeListener, OnPreferenceClickListener}
-import android.support.v7.app.ActionBarActivity
+import android.support.v7.app.AppCompatActivity
 import android.text.method.PasswordTransformationMethod
 import android.util.AttributeSet
 import android.view.View.OnFocusChangeListener
@@ -48,7 +48,7 @@ object SetupActivity {
     intent
   }
 }
-class SetupActivity extends ActionBarActivity with TypedViewHolder with EventBus.RefOwner {
+class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus.RefOwner {
   implicit val TAG = LogcatTag("SetupActivity")
   import KeyManager._
   import RequestCodes._

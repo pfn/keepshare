@@ -3,9 +3,8 @@ package com.hanhuy.android.keepshare
 import java.net.URI
 
 import android.app.Activity
-import android.content.{Intent, Context}
+import android.content.Intent
 import android.os.Bundle
-import android.support.v7.app.ActionBarActivity
 import android.view.{View, ViewGroup}
 import android.widget.BaseAdapter
 import com.hanhuy.android.common.{ServiceBus, UiBus}

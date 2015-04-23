@@ -21,8 +21,8 @@ libraryDependencies ++= Seq(
   "com.hanhuy.keepassj" % "keepassj" % "2.29" exclude("xpp3", "xpp3"),
   "com.google.code.findbugs" % "jsr305" % "2.0.1",
   "com.google.code.gson" % "gson" % "2.2.4",
-  "com.android.support" % "support-v4" % "22.0.0",
-  "com.android.support" % "appcompat-v7" % "22.0.0",
+  "com.android.support" % "support-v4" % "22.1.0",
+  "com.android.support" % "appcompat-v7" % "22.1.0",
   "com.google.android.gms" % "play-services-drive" % "7.0.0"
 )
 

@@ -3,7 +3,7 @@ package com.hanhuy.android.keepshare
 import android.app.{Activity, ProgressDialog}
 import android.content.Intent
 import android.os.Bundle
-import android.support.v7.app.ActionBarActivity
+import android.support.v7.app.AppCompatActivity
 import android.view.{MenuItem, Menu}
 import android.widget.Toast
 import com.hanhuy.android.common.{UiBus, EventBus, ServiceBus}
@@ -18,7 +18,7 @@ import scala.util.Try
 /**
  * @author pfnguyen
  */
-class AuthorizedActivity extends ActionBarActivity with EventBus.RefOwner {
+class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner {
   lazy val settings = Settings(this)
   lazy val km = new KeyManager(this, settings)
   private var running = false
