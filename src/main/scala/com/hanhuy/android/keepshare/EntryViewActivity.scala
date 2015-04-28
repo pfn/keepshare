@@ -27,12 +27,14 @@ object EntryViewActivity {
     val intent = new Intent(a, classOf[EntryViewActivity])
     intent.putExtra(EXTRA_ENTRY_ID, e.getUuid.ToHexString)
     a.startActivity(intent)
+    PINHolderService.ping()
   }
   def show(a: Activity, e: PwEntry, historyIndex: Int): Unit = {
     val intent = new Intent(a, classOf[EntryViewActivity])
     intent.putExtra(EXTRA_ENTRY_ID, e.getUuid.ToHexString)
     intent.putExtra(EXTRA_HISTORY_IDX, historyIndex)
     a.startActivity(intent)
+    PINHolderService.ping()
   }
 }
 class EntryViewActivity extends AuthorizedActivity with TypedActivity {

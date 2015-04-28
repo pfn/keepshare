@@ -25,6 +25,7 @@ object BrowseActivity {
     val intent = new Intent(a, classOf[BrowseActivity])
     intent.putExtra(BrowseActivity.EXTRA_GROUP_ID, KeyManager.hex(group.getUuid.getUuidBytes))
     a.startActivity(intent)
+    PINHolderService.ping()
   }
   def open(a: Activity): Unit = {
     val intent = new Intent(a, classOf[BrowseActivity])
@@ -113,7 +114,8 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
       val groups = group.GetGroups(false).asScala.toList
       val entries = group.GetEntries(false).asScala.toList
 
-      val adapter = new GroupAdapter(groups, entries)
+      val adapter = new GroupAdapter(db,
+        Option(group.getParentGroup), groups, entries)
       list.setDividerHeight(0)
       list.setAdapter(adapter)
       list.onItemClick { row =>
@@ -174,9 +176,9 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
 //    }
   }
 
-  class GroupAdapter(groups: Seq[PwGroup], entries: Seq[PwEntry]) extends BaseAdapter {
+  class GroupAdapter(db: PwDatabase, parent: Option[PwGroup], groups: Seq[PwGroup], entries: Seq[PwEntry]) extends BaseAdapter {
     import TypedResource._
-    val data = (groups map(Left(_))) ++ (entries map(Right(_)))
+    val data = (parent map Left.apply).toList ++ (groups map(Left(_))) ++ (entries map(Right(_)))
 
     override def hasStableIds = true
     override def getItemId(position: Int) =
@@ -196,6 +198,11 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
       val icon = view.findView(TR.entry_image)
 
       item.left foreach { group =>
+        folder.setImageResource(if (db.getRecycleBinUuid.Equals(group.getUuid))
+          R.drawable.ic_delete_black_24dp else R.drawable.ic_folder_open_black_24dp)
+        if (this.parent exists (_.getUuid.equals(group.getUuid))) {
+          folder.setImageResource(R.drawable.ic_expand_less_black_24dp)
+        }
         folder.setVisibility(View.VISIBLE)
         if (PwUuid.Zero == group.getCustomIconUuid)
           icon.setImageResource(Database.Icons(group.getIconId.ordinal))

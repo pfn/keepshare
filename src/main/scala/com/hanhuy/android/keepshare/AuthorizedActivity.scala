@@ -71,7 +71,6 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner {
   override def onResume() = {
     super.onResume()
     running = true
-    PINHolderService.instance foreach (_.ping())
   }
   override def onPause() = {
     super.onPause()

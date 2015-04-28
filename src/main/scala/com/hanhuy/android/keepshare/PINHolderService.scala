@@ -31,6 +31,10 @@ object PINHolderService {
     // must convert the KEY or else IV failure on 4.2 and below
     new SecretKeySpec(kf.generateSecret(spec).getEncoded, KeyManager.ALG)
   }
+
+  def ping(): Unit = {
+    instance foreach (_.ping())
+  }
 }
 
 /** Makes a best effort at holding the user's PIN-key in memory for
@@ -46,7 +50,7 @@ class PINHolderService extends Service {
   lazy val settings = Settings(this)
   private var shutdownAt = SystemClock.uptimeMillis
 
-  def ping(): Unit = {
+  private def ping(): Unit = {
     handler.removeCallbacks(finishRunner)
     val pinTimeout = settings.get(Settings.PIN_TIMEOUT) * 60 * 1000
     shutdownAt = SystemClock.uptimeMillis + pinTimeout
