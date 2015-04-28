@@ -2,6 +2,7 @@ package com.hanhuy.android.keepshare
 
 import java.net.URI
 
+import android.annotation.TargetApi
 import android.app.{Notification, KeyguardManager, PendingIntent, NotificationManager}
 import android.content._
 import android.os.{Handler, HandlerThread, Bundle}
@@ -104,6 +105,7 @@ object AccessibilityService {
     "com.android.systemui")
 }
 
+@TargetApi(18)
 class AccessibilityService extends Accessibility with EventBus.RefOwner {
   val _implicits: RichContext = this
   import _implicits._
