@@ -14,7 +14,9 @@ import com.hanhuy.android.common.RichLogger._
 
 import android.accessibilityservice.{AccessibilityService => Accessibility}
 
+import scala.annotation.tailrec
 import scala.collection.JavaConversions._
+import scala.collection.immutable.Queue
 
 /**
  * The clipboard remains vulnerable to
@@ -54,16 +56,11 @@ object AccessibilityService {
       childrenToSeq(n) map AccessibilityTree.apply
     } getOrElse Seq.empty
 
-    def find(f: AccessibilityTree => Boolean): Option[AccessibilityTree] = {
-      if (f(this)) {
-        Some(this)
-      } else {
-        children find f orElse {
-          //(children map (_.find(f))) find (_.isDefined) flatMap identity
-          // this way is better
-          children collectFirst Function.unlift(_.find(f))
-        }
-      }
+
+    @tailrec
+    final def find(f: AccessibilityTree => Boolean, bfsQueue: Queue[AccessibilityTree] = Queue(this)): Option[AccessibilityTree] = bfsQueue.dequeueOption match {
+      case Some((x, xs)) => if (f(x)) Some(x) else find(f, xs ++ x.children)
+      case _ => None
     }
     def exists(f: AccessibilityTree => Boolean): Boolean = find(f).isDefined
 
