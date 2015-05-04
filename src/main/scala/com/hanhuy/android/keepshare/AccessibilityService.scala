@@ -51,25 +51,21 @@ object AccessibilityService {
   object AccessibilityTree {
     def apply(node: AccessibilityNodeInfo) = new AccessibilityTree(Option(node))
   }
-  class AccessibilityTree private(val node: Option[AccessibilityNodeInfo]) {
+  class AccessibilityTree private(val node: Option[AccessibilityNodeInfo]) extends Iterable[AccessibilityTree] {
     lazy val children = node map { n =>
       childrenToSeq(n) map AccessibilityTree.apply
     } getOrElse Seq.empty
 
 
-    @tailrec
-    final def find(f: AccessibilityTree => Boolean, bfsQueue: Queue[AccessibilityTree] = Queue(this)): Option[AccessibilityTree] = bfsQueue.dequeueOption match {
-      case Some((x, xs)) => if (f(x)) Some(x) else find(f, xs ++ x.children)
-      case _ => None
+    override def iterator = new Iterator[AccessibilityTree] {
+      var queue = Queue(AccessibilityTree.this)
+      override def hasNext = queue.nonEmpty
+      override def next() = {
+        val (n, q) = queue.dequeue
+        queue = q ++ n.children
+        n
+      }
     }
-    def exists(f: AccessibilityTree => Boolean): Boolean = find(f).isDefined
-
-    def collect[B](pf: PartialFunction[AccessibilityTree,B]): Seq[B] =
-      if (pf isDefinedAt this)
-        Vector(pf.apply(this)) else { Vector.empty } ++ _collect(pf)
-
-    private def _collect[B](pf: PartialFunction[AccessibilityTree,B]): Seq[B] =
-      (children collect pf) ++ (children map (_ _collect pf)).flatten
 
     // this kinda stinks, but should catch the vast majority of text fields
     def isEditable = node exists (_.isEditable)
@@ -113,7 +109,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
 
   private val thread = new HandlerThread("AccessibilityService")
   private lazy val handler = {
-    thread.start
+    thread.start()
     new Handler(thread.getLooper)
   }
   /**
@@ -130,7 +126,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
     // half overlays, like IME will show with a different window ID
     // notifications seem to put in the wrong package name as well
     // any views with systemui should be filtered out
-    val r = if (tree.windowId.exists (_ == windowId) && !tree.exists (
+    val r = if (tree.windowId.contains(windowId) && !tree.exists (
         _.viewIdResourceName exists (_ startsWith "com.android.systemui"))) {
       val password = tree find (_.isPassword)
 
