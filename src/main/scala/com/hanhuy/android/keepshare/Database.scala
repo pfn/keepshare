@@ -23,6 +23,8 @@ object Database {
 
   def isOpen = database.nonEmpty
 
+  // this should only run on api19+
+  // path is already normalized to a local path if on an earlier version
   def resolvePath(f: String): Future[String] = {
     if (f startsWith "content:") Future {
       val external = Application.instance.getExternalFilesDir(null)

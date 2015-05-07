@@ -239,7 +239,7 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
             }
 
             f onFailureMain { case e =>
-              UiBus.post { error("Unable to open database") }
+              UiBus.post { error("Unable to open database: " + e.getMessage) }
               RichLogger.e("failed to load database", e)
             }
 
@@ -335,7 +335,7 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
       async {
         val c = getContentResolver.query(uri, null, null, null, null)
         var name = uri.getLastPathSegment
-        var size = 100
+        var size = -1
         var lastModified = Option.empty[Long]
         val cName = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
         val cSize = c.getColumnIndex(OpenableColumns.SIZE)
@@ -343,7 +343,9 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
           Stream.continually(c.moveToNext) takeWhile identity foreach { _ =>
             if (!c.isNull(cName)) {
               name = c.getString(cName)
-              size = c.getInt(cSize) // oh well, overflow don't care
+              if (!c.isNull(cSize)) {
+                size = c.getInt(cSize) // oh well, overflow don't care
+              }
               if (kitkatAndNewer) {
                 val cLastModified = c.getColumnIndex(
                   DocumentsContract.Document.COLUMN_LAST_MODIFIED)
@@ -355,7 +357,10 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
         }
         c.close()
         UiBus.post {
-          progress.setMax(size)
+          if (size != -1) {
+            progress.setMax(size)
+            progress.setIndeterminate(false)
+          }
         }
         val external = getExternalFilesDir(null)
         val input = getContentResolver.openInputStream(uri)
