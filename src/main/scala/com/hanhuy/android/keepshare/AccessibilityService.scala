@@ -95,7 +95,7 @@ object AccessibilityService {
   }
 
   val EXCLUDED_PACKAGES = Set("com.hanhuy.android.keepshare",
-    "com.android.systemui")
+    "com.android.systemui", "")
 }
 
 @TargetApi(18)
@@ -169,7 +169,8 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
     import AccessibilityEvent._
 
     // don't handle form fill for ourself and system
-    val packageName = event.getPackageName.toString
+    val packageName =
+      Option(event) flatMap (e => Option(e.getPackageName)) flatMap (p => Option(p.toString)) getOrElse ""
     if (!EXCLUDED_PACKAGES(packageName) && filling) {
       val windowId = event.getWindowId
       event.getEventType match {
