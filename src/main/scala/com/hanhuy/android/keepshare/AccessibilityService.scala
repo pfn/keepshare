@@ -17,6 +17,7 @@ import android.accessibilityservice.{AccessibilityService => Accessibility}
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scala.collection.immutable.Queue
+import scala.util.Try
 
 /**
  * The clipboard remains vulnerable to
@@ -95,7 +96,9 @@ object AccessibilityService {
   }
 
   val EXCLUDED_PACKAGES = Set("com.hanhuy.android.keepshare",
-    "com.android.systemui", "")
+    "com.android.chrome",
+    "com.android.systemui",
+    "")
 }
 
 @TargetApi(18)
@@ -138,9 +141,9 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
           val d = urlbar map { u =>
             val url = u.getText.toString
 
-            util.control.Exception.catching(classOf[Exception]) opt {
+            Try {
               new URI(if (url.indexOf(":/") < 0) "http://" + url else url)
-            }
+            } toOption
           } getOrElse None
           d
         } else if (packageName == "com.android.browser") {
@@ -158,7 +161,6 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
       } else None
       Some(f(packageName, searchURI, tree, password))
     } else {
-      d("Not handling because %s != %s; %s", tree.windowId, windowId, tree)
       None
     }
 
@@ -298,8 +300,6 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
       text foreach (_.node foreach { n =>
         Thread.sleep(100)
         pasteData(n, event.username) })
-      if (text.isEmpty)
-        w("No username field for password form: " + tree)
 
       //clipboard.setPrimaryClip(clip)
       true
