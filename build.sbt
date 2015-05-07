@@ -32,6 +32,8 @@ proguardOptions in Android ++=
   "-dontwarn sun.misc.Unsafe" ::
   Nil
 
+proguardCache in Android += ProguardCache("com.google.common") % "com.google.guava"
+
 ndkBuild in Android := Nil
 
 run <<= run in android.Keys.Android

@@ -5,7 +5,7 @@ import java.net.URI
 import android.annotation.TargetApi
 import android.app.{Notification, KeyguardManager, PendingIntent, NotificationManager}
 import android.content._
-import android.os.{Handler, HandlerThread, Bundle}
+import android.os.{Build, Handler, HandlerThread, Bundle}
 import android.support.v4.app.NotificationCompat
 import android.view.accessibility.{AccessibilityNodeInfo, AccessibilityEvent}
 import com.hanhuy.android.common.AndroidConversions._
@@ -14,10 +14,13 @@ import com.hanhuy.android.common.RichLogger._
 
 import android.accessibilityservice.{AccessibilityService => Accessibility}
 
-import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scala.collection.immutable.Queue
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.Duration
 import scala.util.Try
+
+import Futures._
 
 /**
  * The clipboard remains vulnerable to
@@ -29,6 +32,9 @@ import scala.util.Try
  * and pasting data randomly from the clipboard when it matches what we need
  * to paste. However, the android bug where it inserts an additional space
  * breaks this behavior.
+ *
+ * This bug has been fixed in API21 and newer, and the clipboard obfuscator
+ * has been re-enabled for devices on at least Lollipop
  * @author pfnguyen
  */
 object AccessibilityService {
@@ -276,6 +282,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
       lastCallback = Some(r)
   }
 
+  lazy val lollipopAndNewer = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
   def fillIn(event: AccessibilityFillEvent,
              pkg: String,
              searchURI: Option[URI],
@@ -295,11 +302,12 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
 
       // do password first because some username fields have autocompletes...
       passwordField foreach (_.node foreach { n =>
-        pasteData(n, event.password) })
+          pasteData(n, event.password, event.username ++ event.password) })
 
       text foreach (_.node foreach { n =>
         Thread.sleep(100)
-        pasteData(n, event.username) })
+        pasteData(n, event.username, event.username ++ event.password)
+      })
 
       //clipboard.setPrimaryClip(clip)
       true
@@ -311,58 +319,73 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
     } getOrElse { fillInfo = Some(event) }
   }
 
-  def pasteData(node: AccessibilityNodeInfo, data: String) {
-    var lockCounter = 0
-    val lock = new Object
-    def block(i: Int) = lock.synchronized {
-      if (lockCounter != i)
-        lock.wait()
-    }
+  def pasteData(node: AccessibilityNodeInfo, data: String, set: Seq[Char]) {
+    // this will break if data approaches/exceeds 512 characters in length
+    val randomlength = 512
 
-    def clear(i: Int) = lock.synchronized {
-      lockCounter = i
-      lock.notify()
-    }
-
-    UiBus.post {
-      node.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
-      clear(1)
-    }
-    block(1)
-
-    UiBus.post {
-      // unfortunately, this doesn't work for password fields...
-      val text = node.getText
-      if (text != null && !text.isEmpty) {
-        val args = new Bundle
-        import AccessibilityNodeInfo._
-        args.putInt(ACTION_ARGUMENT_SELECTION_START_INT, 0)
-        args.putInt(ACTION_ARGUMENT_SELECTION_END_INT, text.length)
-        node.performAction(ACTION_SET_SELECTION, args)
-        node.performAction(ACTION_CUT)
+    val random = new java.security.SecureRandom
+    val dataset = (set.min to set.max).toList
+    val positions = Stream.iterate(Set.empty[Int])(
+      _ + random.nextInt(randomlength)).dropWhile(
+        _.size < data.length).head.toList.sorted
+    val subs = positions.zipWithIndex.toMap
+    def preamble = Future.main {
+        node.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+      } ~ Future.main {
+        // unfortunately, this doesn't work for password fields...
+        val text = node.getText
+        if (text != null && !text.isEmpty) {
+          val args = new Bundle
+          import AccessibilityNodeInfo._
+          args.putInt(ACTION_ARGUMENT_SELECTION_START_INT, 0)
+          args.putInt(ACTION_ARGUMENT_SELECTION_END_INT, text.length)
+          node.performAction(ACTION_SET_SELECTION, args)
+          node.performAction(ACTION_CUT)
+        }
       }
-      clear(2)
-    }
-    block(2)
 
-    UiBus.post {
-      systemService[ClipboardManager].setPrimaryClip(
-        ClipData.newPlainText("", data))
-      clear(3)
-    }
-    block(3)
+    def pasting = if (lollipopAndNewer) {
+      (0 until randomlength).foldLeft(Future.successful(())) { (ac, i) =>
+        val (paste, idx, c) = if (subs.contains(i)) {
+          (true, Some(subs(i)), data(subs(i)).toString)
+        } else {
+          (false, None, dataset(random.nextInt(dataset.size)).toString)
+        }
 
-    UiBus.post {
-      node.performAction(AccessibilityNodeInfo.ACTION_PASTE)
-      clear(4)
-    }
-    block(4)
-    UiBus.post {
+        ac ~ Future.main {
+          systemService[ClipboardManager].setPrimaryClip(
+            ClipData.newPlainText("keepshare data", c))
+        } ~ (if (paste) {
+          Future.main {
+            node.performAction(AccessibilityNodeInfo.ACTION_PASTE)
+          }
+        } else Future.successful(()))
+      }
+    } else {
+      Future.main {
+        systemService[ClipboardManager].setPrimaryClip(
+          ClipData.newPlainText("", data))
+      } ~ Future.main {
+        node.performAction(AccessibilityNodeInfo.ACTION_PASTE)
+      }
+    } ~ Future.main {
+      node.performAction(AccessibilityNodeInfo.ACTION_CLEAR_SELECTION)
       systemService[ClipboardManager].setPrimaryClip(
         ClipData.newPlainText("", ""))
-      clear(5)
     }
-    block(5)
+
+    def epilogue = Future.main {
+        node.performAction(AccessibilityNodeInfo.ACTION_CLEAR_SELECTION)
+        systemService[ClipboardManager].setPrimaryClip(
+          ClipData.newPlainText("", ""))
+      } ~ Future.main {
+        node.performAction(AccessibilityNodeInfo.ACTION_CLEAR_FOCUS)
+      }
+
+    // make sure all previous actions complete from each main
+    // block before proceeding to next, each call within each
+    // future may post items onto the ui thread iteself
+    Await.ready(preamble ~ pasting ~ epilogue, Duration.Inf)
   }
 
 }

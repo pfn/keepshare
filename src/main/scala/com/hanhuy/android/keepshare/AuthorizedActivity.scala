@@ -136,8 +136,10 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner {
           val b = new Bundle
           Database.open(db, Option(pw), Option(keyf)) recoverWith {
             case e =>
-              Toast.makeText(this, getString(R.string.failed_to_open) +
-                e.getMessage, Toast.LENGTH_LONG).show()
+              UiBus.post {
+                Toast.makeText(this, getString(R.string.failed_to_open) +
+                  e.getMessage, Toast.LENGTH_LONG).show()
+              }
               startActivityForResult(SetupActivity.intent,
                 RequestCodes.REQUEST_SETUP)
               Future.failed(KeyError.NeedSetup)

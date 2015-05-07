@@ -27,6 +27,10 @@ object Futures {
       "Futures", cause.getMessage, cause)
   }
 
+  implicit class RichFuturesType(val f: Future.type) extends AnyVal {
+    def main[A](b: => A) = f.apply(b)(MainThread)
+  }
+
   implicit class RichFutures[T](val f: Future[T]) extends AnyVal {
     type S[U] = PartialFunction[T,U]
     type F[U] = PartialFunction[Throwable,U]
@@ -37,5 +41,7 @@ object Futures {
     def onSuccessMain[U]  = f.onSuccess( _: S[U])(MainThread)
     def onFailureMain[U]  = f.onFailure( _: F[U])(MainThread)
     def onCompleteMain[U] = f.onComplete(_: C[U])(MainThread)
+
+    def ~[A >: T](f: Future[A]): Future[A] = f.flatMap(_ => f)
   }
 }
