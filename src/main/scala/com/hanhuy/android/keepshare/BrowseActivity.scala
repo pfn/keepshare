@@ -15,6 +15,8 @@ import collection.JavaConverters._
 import Futures._
 import BrowseActivity._
 
+import scala.concurrent.Future
+
 /**
  * @author pfnguyen
  */
@@ -96,7 +98,11 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
   }
 
   private def navigateTo(groupId: Option[PwUuid]): Unit = {
-    database.onSuccessMain { case db =>
+    database flatMap { db =>
+      if (db.IsOpen) Future.successful(db) else {
+        Future.failed(KeyError.NeedLoad)
+      }
+    } onSuccessMain { case db =>
       val root = db.getRootGroup
       val group = groupId map { id =>
         root.FindGroup(id, true) } getOrElse root

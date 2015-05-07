@@ -101,6 +101,8 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner {
     case _ => super.onOptionsItemSelected(item)
   }
   ServiceBus += {
+    case DatabaseClosed =>
+      dbFuture = None
     case PINServiceExit  =>
       dbFuture = None
       if (running)
@@ -132,15 +134,14 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner {
         }
         case Right((db, pw, keyf)) =>
           val b = new Bundle
-          Try(Database.open(db, Option(pw), Option(keyf))) map (_ =>
-            Future.successful(Database.pwdatabase)) recover {
+          Database.open(db, Option(pw), Option(keyf)) recoverWith {
             case e =>
               Toast.makeText(this, getString(R.string.failed_to_open) +
                 e.getMessage, Toast.LENGTH_LONG).show()
               startActivityForResult(SetupActivity.intent,
                 RequestCodes.REQUEST_SETUP)
               Future.failed(KeyError.NeedSetup)
-          } get
+          }
       }
       if (!f.isCompleted) {
         val p = ProgressDialog.show(this, getString(R.string.loading_database),

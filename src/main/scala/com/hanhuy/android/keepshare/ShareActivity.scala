@@ -3,7 +3,7 @@ package com.hanhuy.android.keepshare
 import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common._
 import com.hanhuy.android.common.RichLogger._
-import com.hanhuy.keepassj.{PwDefs, PwEntry}
+import com.hanhuy.keepassj.{PwDatabase, PwDefs, PwEntry}
 
 import collection.JavaConversions._
 
@@ -74,10 +74,8 @@ object ShareActivity {
           Future.failed(new Exception("key error: " + err))
           case Right((db, pw, keyf)) =>
             val b = new Bundle
-            Try(Database.open(db, Option(pw), Option(keyf))) match {
-              case Success(r) =>
-                Future.successful(())
-              case Failure(e) =>
+            Database.open(db, Option(pw), Option(keyf)) map (_ => ()) recoverWith {
+              case e =>
                 Toast.makeText(c, c.getString(R.string.failed_to_open) +
                   e.getMessage,
                   Toast.LENGTH_LONG).show()
@@ -245,10 +243,10 @@ class ShareActivity extends Activity with TypedViewHolder {
 
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
-    Option(settings.get(Settings.VERIFY_DATA)) map { _ => init() } getOrElse {
-      startActivityForResult(
-        SetupActivity.intent, RequestCodes.REQUEST_SETUP)
-    }
+    if (Option(settings.get(Settings.VERIFY_DATA)).isDefined)
+      init()
+    else
+      startActivityForResult(SetupActivity.intent, RequestCodes.REQUEST_SETUP)
   }
 
   override def onActivityResult(request: Int, result: Int, data: Intent) {

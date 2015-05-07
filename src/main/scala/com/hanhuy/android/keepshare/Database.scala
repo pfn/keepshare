@@ -1,10 +1,17 @@
 package com.hanhuy.android.keepshare
 
-import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.nio.ByteBuffer
 
+import android.net.Uri
+import android.provider.DocumentsContract
+import com.hanhuy.android.common.ServiceBus
 import com.hanhuy.keepassj._
 import com.hanhuy.keepassj.spr.{SprEngine, SprContext, SprCompileFlags}
+
+import scala.concurrent.{Promise, Future}
+
+import Futures._
 
 /**
  * @author pfnguyen
@@ -16,28 +23,57 @@ object Database {
 
   def isOpen = database.nonEmpty
 
-  def open(db: String, pw: Option[String], keyfile: Option[String]) = {
+  def resolvePath(f: String): Future[String] = {
+    if (f startsWith "content:") Future {
+      val external = Application.instance.getExternalFilesDir(null)
+      val dest = new java.io.File(external, KeyManager.sha1(f.toString.getBytes("utf-8")))
+      val uri = Uri.parse(f)
+      val cr = Application.instance.getContentResolver
+
+      val c = cr.query(uri, null, null, null, null)
+      val cLastModified = c.getColumnIndex(
+        DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+      var lastModified = Option.empty[Long]
+      Stream.continually(c.moveToNext) takeWhile identity foreach { _ =>
+        lastModified = Some(c.getLong(cLastModified))
+      }
+      c.close()
+
+      if (lastModified exists (_ > dest.lastModified)) {
+        val input = cr.openInputStream(uri)
+        val out = new FileOutputStream(dest)
+        try {
+          var total = 0
+          val buf = Array.ofDim[Byte](32768)
+          Stream.continually(input.read(buf, 0, 32768)) takeWhile (_ != -1) foreach { read =>
+            total += read
+            out.write(buf, 0, read)
+          }
+        } finally {
+          input.close()
+          out.close()
+        }
+      }
+      dest.getAbsolutePath
+    } else Promise.successful(f).future
+  }
+  def open(db: String, pw: Option[String], keyfile: Option[String]): Future[PwDatabase] = {
     close()
-    val pwdb = new PwDatabase
-    val key = new CompositeKey
+    resolvePath(db) map { p =>
+      val pwdb = new PwDatabase
+      val key = new CompositeKey
 
-    pw find (_.nonEmpty) foreach { p => key.AddUserKey(new KcpPassword(p)) }
-    keyfile find (_.nonEmpty) foreach { f => key.AddUserKey(new KcpKeyFile(f)) }
+      pw find (_.nonEmpty) foreach { p => key.AddUserKey(new KcpPassword(p)) }
+      keyfile find (_.nonEmpty) foreach { f => key.AddUserKey(new KcpKeyFile(f)) }
 
-    pwdb.setMasterKey(key)
-    val file = new KdbxFile(pwdb)
-    val in = new FileInputStream(db)
-    try {
-      file.Load(new FileInputStream(db), KdbxFormat.Default, null)
-    } finally {
-      in.close()
+      pwdb.Open(IOConnectionInfo.FromPath(p), key, null)
+      database = Some(pwdb)
+      pwdb
     }
-
-    database = Some(pwdb)
-    true
   }
 
   def close(): Unit = {
+    ServiceBus.send(DatabaseClosed)
     database foreach { _.Close() }
     database = None
   }

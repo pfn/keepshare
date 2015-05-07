@@ -201,17 +201,14 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
         } else {
 
           val db = new File(database.trim).getAbsoluteFile
-          if (!db.isFile) {
+          if (!database.trim.startsWith("content:") && !db.isFile) {
             error(R.string.database_no_exist)
           } else {
             findView(TR.progress2).setVisibility(View.VISIBLE)
             val keyfilepath = if (keyf.isFile) keyf.getAbsolutePath else ""
-            val f = Future {
-              Database.open(
-                db.getAbsolutePath,
-                Option(password.trim),
-                if (keyf.isFile) Some(keyf.getAbsolutePath) else None)
-            } flatMap { _ => keymanager.localKey }
+            val f = Database.open(database.trim, Option(password.trim),
+                if (keyf.isFile) Some(keyf.getAbsolutePath) else None) flatMap {
+              _ => keymanager.localKey  }
 
             f onSuccessMain {
                 case Left(error) =>
@@ -221,7 +218,7 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
                     finish()
                   }
                 case Right(k) =>
-                  val encdb = KeyManager.encrypt(k, db.getAbsolutePath)
+                  val encdb = KeyManager.encrypt(k, database.trim)
                   val encpw = KeyManager.encrypt(k, password.trim)
                   val enckeyf = KeyManager.encrypt(k, keyfilepath)
                   val verifier = KeyManager.encrypt(k, KeyManager.VERIFIER)
@@ -362,10 +359,11 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
         }
         val external = getExternalFilesDir(null)
         val input = getContentResolver.openInputStream(uri)
-        val dest = new java.io.File(external, name)
+        val dest = new java.io.File(external, if (kitkatAndNewer)
+          KeyManager.sha1(uri.toString.getBytes("utf-8")) else name)
         val out = new FileOutputStream(dest)
 
-        UiBus.post { setProperty(dest.getAbsolutePath) }
+        UiBus.post { setProperty(if (kitkatAndNewer) uri.toString else dest.getAbsolutePath) }
         try {
           var total = 0
           val buf = Array.ofDim[Byte](32768)
