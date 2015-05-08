@@ -3,6 +3,8 @@ package com.hanhuy.android.keepshare
 import java.io.FileOutputStream
 import java.nio.ByteBuffer
 
+import android.annotation.TargetApi
+import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
 import com.hanhuy.android.common.ServiceBus
@@ -25,6 +27,7 @@ object Database {
 
   // this should only run on api19+
   // path is already normalized to a local path if on an earlier version
+  @TargetApi(19)
   def resolvePath(f: String): Future[String] = {
     if (f startsWith "content:") Future {
       val external = Application.instance.getExternalFilesDir(null)
@@ -56,6 +59,9 @@ object Database {
           out.close()
         }
       }
+      cr.takePersistableUriPermission(uri,
+        Intent.FLAG_GRANT_READ_URI_PERMISSION |
+          Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
       dest.getAbsolutePath
     } else Promise.successful(f).future
   }

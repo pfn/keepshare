@@ -1,5 +1,6 @@
 package com.hanhuy.android.keepshare
 
+import android.annotation.TargetApi
 import android.preference.{ListPreference, CheckBoxPreference, Preference}
 import android.preference.Preference.{OnPreferenceChangeListener, OnPreferenceClickListener}
 import android.support.v7.app.AppCompatActivity
@@ -367,6 +368,13 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
         val dest = new java.io.File(external, if (kitkatAndNewer)
           KeyManager.sha1(uri.toString.getBytes("utf-8")) else name)
         val out = new FileOutputStream(dest)
+        @TargetApi(19)
+        def takePermissions() {
+          if (kitkatAndNewer)
+            getContentResolver.takePersistableUriPermission(uri,
+              Intent.FLAG_GRANT_WRITE_URI_PERMISSION |
+                Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
 
         UiBus.post { setProperty(if (kitkatAndNewer) uri.toString else dest.getAbsolutePath) }
         try {

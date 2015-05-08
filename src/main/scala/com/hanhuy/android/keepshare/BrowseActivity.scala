@@ -8,7 +8,7 @@ import com.hanhuy.android.common.AndroidConversions._
 
 import android.app.{Activity, SearchManager}
 import android.view._
-import android.widget.{SearchView, BaseAdapter}
+import android.widget.{Toast, SearchView, BaseAdapter}
 import com.hanhuy.keepassj._
 
 import collection.JavaConverters._
@@ -136,6 +136,10 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
             R.anim.slide_out_left)
         }
       }
+    }
+    database onFailureMain { case e =>
+        Toast.makeText(this, "Failed to load database: " + e.getMessage,
+          Toast.LENGTH_LONG).show()
     }
   }
 
