@@ -324,10 +324,16 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
     val randomlength = 512
 
     val random = new java.security.SecureRandom
+    // the sets of characters to use for random data
+    // there can be some information leakage here if the variations in the
+    // input data is relatively small, user/pass info is definitely contained
+    // within the set of data
     val dataset = (set.min to set.max).toList
+    // the indices in the random stream where we will pull data out
     val positions = Stream.iterate(Set.empty[Int])(
       _ + random.nextInt(randomlength)).dropWhile(
         _.size < data.length).head.toList.sorted
+    // map of stream index to data index
     val subs = positions.zipWithIndex.toMap
     def preamble = Future.main {
         node.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
@@ -346,15 +352,16 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
 
     def pasting = if (lollipopAndNewer) {
       (0 until randomlength).foldLeft(Future.successful(())) { (ac, i) =>
-        val (paste, idx, c) = if (subs.contains(i)) {
-          (true, Some(subs(i)), data(subs(i)).toString)
+        // use data if at data position, else random data
+        val (paste, c) = if (subs.contains(i)) {
+          (true, data(subs(i)))
         } else {
-          (false, None, dataset(random.nextInt(dataset.size)).toString)
+          (false, dataset(random.nextInt(dataset.size)))
         }
 
         ac ~ Future.main {
           systemService[ClipboardManager].setPrimaryClip(
-            ClipData.newPlainText("keepshare data", c))
+            ClipData.newPlainText("keepshare data", c.toString))
         } ~ (if (paste) {
           Future.main {
             node.performAction(AccessibilityNodeInfo.ACTION_PASTE)
