@@ -305,12 +305,12 @@ class KeyManager(c: Context, settings: Settings) {
 
 sealed trait KeyError
 object KeyError {
-  case object NeedPin extends Exception with KeyError
+  case object NeedPin extends Exception("Need PIN") with KeyError
   case class VerifyFailure(error: String) extends KeyError
-  case object NeedLoad extends Exception with KeyError
+  case object NeedLoad extends Exception("Need to load") with KeyError
   case object NeedClear extends KeyError
-  case object NeedSetup extends Exception with KeyError
+  case object NeedSetup extends Exception("Need setup") with KeyError
   case class LoadFailed(s: String) extends Exception(s) with KeyError
   case class CreateFailed(s: String) extends Exception(s) with KeyError
-  case object NotReady extends Exception with KeyError
+  case object NotReady extends Exception("Not ready") with KeyError
 }

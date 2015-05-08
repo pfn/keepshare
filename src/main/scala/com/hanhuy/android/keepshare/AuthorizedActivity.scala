@@ -25,6 +25,7 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner {
 
   private var dbFuture = Option.empty[Future[PwDatabase]]
   private val readyPromise = Promise[Unit]()
+  def ready = readyPromise.isCompleted
   def database = dbFuture getOrElse openDatabase()
   override def onCreate(savedInstanceState: Bundle) = {
     super.onCreate(savedInstanceState)

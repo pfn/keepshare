@@ -137,9 +137,9 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
         }
       }
     }
-    database onFailureMain { case e =>
-        Toast.makeText(this, "Failed to load database: " + e.getMessage,
-          Toast.LENGTH_LONG).show()
+    if (ready) database onFailureMain { case e =>
+      Toast.makeText(this, "Failed to load database: " + e.getMessage,
+        Toast.LENGTH_LONG).show()
     }
   }
 
