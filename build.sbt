@@ -38,5 +38,6 @@ ndkBuild in Android := Nil
 
 run <<= run in android.Keys.Android
 
-proguardOptions in Android +=
-  "-keep class * extends junit.framework.TestCase { *; }"
+proguardOptions in Android ++=
+  "-keep class * extends junit.framework.TestCase { *; }" ::
+  "-keep class scala.runtime.BoxesRunTime { *; }" :: Nil // for debugging only

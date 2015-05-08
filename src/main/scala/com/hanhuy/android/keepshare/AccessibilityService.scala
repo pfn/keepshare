@@ -33,11 +33,11 @@ import Futures._
  * to paste. However, the android bug where it inserts an additional space
  * breaks this behavior.
  *
- * This bug has been fixed in API21 and newer, and the clipboard obfuscator
- * has been re-enabled for devices on at least Lollipop
+ * No longer uses the clipboard for Lollipop and newer. Thus impervious.
  * @author pfnguyen
  */
 object AccessibilityService {
+  lazy val lollipopAndNewer = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
   // flag to disable fill prompt/processing during lock screen
   var filling: Boolean = false
   var fillInfo = Option.empty[AccessibilityFillEvent]
@@ -63,7 +63,6 @@ object AccessibilityService {
       childrenToSeq(n) map AccessibilityTree.apply
     } getOrElse Seq.empty
 
-
     override def iterator = new Iterator[AccessibilityTree] {
       var queue = Queue(AccessibilityTree.this)
       override def hasNext = queue.nonEmpty
@@ -75,7 +74,7 @@ object AccessibilityService {
     }
 
     // this kinda stinks, but should catch the vast majority of text fields
-    def isEditable = node exists (_.isEditable)
+    def isEditable = node exists (n => n.isEditable || n.getClassName == "android.widget.EditText")
     def isPassword = node exists (_.isPassword)
     def packageName = node map (_.getPackageName)
     def windowId = node map (_.getWindowId)
@@ -101,10 +100,10 @@ object AccessibilityService {
     }
   }
 
-  val EXCLUDED_PACKAGES = Set("com.hanhuy.android.keepshare",
-    "com.android.chrome",
-    "com.android.systemui",
-    "")
+  val EXCLUDED_PACKAGES = if (lollipopAndNewer)
+    Set("com.hanhuy.android.keepshare", "com.android.systemui", "")
+  else
+    Set("com.hanhuy.android.keepshare", "com.android.chrome", "com.android.systemui")
 }
 
 @TargetApi(18)
@@ -282,7 +281,6 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
       lastCallback = Some(r)
   }
 
-  lazy val lollipopAndNewer = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
   def fillIn(event: AccessibilityFillEvent,
              pkg: String,
              searchURI: Option[URI],
@@ -320,21 +318,6 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
   }
 
   def pasteData(node: AccessibilityNodeInfo, data: String, set: Seq[Char]) {
-    // this will break if data approaches/exceeds 512 characters in length
-    val randomlength = 512
-
-    val random = new java.security.SecureRandom
-    // the sets of characters to use for random data
-    // there can be some information leakage here if the variations in the
-    // input data is relatively small, user/pass info is definitely contained
-    // within the set of data
-    val dataset = (set.min to set.max).toList
-    // the indices in the random stream where we will pull data out
-    val positions = Stream.iterate(Set.empty[Int])(
-      _ + random.nextInt(randomlength)).dropWhile(
-        _.size < data.length).head.toList.sorted
-    // map of stream index to data index
-    val subs = positions.zipWithIndex.toMap
     def preamble = Future.main {
         node.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
       } ~ Future.main {
@@ -351,22 +334,10 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
       }
 
     def pasting = if (lollipopAndNewer) {
-      (0 until randomlength).foldLeft(Future.successful(())) { (ac, i) =>
-        // use data if at data position, else random data
-        val (paste, c) = if (subs.contains(i)) {
-          (true, data(subs(i)))
-        } else {
-          (false, dataset(random.nextInt(dataset.size)))
-        }
-
-        ac ~ Future.main {
-          systemService[ClipboardManager].setPrimaryClip(
-            ClipData.newPlainText("keepshare data", c.toString))
-        } ~ (if (paste) {
-          Future.main {
-            node.performAction(AccessibilityNodeInfo.ACTION_PASTE)
-          }
-        } else Future.successful(()))
+      Future.main {
+        val args = new Bundle
+        args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, data)
+        node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
       }
     } else {
       Future.main {
@@ -375,10 +346,6 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
       } ~ Future.main {
         node.performAction(AccessibilityNodeInfo.ACTION_PASTE)
       }
-    } ~ Future.main {
-      node.performAction(AccessibilityNodeInfo.ACTION_CLEAR_SELECTION)
-      systemService[ClipboardManager].setPrimaryClip(
-        ClipData.newPlainText("", ""))
     }
 
     def epilogue = Future.main {
@@ -392,7 +359,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
     // make sure all previous actions complete from each main
     // block before proceeding to next, each call within each
     // future may post items onto the ui thread iteself
-    Await.ready(preamble ~ pasting ~ epilogue, Duration.Inf)
+    Await.ready(if (lollipopAndNewer) pasting else preamble ~ pasting ~ epilogue, Duration.Inf)
   }
 
 }
