@@ -16,6 +16,7 @@ import Futures._
 import BrowseActivity._
 
 import scala.concurrent.Future
+import scala.util.{Success, Failure}
 
 /**
  * @author pfnguyen
@@ -47,6 +48,11 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
         this.systemService[SearchManager].getSearchableInfo(
           new ComponentName(getPackageName, "com.hanhuy.android.keepshare.SearchableActivity")))
     }
+
+    database onSuccessMain { case d =>
+      if (groupId.contains(d.getRecycleBinUuid))
+        menu.findItem(R.id.empty_recycle_bin).setVisible(true)
+    }
     true
   }
 
@@ -58,6 +64,13 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
   override def onOptionsItemSelected(item: MenuItem) = item.getItemId match {
     case android.R.id.home =>
       onBackPressed()
+      true
+    case R.id.empty_recycle_bin =>
+      Database.emptyRecycleBin()
+      Database.save() onComplete {
+        case Success(_) =>
+        case Failure(ex) => android.util.Log.v("BrowseActivity", ex.getMessage, ex)
+      }
       true
     case _ => super.onOptionsItemSelected(item)
   }
@@ -145,11 +158,12 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
 
 //  private var stack = List.empty[PwUuid]
 
+  def groupId = for {
+    intent <- Option(getIntent)
+    id     <- Option(intent.getStringExtra(BrowseActivity.EXTRA_GROUP_ID))
+  } yield new PwUuid(KeyManager.bytes(id))
+
   private def handleIntent(): Unit = {
-    val groupId = for {
-      intent <- Option(getIntent)
-      id     <- Option(intent.getStringExtra(BrowseActivity.EXTRA_GROUP_ID))
-    } yield new PwUuid(KeyManager.bytes(id))
 
 //    for {
 //      id   <- groupId

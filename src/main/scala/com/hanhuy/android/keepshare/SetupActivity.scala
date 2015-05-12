@@ -22,9 +22,8 @@ import android.text.{InputType, Editable, TextWatcher}
 import android.view.inputmethod.InputMethodManager
 import android.provider.{DocumentsContract, OpenableColumns}
 
-import scala.concurrent.Future
-import scala.util.Try
 import Futures._
+import ManagedResource._
 
 object RequestCodes {
 
@@ -334,29 +333,31 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
         canceled = true
       }
       async {
-        val c = getContentResolver.query(uri, null, null, null, null)
-        var name = uri.getLastPathSegment
         var size = -1
-        var lastModified = Option.empty[Long]
-        val cName = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-        val cSize = c.getColumnIndex(OpenableColumns.SIZE)
-        if (cName != -1) {
-          Stream.continually(c.moveToNext) takeWhile identity foreach { _ =>
-            if (!c.isNull(cName)) {
-              name = c.getString(cName)
-              if (!c.isNull(cSize)) {
-                size = c.getInt(cSize) // oh well, overflow don't care
-              }
-              if (kitkatAndNewer) {
-                val cLastModified = c.getColumnIndex(
-                  DocumentsContract.Document.COLUMN_LAST_MODIFIED)
-                if (cLastModified != -1 && !c.isNull(cLastModified))
-                  lastModified = Some(c.getLong(cLastModified))
+        var name = uri.getLastPathSegment
+        for {
+          c <- using(getContentResolver.query(uri, null, null, null, null))
+        } {
+          var lastModified = Option.empty[Long]
+          val cName = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+          val cSize = c.getColumnIndex(OpenableColumns.SIZE)
+          if (cName != -1) {
+            Stream.continually(c.moveToNext) takeWhile identity foreach { _ =>
+              if (!c.isNull(cName)) {
+                name = c.getString(cName)
+                if (!c.isNull(cSize)) {
+                  size = c.getInt(cSize) // oh well, overflow don't care
+                }
+                if (kitkatAndNewer) {
+                  val cLastModified = c.getColumnIndex(
+                    DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+                  if (cLastModified != -1 && !c.isNull(cLastModified))
+                    lastModified = Some(c.getLong(cLastModified))
+                }
               }
             }
           }
         }
-        c.close()
         UiBus.post {
           if (size != -1) {
             progress.setMax(size)
@@ -364,10 +365,8 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
           }
         }
         val external = getExternalFilesDir(null)
-        val input = getContentResolver.openInputStream(uri)
         val dest = new java.io.File(external, if (kitkatAndNewer)
           KeyManager.sha1(uri.toString.getBytes("utf-8")) else name)
-        val out = new FileOutputStream(dest)
         @TargetApi(19)
         def takePermissions() {
           if (kitkatAndNewer)
@@ -377,7 +376,10 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
         }
 
         UiBus.post { setProperty(if (kitkatAndNewer) uri.toString else dest.getAbsolutePath) }
-        try {
+        for {
+          input <- using(getContentResolver.openInputStream(uri))
+          out   <- using(new FileOutputStream(dest))
+        } {
           var total = 0
           val buf = Array.ofDim[Byte](32768)
           Stream.continually(input.read(buf, 0, 32768)) takeWhile (
@@ -388,9 +390,6 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
           }
           if (canceled)
             dest.delete()
-        } finally {
-          input.close()
-          out.close()
         }
         UiBus.post { progress.dismiss() }
       }

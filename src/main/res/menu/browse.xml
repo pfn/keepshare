@@ -5,4 +5,7 @@
     <item app:actionViewClass="android.widget.SearchView"
           app:showAsAction="always"
           android:id="@+id/menu_search"/>
+    <item android:id="@+id/empty_recycle_bin"
+            android:title="Empty Recycle Bin"
+            android:visible="false"/>
 </menu>

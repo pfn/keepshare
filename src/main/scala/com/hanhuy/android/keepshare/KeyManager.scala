@@ -26,6 +26,7 @@ import scala.concurrent.duration._
 import scala.util.Try
 
 import Futures._
+import ManagedResource._
 
 object KeyManager {
   val VERIFIER = "KeepShare Verifier"
@@ -179,12 +180,14 @@ class KeyManager(c: Context, settings: Settings) {
           .open(apiClient, DriveFile.MODE_READ_ONLY, null)
           .await().getDriveContents
         val buf = Array.ofDim[Byte](32)
-        val in = dfile.getInputStream
         val b = ByteBuffer.allocate(32)
-        Stream.continually(in.read(buf)).takeWhile(r => r != -1 && b.remaining >= r) foreach { r =>
-          b.put(buf, 0, r)
+        for {
+          in <- using(dfile.getInputStream)
+        } {
+          Stream.continually(in.read(buf)).takeWhile(r => r != -1 && b.remaining >= r) foreach { r =>
+            b.put(buf, 0, r)
+          }
         }
-        in.close()
         dfile.discard(apiClient)
         b.flip()
         if (b.remaining != 32) {
@@ -244,9 +247,11 @@ class KeyManager(c: Context, settings: Settings) {
         .setMimeType("application/octet-stream")
         .setTitle(KEY_FILE).build()
       val contents = Drive.DriveApi.newDriveContents(apiClient).await().getDriveContents
-      val out = contents.getOutputStream
-      val written = out.write(keybuf)
-      out.close()
+      for {
+        out <- using(contents.getOutputStream)
+      } {
+        val written = out.write(keybuf)
+      }
       appFolder.createFile(apiClient, metadata, contents)
       _loadKey()
     } catch {

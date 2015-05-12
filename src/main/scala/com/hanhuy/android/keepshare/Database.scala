@@ -1,6 +1,6 @@
 package com.hanhuy.android.keepshare
 
-import java.io.FileOutputStream
+import java.io.{FileInputStream, FileOutputStream}
 import java.nio.ByteBuffer
 
 import android.annotation.TargetApi
@@ -14,6 +14,7 @@ import com.hanhuy.keepassj.spr.{SprEngine, SprContext, SprCompileFlags}
 import scala.concurrent.{Promise, Future}
 
 import Futures._
+import ManagedResource._
 
 /**
  * @author pfnguyen
@@ -21,6 +22,7 @@ import Futures._
 object Database {
   def rootGroupid = database map (_.getRootGroup.getUuid)
   private var database = Option.empty[PwDatabase]
+  private var databasePath = Option.empty[String]
   def pwdatabase = database.get
 
   def isOpen = database.nonEmpty
@@ -35,28 +37,28 @@ object Database {
       val uri = Uri.parse(f)
       val cr = Application.instance.getContentResolver
 
-      val c = cr.query(uri, null, null, null, null)
-      val cLastModified = c.getColumnIndex(
-        DocumentsContract.Document.COLUMN_LAST_MODIFIED)
       var lastModified = Option.empty[Long]
-      Stream.continually(c.moveToNext) takeWhile identity foreach { _ =>
-        lastModified = Some(c.getLong(cLastModified))
+      for {
+        c <- using(cr.query(uri, null, null, null, null))
+      } {
+        val cLastModified = c.getColumnIndex(
+          DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+        Stream.continually(c.moveToNext) takeWhile identity foreach { _ =>
+          lastModified = Some(c.getLong(cLastModified))
+        }
       }
-      c.close()
 
       if (lastModified exists (_ > dest.lastModified)) {
-        val input = cr.openInputStream(uri)
-        val out = new FileOutputStream(dest)
-        try {
+        for {
+          input <- using(cr.openInputStream(uri))
+          out   <- using(new FileOutputStream(dest))
+        } {
           var total = 0
           val buf = Array.ofDim[Byte](32768)
           Stream.continually(input.read(buf, 0, 32768)) takeWhile (_ != -1) foreach { read =>
             total += read
             out.write(buf, 0, read)
           }
-        } finally {
-          input.close()
-          out.close()
         }
       }
       cr.takePersistableUriPermission(uri,
@@ -66,6 +68,7 @@ object Database {
     } else Promise.successful(f).future
   }
   def open(db: String, pw: Option[String], keyfile: Option[String]): Future[PwDatabase] = {
+    databasePath = Option(db)
     close()
     resolvePath(db) map { p =>
       val pwdb = new PwDatabase
@@ -115,6 +118,79 @@ object Database {
   }
   def getId(group: PwGroup) = {
     ByteBuffer.wrap(group.getUuid.getUuidBytes).getLong
+  }
+
+  def save(): Future[Unit] = {
+    (for {
+      d    <- database
+      path <- databasePath
+    } yield {
+      resolvePath(path) map { p =>
+        val mergeIn = new PwDatabase
+        mergeIn.Open(IOConnectionInfo.FromPath(p), d.getMasterKey, null)
+        d.MergeIn(mergeIn, PwMergeMethod.Synchronize)
+        mergeIn.Close()
+        d.Save(null)
+        if (path startsWith "content:") {
+          for {
+            in  <- using(new FileInputStream(p))
+            out <- using(Application.instance.getContentResolver.openOutputStream(Uri.parse(path)))
+          } {
+            val buf = Array.ofDim[Byte](32768)
+            Stream.continually(in.read(buf, 0, 32768)) takeWhile (_ != -1) foreach { read =>
+              out.write(buf, 0, read)
+            }
+          }
+        }
+      }
+    }) getOrElse Future.failed(KeyError.NeedLoad)
+  }
+
+  def emptyRecycleBin(): Unit = {
+    for {
+      db  <- database
+      bin <- Option(db.getRootGroup.FindGroup(db.getRecycleBinUuid, true))
+    } {
+      bin.DeleteAllObjects(db)
+    }
+  }
+
+  def delete(entries: PwEntry*): Unit = {
+    val now = new java.util.Date
+    database foreach { db =>
+      val del = if (db.isRecycleBinEnabled) {
+        (e: PwEntry) => {
+          e.getParentGroup.getEntries.Remove(e)
+
+          val recycle = Option(db.getRootGroup.FindGroup(db.getRecycleBinUuid, true)) getOrElse {
+            val group = new PwGroup(true, true, "Recycle Bin", PwIcon.TrashBin)
+            group.setEnableAutoType(false)
+            group.setEnableSearching(false)
+            group.setExpanded(false)
+            db.getRootGroup.AddGroup(group, true)
+            db.setRecycleBinUuid(group.getUuid)
+            group
+          }
+
+          if (e.getParentGroup == recycle) {
+            recycle.getEntries.Remove(e)
+            val pdo = new PwDeletedObject(e.getUuid, now)
+            db.getDeletedObjects.Add(pdo)
+          } else {
+            recycle.AddEntry(e, true, true)
+            e.Touch(false)
+          }
+        }
+      } else {
+        (e: PwEntry) => {
+          e.getParentGroup.getEntries.Remove(e)
+          val pdo = new PwDeletedObject(e.getUuid, now)
+          db.getDeletedObjects.Add(pdo)
+        }
+      }
+
+      entries foreach del
+    }
   }
 
   val Icons = Vector(
