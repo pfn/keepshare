@@ -5,7 +5,7 @@ import com.google.android.gms.auth.UserRecoverableAuthException
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.common.api.GoogleApiClient.{ConnectionCallbacks, OnConnectionFailedListener}
-import com.google.android.gms.drive.{DriveFile, MetadataChangeSet, Drive}
+import com.google.android.gms.drive.{DriveContents, DriveFile, MetadataChangeSet, Drive}
 import com.google.android.gms.drive.query.{Query, SearchableField, Filters}
 import com.hanhuy.android.common.{UiBus, LogcatTag}
 import com.hanhuy.android.common.RichLogger._
@@ -175,20 +175,22 @@ class KeyManager(c: Context, settings: Settings) {
           .addFilter(Filters.eq(SearchableField.TITLE, KEY_FILE))
           .build())
         .await().getMetadataBuffer
+      implicit val dfileCloser = new ResourceManager[DriveContents] {
+        override def dispose(resource: DriveContents) = resource.discard(apiClient)
+      }
       val k = result find (_ != null) map { metadata =>
-        val dfile = Drive.DriveApi.getFile(apiClient, metadata.getDriveId)
-          .open(apiClient, DriveFile.MODE_READ_ONLY, null)
-          .await().getDriveContents
         val buf = Array.ofDim[Byte](32)
         val b = ByteBuffer.allocate(32)
         for {
+          dfile <- using(Drive.DriveApi.getFile(apiClient, metadata.getDriveId)
+            .open(apiClient, DriveFile.MODE_READ_ONLY, null)
+            .await().getDriveContents)
           in <- using(dfile.getInputStream)
         } {
           Stream.continually(in.read(buf)).takeWhile(r => r != -1 && b.remaining >= r) foreach { r =>
             b.put(buf, 0, r)
           }
         }
-        dfile.discard(apiClient)
         b.flip()
         if (b.remaining != 32) {
           e("wrong buffer size: " + b.remaining)

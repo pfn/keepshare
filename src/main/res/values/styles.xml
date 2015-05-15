@@ -1,27 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Base.AppTheme" parent="Theme.AppCompat.Light">
-        <item name="colorAccent">#f4870e</item>
-        <item name="colorPrimary">#f30000</item>
-        <item name="colorPrimaryDark">#a50000</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="actionBarStyle">@style/Base.ActionBar</item>
+        <item name="colorControlNormal">@android:color/white</item>
+        <item name="android:actionModeBackground">@android:color/darker_gray</item>
+        <item name="actionBarPopupTheme">@style/Base.ActionBar.PopupMenu</item>
     </style>
     <style name="Base.AppTheme.Dialog" parent="android:Theme.DeviceDefault.Light.Dialog">
-        <item name="colorAccent">#f4870e</item>
-        <item name="colorPrimary">#f30000</item>
-        <item name="colorPrimaryDark">#a50000</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
     </style>
-    <style name="Base.ActionBar" parent="Widget.AppCompat.ActionBar.Solid">
+    <style name="Base.ActionBar" parent="Widget.AppCompat.ActionBar">
         <item name="titleTextStyle">@style/Base.ActionBar.TitleText</item>
+        <item name="subtitleTextStyle">@style/Base.ActionBar.SubTitleText</item>
         <item name="background">?attr/colorPrimary</item>
         <item name="actionOverflowButtonStyle">@style/Widget.AppCompat.ActionButton.Overflow</item>
+    </style>
+    <style name="Base.ActionBar.PopupMenu" parent="ThemeOverlay.AppCompat.Light">
+        <!--<item name="android:colorBackground">@android:color/darker_gray</item>-->
+        <!--<item name="android:textColorPrimary">@android:color/white</item>-->
     </style>
     <style name="Base.ActionBar.TitleText" parent="TextAppearance.AppCompat.Widget.ActionBar.Title">
         <item name="android:textColor">@android:color/white</item>
         <!-- The textColor property is backward compatible with the Support Library -->
     </style>
+    <style name="Base.ActionBar.SubTitleText" parent="TextAppearance.AppCompat.Widget.ActionBar.Subtitle">
+        <item name="android:textColor">@android:color/white</item>
+        <!-- The textColor property is backward compatible with the Support Library -->
+    </style>
+    <style name="FloatingActionButton">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_gravity">bottom|right</item>
+        <item name="android:layout_margin">16dp</item>
+        <item name="fab_colorNormal">@color/colorPrimary</item>
+        <item name="fab_colorPressed">@color/colorPrimaryDark</item>
+        <item name="fab_colorRipple">@color/colorAccent</item>
+    </style>
     <style name="AppTheme" parent="Base.AppTheme"/>
     <style name="AppTheme.Dialog" parent="Base.AppTheme.Dialog"/>
     <drawable name="list_selector_background">@android:drawable/list_selector_background</drawable>
     <drawable name="list_selector_background_impl">@android:drawable/list_selector_background</drawable>
+
+    <declare-styleable name="StandardEditView">
+        <attr name="android:hint"/>
+        <attr name="android:text"/>
+        <attr name="android:icon"/>
+        <attr name="android:password"/>
+        <attr name="first" format="boolean"/>
+        <attr name="longform" format="boolean"/>
+    </declare-styleable>
+    <color name="colorAccent">#f4870e</color>
+    <color name="colorPrimary">#f30000</color>
+    <color name="colorPrimaryDark">#a50000</color>
 </resources>

@@ -4,9 +4,10 @@ import android.content.{ComponentName, Intent}
 import android.graphics.BitmapFactory
 import android.graphics.drawable.{BitmapDrawable, LayerDrawable}
 import android.os.Bundle
+import android.support.v4.widget.SwipeRefreshLayout
 import com.hanhuy.android.common.AndroidConversions._
 
-import android.app.{Activity, SearchManager}
+import android.app.{ProgressDialog, Activity, SearchManager}
 import android.view._
 import android.widget.{Toast, SearchView, BaseAdapter}
 import com.hanhuy.keepassj._
@@ -34,10 +35,18 @@ object BrowseActivity {
     val intent = new Intent(a, classOf[BrowseActivity])
     a.startActivity(intent)
   }
+  implicit val groupSort = new Ordering[PwGroup] {
+    override def compare(x: PwGroup, y: PwGroup) = x.getName.compareTo(y.getName)
+  }
+  implicit val entrySort = new Ordering[PwEntry] {
+    override def compare(x: PwEntry, y: PwEntry) = x.getStrings.ReadSafe(PwDefs.TitleField).compareTo(y.getStrings.ReadSafe(PwDefs.TitleField))
+  }
 }
-class BrowseActivity extends AuthorizedActivity with TypedActivity {
+class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRefreshLayout.OnRefreshListener {
   lazy val list = findView(TR.list)
+  lazy val refresher = findView(TR.refresher)
   private var searchView = Option.empty[SearchView]
+
   override def onCreateOptionsMenu(menu: Menu) = {
     super.onCreateOptionsMenu(menu)
     getMenuInflater.inflate(R.menu.browse, menu)
@@ -49,9 +58,17 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
           new ComponentName(getPackageName, "com.hanhuy.android.keepshare.SearchableActivity")))
     }
 
+    Option(menu.findItem(R.id.database_sort)) foreach { m =>
+      m.setChecked(settings.get(Settings.BROWSE_SORT_ALPHA))
+    }
+
     database onSuccessMain { case d =>
-      if (groupId.contains(d.getRecycleBinUuid))
+      if (groupId.contains(d.getRecycleBinUuid) &&
+        d.getRootGroup.FindGroup(
+          d.getRecycleBinUuid, true).GetEntriesCount(true) > 0 &&
+        Database.writeSupported) {
         menu.findItem(R.id.empty_recycle_bin).setVisible(true)
+      }
     }
     true
   }
@@ -59,6 +76,25 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
   override def onCreate(savedInstanceState: Bundle) = {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.browse)
+
+    findView(TR.fab).attachToListView(list)
+    if (!Database.writeSupported)
+      findView(TR.fab).setVisibility(View.GONE)
+    refresher.setOnRefreshListener(this)
+  }
+
+
+  override def onRefresh() = {
+    Database.close()
+    database onSuccessMain { case db =>
+      refresher.setRefreshing(false)
+      navigateTo(groupId)
+    }
+    database onFailureMain { case t =>
+      refresher.setRefreshing(false)
+      Toast.makeText(this, "Unable to reload database: " + t.getMessage, Toast.LENGTH_LONG).show()
+      finish()
+    }
   }
 
   override def onOptionsItemSelected(item: MenuItem) = item.getItemId match {
@@ -67,11 +103,24 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
       true
     case R.id.empty_recycle_bin =>
       Database.emptyRecycleBin()
+      list.getAdapter.asInstanceOf[GroupAdapter].notifyDataSetChanged()
+      val p = ProgressDialog.show(this, getString(R.string.saving_database),
+        getString(R.string.please_wait), true, false)
       Database.save() onComplete {
-        case Success(_) =>
-        case Failure(ex) => android.util.Log.v("BrowseActivity", ex.getMessage, ex)
+        case Success(_) => p.dismiss()
+        case Failure(ex) => p.dismiss()
+          Toast.makeText(this,
+            "Failed to save database: " + ex.getMessage,
+            Toast.LENGTH_LONG).show()
+          android.util.Log.v("BrowseActivity", ex.getMessage, ex)
       }
       true
+    case R.id.database_sort =>
+      settings.set(Settings.BROWSE_SORT_ALPHA, !item.isChecked)
+      item.setChecked(!item.isChecked)
+      list.getAdapter.asInstanceOf[GroupAdapter].notifyDataSetChanged()
+      true
+
     case _ => super.onOptionsItemSelected(item)
   }
 
@@ -121,7 +170,7 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
         root.FindGroup(id, true) } getOrElse root
       val ab = getSupportActionBar
       ab.setSubtitle(group.getName)
-      if (PwUuid.Zero == group.getCustomIconUuid) {
+//      if (PwUuid.Zero == group.getCustomIconUuid) {
         val bm = BitmapFactory.decodeResource(getResources, Database.Icons(group.getIconId.ordinal))
         val bd = new BitmapDrawable(getResources, bm)
         bd.setGravity(Gravity.CENTER)
@@ -129,7 +178,7 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
         ab.setIcon(layers)
         ab.setDisplayShowHomeEnabled(true)
         ab.setDisplayHomeAsUpEnabled(group != root)
-      }
+//      }
       val groups = group.GetGroups(false).asScala.toList
       val entries = group.GetEntries(false).asScala.toList
 
@@ -202,7 +251,7 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
 
   class GroupAdapter(db: PwDatabase, parent: Option[PwGroup], groups: Seq[PwGroup], entries: Seq[PwEntry]) extends BaseAdapter {
     import TypedResource._
-    val data = (parent map Left.apply).toList ++ (groups map(Left(_))) ++ (entries map(Right(_)))
+    var data = sortedData
 
     override def hasStableIds = true
     override def getItemId(position: Int) =
@@ -228,19 +277,31 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity {
           folder.setImageResource(R.drawable.ic_expand_less_black_24dp)
         }
         folder.setVisibility(View.VISIBLE)
-        if (PwUuid.Zero == group.getCustomIconUuid)
+//        if (PwUuid.Zero == group.getCustomIconUuid)
           icon.setImageResource(Database.Icons(group.getIconId.ordinal))
       }
       item.right foreach { entry =>
         folder.setVisibility(View.INVISIBLE)
-        if (PwUuid.Zero == entry.getCustomIconUuid)
+//        if (PwUuid.Zero == entry.getCustomIconUuid)
           icon.setImageResource(Database.Icons(entry.getIconId.ordinal))
       }
 
       view
     }
     override def getItem(position: Int) = data(position)
-//    override def getItemViewType(position: Int) = if (data(position).isLeft) 0 else 1
-//    override def getViewTypeCount = 2
+    override def notifyDataSetChanged() {
+      data = sortedData
+      super.notifyDataSetChanged()
+    }
+
+    def sortedData: Vector[Either[PwGroup,PwEntry]] = {
+      (parent map Left.apply).toVector ++ (if (settings.get(Settings.BROWSE_SORT_ALPHA)) {
+        (groups.sorted map (Left(_))) ++ (entries.sorted map (Right(_)))
+      } else {
+        (groups map (Left(_))) ++ (entries map (Right(_)))
+      })
+    }
+    //    override def getItemViewType(position: Int) = if (data(position).isLeft) 0 else 1
+    //    override def getViewTypeCount = 2
   }
 }

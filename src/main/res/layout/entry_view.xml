@@ -1,14 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
+<FrameLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:fab="http://schemas.android.com/apk/res-auto"
+        android:id="@+id/content"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+    >
+
+    <com.melnykov.fab.ObservableScrollView
+            android:id="@+id/scroll_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
 
         <LinearLayout android:id="@+id/field_list"
                       android:background="@android:drawable/picture_frame"
                       android:layout_width="match_parent"
-                      android:layout_margin="4dp"
+                      android:layout_margin="2dp"
                       android:layout_marginBottom="8dp"
                       android:layout_height="wrap_content"
                       android:orientation="vertical" />
-</ScrollView>
+    </com.melnykov.fab.ObservableScrollView>
+    <com.melnykov.fab.FloatingActionButton
+            style="@style/FloatingActionButton"
+            android:id="@+id/fab"
+            android:src="@drawable/ic_edit_white_24dp"/>
+</FrameLayout>

@@ -1,10 +1,12 @@
 package com.hanhuy.android.keepshare
 
-import android.app.Activity
+import android.app.{FragmentTransaction, Activity}
 import android.content.{Context, Intent}
 import android.graphics.BitmapFactory
 import android.graphics.drawable.{LayerDrawable, BitmapDrawable}
 import android.os.Bundle
+import android.support.v7.app.ActionBar
+import android.support.v7.widget.Toolbar
 import android.text.method.{LinkMovementMethod, SingleLineTransformationMethod, PasswordTransformationMethod}
 import android.text.util.Linkify
 import android.view._
@@ -15,6 +17,7 @@ import Futures._
 import EntryViewActivity._
 import com.hanhuy.android.common.AndroidConversions._
 import scala.collection.JavaConverters._
+import TypedResource._
 
 /**
  * @author pfnguyen
@@ -22,6 +25,7 @@ import scala.collection.JavaConverters._
 object EntryViewActivity {
   val EXTRA_ENTRY_ID = "keepshare.extra.ENTRY_ID"
   val EXTRA_HISTORY_IDX = "keepshare.extra.HISTORY_IDX"
+  val STATE_IS_EDITING = "keepshare.isEditing"
 
   def show(a: Activity, e: PwEntry): Unit = {
     val intent = new Intent(a, classOf[EntryViewActivity])
@@ -39,10 +43,18 @@ object EntryViewActivity {
 }
 class EntryViewActivity extends AuthorizedActivity with TypedActivity {
   private var pwentry = Option.empty[PwEntry]
+  private var isEditing = false
+  lazy val editBar = getLayoutInflater.inflate(
+    TR.layout.entry_edit_action_bar, null, false)
+
   override def onBackPressed() = {
-    super.onBackPressed()
-    overridePendingTransition(
-      android.R.anim.slide_in_left, android.R.anim.slide_out_right)
+    if (isEditing) {
+      editing(false)
+    } else {
+      super.onBackPressed()
+      overridePendingTransition(
+        android.R.anim.slide_in_left, android.R.anim.slide_out_right)
+    }
   }
 
   override def onCreate(savedInstanceState: Bundle) = {
@@ -53,21 +65,67 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.entry_view)
 
+    findView(TR.fab).attachToScrollView(findView(TR.scroll_view))
+    findView(TR.fab).onClick {
+      editing(true)
+    }
+    editBar.findView(TR.cancel).onClick {
+      editing(false)
+    }
+
+
+    getSupportActionBar.setCustomView(editBar, new ActionBar.LayoutParams(
+      ViewGroup.LayoutParams.MATCH_PARENT,
+      ViewGroup.LayoutParams.MATCH_PARENT))
+
     val id = for {
       intent <- Option(getIntent)
       entry  <- Option(intent.getStringExtra(EXTRA_ENTRY_ID))
     } {
       val uuid = new PwUuid(KeyManager.bytes(entry))
-      database.onSuccessMain { case db =>
-        showEntry(db.getRootGroup.FindEntry(uuid, true))
+      database map { db =>
+        db.getRootGroup.FindEntry(uuid, true)
+      } onSuccessMain { case e =>
+        showEntry(e)
+        if (Option(savedInstanceState) exists (_.getBoolean(STATE_IS_EDITING, false))) {
+          editing(true)
+        }
       }
     }
   }
 
+  def editing(b: Boolean) {
+    getSupportActionBar.setHomeButtonEnabled(!b)
+    getSupportActionBar.setDisplayShowHomeEnabled(!b)
+    getSupportActionBar.setDisplayHomeAsUpEnabled(!b)
+    getSupportActionBar.setDisplayShowTitleEnabled(!b)
+    getSupportActionBar.setDisplayShowCustomEnabled(b)
+    if (b) {
+      editBar.getParent match {
+        case t: Toolbar => t.setContentInsetsAbsolute(0, 0)
+        case _ =>
+      }
+      findView(TR.fab).hide()
+      if (getFragmentManager.findFragmentByTag("editor") == null)
+        getFragmentManager.beginTransaction()
+          .add(R.id.content, EntryEditFragment.edit(pwentry.get), "editor")
+          .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
+          .addToBackStack("edit")
+          .commit()
+    } else {
+      findView(TR.fab).show()
+      getFragmentManager.popBackStack()
+    }
+    isEditing = b
+    invalidateOptionsMenu()
+  }
 
   override def onCreateOptionsMenu(menu: Menu) = {
-    getMenuInflater.inflate(R.menu.entry_view, menu)
-    super.onCreateOptionsMenu(menu)
+    if (!isEditing) {
+      getMenuInflater.inflate(R.menu.entry_view, menu)
+      super.onCreateOptionsMenu(menu)
+    }
+    true
   }
 
   override def onOptionsItemSelected(item: MenuItem) = item.getItemId match {
@@ -91,7 +149,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
     val ab = getSupportActionBar
     val strings = entry.getStrings
     ab.setSubtitle(strings.ReadSafe(PwDefs.TitleField))
-    if (PwUuid.Zero == entry.getCustomIconUuid) {
+//    if (PwUuid.Zero == entry.getCustomIconUuid) {
       val bm = BitmapFactory.decodeResource(getResources,
         if (histIdx.nonEmpty) R.drawable.ic_history_black_36dp
         else Database.Icons(entry.getIconId.ordinal))
@@ -101,7 +159,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
       ab.setIcon(layers)
       ab.setDisplayShowHomeEnabled(true)
       ab.setDisplayHomeAsUpEnabled(true)
-    }
+//    }
 
     val fieldlist = findView(TR.field_list)
 
@@ -141,12 +199,17 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
       fieldlist.addView(linkfield)
     }
 
+    if (!Database.writeSupported)
+      findView(TR.fab).setVisibility(View.GONE)
+
     if (histIdx.isEmpty) {
       val groupfield = new GroupFieldView(this, e.getParentGroup)
       groupfield.first = first
       groupfield.setBackgroundResource(R.drawable.list_selector_background)
       first = false
       fieldlist.addView(groupfield)
+    } else {
+      findView(TR.fab).setVisibility(View.GONE)
     }
 
     if (Option(strings.Get(PwDefs.NotesField)) exists (_.Length > 0)) {
@@ -219,6 +282,11 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
         f
       } ::: history.drop(1)) foreach fieldlist.addView
     }
+  }
+
+  override def onSaveInstanceState(outState: Bundle) = {
+    outState.putBoolean(STATE_IS_EDITING, isEditing)
+    super.onSaveInstanceState(outState)
   }
 }
 
@@ -302,10 +370,10 @@ class GroupFieldView(a: AuthorizedActivity, g: PwGroup) extends StandardFieldVie
 //  imagefield onClick openGroup()
   this onClick openGroup()
 
-  if (PwUuid.Zero == g.getCustomIconUuid) {
+//  if (PwUuid.Zero == g.getCustomIconUuid) {
     imagefield.setImageResource(
       Database.Icons(g.getIconId.ordinal))
-  }
+//  }
 
   private def openGroup(): Unit = {
     BrowseActivity.browse(a, g)

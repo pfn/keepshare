@@ -20,6 +20,8 @@ import ManagedResource._
  * @author pfnguyen
  */
 object Database {
+  val writeSupported = true
+
   def rootGroupid = database map (_.getRootGroup.getUuid)
   private var database = Option.empty[PwDatabase]
   private var databasePath = Option.empty[String]

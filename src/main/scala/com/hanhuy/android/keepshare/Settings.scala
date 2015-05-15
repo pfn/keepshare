@@ -32,6 +32,8 @@ object Settings {
   val NEEDS_PIN = Setting[Boolean]("needs_pin", false)
   val PIN_VERIFIER = Setting[String]("pin_verifier", "")
 
+  val BROWSE_SORT_ALPHA = Setting[Boolean]("browse_sort_order", true)
+
   def apply(c: Context) = {
     new Settings(c.getApplicationContext)
   }
