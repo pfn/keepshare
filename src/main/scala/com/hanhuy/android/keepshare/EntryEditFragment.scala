@@ -152,7 +152,7 @@ class EntryEditFragment extends AuthorizedFragment {
       } getOrElse builder).create().show()
     }
 
-    newfield onClick showFieldOptions("Create", "New field options", None, false) { (n,c) =>
+    newfield onClick showFieldOptions("Create", "Create new field", None, false) { (n,c) =>
       if (n.getText.toString.nonEmpty) {
         model = model.copy(fields = model.fields.updated(
           n.getText.toString, new ProtectedString(c.isChecked, "")))
