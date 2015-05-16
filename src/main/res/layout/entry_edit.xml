@@ -63,7 +63,7 @@
                     android:gravity="center"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:src="@drawable/ic_extension_black_36dp"
+                    android:src="@drawable/ic_add_black_36dp"
                     android:contentDescription="Custom Field"
                     android:layout_marginTop="12dp"
                     android:layout_marginLeft="16dp"
