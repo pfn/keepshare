@@ -9,6 +9,7 @@ import android.support.v7.app.ActionBar
 import android.support.v7.widget.Toolbar
 import android.text.method.{LinkMovementMethod, SingleLineTransformationMethod, PasswordTransformationMethod}
 import android.text.util.Linkify
+import android.util.AttributeSet
 import android.view._
 import android.widget.FrameLayout
 import com.hanhuy.keepassj.{PwGroup, PwDefs, PwUuid, PwEntry}
@@ -290,7 +291,8 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
   }
 }
 
-class StandardFieldView(a: AuthorizedActivity) extends FrameLayout(a) with TypedView {
+class StandardFieldView(c: Context, attrs: AttributeSet) extends FrameLayout(c, attrs) with TypedView {
+  def this(c: Context) = this(c, null)
   lazy val textfield = findView(TR.field)
   lazy val iconfield = findView(TR.field_icon)
   lazy val divider = findView(TR.field_divider)
@@ -303,7 +305,7 @@ class StandardFieldView(a: AuthorizedActivity) extends FrameLayout(a) with Typed
     cb
   }
 
-  def inflate() = a.getLayoutInflater.inflate(R.layout.standard_field, this, true)
+  def inflate() = LayoutInflater.from(c).inflate(R.layout.standard_field, this, true)
 
   inflate()
   setMinimumHeight((getResources.getDisplayMetrics.density * 48).toInt)
@@ -359,7 +361,7 @@ class StandardFieldView(a: AuthorizedActivity) extends FrameLayout(a) with Typed
   }
 }
 
-class GroupFieldView(a: AuthorizedActivity, g: PwGroup) extends StandardFieldView(a) {
+class GroupFieldView(a: AuthorizedActivity, g: PwGroup) extends StandardFieldView(a, null) {
   override def inflate() = a.getLayoutInflater.inflate(R.layout.group_field, this, true)
   lazy val imagefield = findView(TR.field_image)
 
@@ -382,7 +384,7 @@ class GroupFieldView(a: AuthorizedActivity, g: PwGroup) extends StandardFieldVie
   }
 }
 
-class CustomField(a: AuthorizedActivity) extends StandardFieldView(a) {
+class CustomField(a: AuthorizedActivity) extends StandardFieldView(a, null) {
   override def inflate() = a.getLayoutInflater.inflate(R.layout.custom_field, this, true)
   override lazy val textfield = findView(TR.custom_field)
   override def hint_=(s: String) = {
