@@ -190,13 +190,10 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
       if (database.trim != "") {
 
         val keyf = new File(keyfile.trim).getAbsoluteFile
-        if (keyfile.trim != "") {
-          if (!keyf.exists) {
-            error(R.string.keyfile_no_exist)
-          }
-        }
         val password = fragment.password
-        if (password.trim == "") {
+        if (keyfile.trim != "" && !keyfile.trim.startsWith("content:") && !keyf.isFile) {
+          error(R.string.keyfile_no_exist)
+        } else  if (password.trim == "" && keyfile.trim == "") {
           error(R.string.password_no_blank)
         } else {
 
