@@ -113,7 +113,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
   import AccessibilityService._
   implicit val TAG = LogcatTag("AccessibilityService")
   private var lastWindowId: Option[Int] = None
-  private var lastFoundWindowId: Option[Int] = None
+  private var lastCanceledWindowId: Option[Int] = None
 
   private val thread = new HandlerThread("AccessibilityService")
   private lazy val handler = {
@@ -187,41 +187,37 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
           val r: Runnable = { () =>
             withTree(windowId) { (pkg, searchURI, tree, password) =>
 
-              if (password.isDefined) {
+              if (password.isDefined && !lastCanceledWindowId.contains(windowId)) {
 
-                fillInfo map (fillIn(_, pkg, searchURI, tree, password)) getOrElse {
-
-                  searchURI foreach { uri =>
-                    if (lastFoundWindowId != Option(windowId)) {
-                      val builder = new NotificationCompat.Builder(this)
-                      val extras = new Bundle()
-                      extras.putString(EXTRA_PACKAGE, packageName)
-                      extras.putString(EXTRA_URI, uri.toString)
-                      extras.putInt(EXTRA_WINDOWID, windowId)
-                      builder.setSmallIcon(R.drawable.ic_lock)
-                        .setPriority(Notification.PRIORITY_HIGH)
-                        .setCategory(Notification.CATEGORY_SYSTEM)
-                        .setVibrate(Array(0l))
-                        .setContentTitle(getString(R.string.form_fill_notif_title, getString(R.string.appname)))
-                        .setContentText(getString(R.string.form_fill_notif_text, uri.getHost))
-                        .setTicker(getString(R.string.form_fill_notif_text, uri.getHost))
-                        .setAutoCancel(true)
-                        .setDeleteIntent(PendingIntent.getBroadcast(this, 0,
+                fillInfo match {
+                  case Some(x) => fillIn(x, pkg, searchURI, tree, password)
+                  case None => searchURI foreach { uri =>
+                    val builder = new NotificationCompat.Builder(this)
+                    val extras = new Bundle()
+                    extras.putString(EXTRA_PACKAGE, packageName)
+                    extras.putString(EXTRA_URI, uri.toString)
+                    extras.putInt(EXTRA_WINDOWID, windowId)
+                    builder.setSmallIcon(R.drawable.ic_lock)
+                      .setPriority(Notification.PRIORITY_HIGH)
+                      .setCategory(Notification.CATEGORY_SYSTEM)
+                      .setVibrate(Array(0l))
+                      .setContentTitle(getString(R.string.form_fill_notif_title, getString(R.string.appname)))
+                      .setContentText(getString(R.string.form_fill_notif_text, uri.getHost))
+                      .setTicker(getString(R.string.form_fill_notif_text, uri.getHost))
+                      .setAutoCancel(true)
+                      .setDeleteIntent(PendingIntent.getBroadcast(this, 0,
                         new Intent(ACTION_CANCEL).putExtras(extras),
-                        PendingIntent.FLAG_UPDATE_CURRENT))
-                        .setContentIntent(PendingIntent.getBroadcast(this, 1,
+                          PendingIntent.FLAG_UPDATE_CURRENT))
+                      .setContentIntent(PendingIntent.getBroadcast(this, 1,
                         new Intent(ACTION_SEARCH).putExtras(extras),
-                        PendingIntent.FLAG_UPDATE_CURRENT))
+                          PendingIntent.FLAG_UPDATE_CURRENT))
 
-                      systemService[NotificationManager].notify(
-                        Notifications.NOTIF_FOUND, builder.build())
-                    }
+                    systemService[NotificationManager].notify(
+                      Notifications.NOTIF_FOUND, builder.build())
                   }
                 }
-
-                lastFoundWindowId = Some(windowId)
               } else {
-                if (lastFoundWindowId != Option(windowId)) {
+                if (!lastWindowId.contains(windowId)) {
                   systemService[NotificationManager].cancel(Notifications.NOTIF_FOUND)
                 }
               }
@@ -264,6 +260,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
         systemService[NotificationManager].cancel(Notifications.NOTIF_FOUND)
       case Intent.ACTION_USER_PRESENT => filling = true
       case ACTION_CANCEL =>
+        lastCanceledWindowId = lastWindowId
       case ACTION_SEARCH =>
         val newIntent = new Intent(this, classOf[AccessibilitySearchActivity])
         newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
@@ -294,7 +291,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
       //val clip = clipboard.getPrimaryClip
 
       fillInfo = None
-      lastFoundWindowId = None
+      lastCanceledWindowId = None
       val edits = tree collect { case t if t.isEditable => t }
       val text = (edits takeWhile (!_.isPassword)).lastOption
 
