@@ -79,7 +79,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
       ViewGroup.LayoutParams.MATCH_PARENT,
       ViewGroup.LayoutParams.MATCH_PARENT))
 
-    val id = for {
+    for {
       intent <- Option(getIntent)
       entry  <- Option(intent.getStringExtra(EXTRA_ENTRY_ID))
     } {

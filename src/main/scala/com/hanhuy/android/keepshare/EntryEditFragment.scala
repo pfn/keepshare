@@ -114,17 +114,20 @@ class EntryEditFragment extends AuthorizedFragment {
         field.hint = k
         field.text = v.ReadString()
         field.password = v.isProtected
-        field.iconfield.onClick {
-          showFieldOptions("Update", "Update field options", Option(field), v.isProtected) { (n, c) =>
-            model = model.copy(fields = (model.fields - k)
-              .updated(n.getText.toString, new ProtectedString(c.isChecked, v.ReadString())))
-            field.hint = n.getText.toString
-          }
-        }
+        field.iconfield.onClick { handleFieldUpdate(field, k) }
         WidgetObservable.text(field.textfield).subscribe((n: OnTextChangeEvent) => {
           model = model.copy(fields = model.fields.updated(k, new ProtectedString(v.isProtected, n.text)))
         })
         fieldlist.addView(field)
+      }
+    }
+
+    def handleFieldUpdate(field: StandardEditView, name: String): Unit = {
+      showFieldOptions("Update", "Update field options", Option(field), field.password) { (n, c) =>
+        model = model.copy(fields = (model.fields - name)
+          .updated(n.getText.toString, new ProtectedString(c.isChecked, field.text)))
+        field.hint = n.getText.toString
+        field.password = c.isChecked
       }
     }
 
@@ -160,13 +163,7 @@ class EntryEditFragment extends AuthorizedFragment {
         val field = new StandardEditView(activity, null)
         field.hint = n.getText.toString
         field.password = c.isChecked
-        field.iconfield.onClick {
-          showFieldOptions("Update", "Update field options", Option(field), field.password) { (n, c) =>
-            model = model.copy(fields = (model.fields - field.hint)
-              .updated(n.getText.toString, new ProtectedString(c.isChecked, field.text)))
-            field.hint = n.getText.toString
-          }
-        }
+        field.iconfield.onClick { handleFieldUpdate(field, field.hint) }
         WidgetObservable.text(field.textfield).subscribe((n: OnTextChangeEvent) => {
           model = model.copy(fields = model.fields.updated(field.hint, new ProtectedString(c.isChecked, n.text)))
         })
@@ -361,7 +358,9 @@ class GroupEditView(c: Context, attrs: AttributeSet) extends StandardFieldView(c
 
       override def getView(i: Int, v: View, viewGroup: ViewGroup) = {
         val b = if (v == null) {
-          LayoutInflater.from(c).inflate(TR.layout.browse_pwgroup_item, viewGroup, false)
+          val l = LayoutInflater.from(c).inflate(TR.layout.browse_pwgroup_item, viewGroup, false)
+          l.findView(TR.folder_image).setVisibility(View.GONE)
+          l
         } else v.asInstanceOf[ViewGroup]
         val icon = b.findView(TR.entry_image)
         icon.setImageResource(Database.Icons(getItem(i).getIconId.ordinal))

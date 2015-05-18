@@ -1,16 +1,26 @@
 package com.hanhuy.android.keepshare
 
-import android.content.{ComponentName, Intent}
+import android.content.{Context, ComponentName, Intent}
 import android.graphics.BitmapFactory
 import android.graphics.drawable.{BitmapDrawable, LayerDrawable}
 import android.os.Bundle
 import android.support.v4.widget.SwipeRefreshLayout
+import android.util.AttributeSet
+import android.view.animation.AccelerateDecelerateInterpolator
 import com.hanhuy.android.common.AndroidConversions._
 
 import android.app.{ProgressDialog, Activity, SearchManager}
 import android.view._
-import android.widget.{Toast, SearchView, BaseAdapter}
+import android.widget._
 import com.hanhuy.keepassj._
+import com.melnykov.fab.FloatingActionButton
+import io.codetail.animation.SupportAnimator.AnimatorListener
+import io.codetail.animation.ViewAnimationUtils
+import io.codetail.animation.SupportAnimator
+import io.codetail.widget.RevealFrameLayout
+import rx.android.schedulers.AndroidSchedulers.mainThread
+import rx.lang.scala.JavaConversions._
+import rx.lang.scala.{Observable, Subject}
 
 import collection.JavaConverters._
 import Futures._
@@ -36,10 +46,12 @@ object BrowseActivity {
     a.startActivity(intent)
   }
   implicit val groupSort = new Ordering[PwGroup] {
-    override def compare(x: PwGroup, y: PwGroup) = x.getName.compareTo(y.getName)
+    override def compare(x: PwGroup, y: PwGroup) =
+      x.getName.compareToIgnoreCase(y.getName)
   }
   implicit val entrySort = new Ordering[PwEntry] {
-    override def compare(x: PwEntry, y: PwEntry) = x.getStrings.ReadSafe(PwDefs.TitleField).compareTo(y.getStrings.ReadSafe(PwDefs.TitleField))
+    override def compare(x: PwEntry, y: PwEntry) =
+      x.getStrings.ReadSafe(PwDefs.TitleField).compareToIgnoreCase(y.getStrings.ReadSafe(PwDefs.TitleField))
   }
 }
 class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRefreshLayout.OnRefreshListener {
@@ -77,9 +89,13 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
     super.onCreate(savedInstanceState)
     setContentView(R.layout.browse)
 
-    findView(TR.fab).attachToListView(list)
+    val fab = findView(TR.observable_fab)
+    findView(TR.fab_close) onClick findView(TR.fab_toolbar).hide()
+    findView(TR.fab_toolbar).button = fab
+    findView(TR.fab_toolbar).container = findView(TR.container)
+    fab.attachToListView(list)
     if (!Database.writeSupported)
-      findView(TR.fab).setVisibility(View.GONE)
+      fab.setVisibility(View.GONE)
     refresher.setOnRefreshListener(this)
   }
 
@@ -303,5 +319,81 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
     }
     //    override def getItemViewType(position: Int) = if (data(position).isLeft) 0 else 1
     //    override def getViewTypeCount = 2
+  }
+}
+
+class FabToolbar(c: Context, attrs: AttributeSet) extends RevealFrameLayout(c, attrs) {
+  lazy val screenWidth = getResources.getDisplayMetrics.widthPixels
+
+  private[this] var showing = false
+  private[this] var _button: ObservableFab = _
+  def button = _button
+  def button_=(b: ObservableFab) = {
+    _button = b
+    if (container != null)
+      container.setBackgroundColor(b.getColorNormal)
+    b onClick show()
+    b.visibility.subscribeOn(mainThread).subscribe(b => if (b && showing) hide())
+  }
+
+  private[this] var _container: ViewGroup = _
+  def container = _container
+  def container_=(b: ViewGroup) = {
+    _container = b
+    if (button != null)
+      container.setBackgroundColor(button.getColorNormal)
+  }
+
+  def show(): Unit = {
+    container.setVisibility(View.VISIBLE)
+    showing = true
+    button.hide(false)
+    animate(0, screenWidth, null)
+  }
+
+  def hide(): Unit = {
+    showing = false
+    animate(screenWidth, 0, closeListener)
+  }
+
+  def animate(sr: Float, er: Float, listener: SupportAnimator.AnimatorListener) {
+    val start = math.max(0, math.abs(button.getTop - button.getBottom))
+    val cx = (button.getLeft + button.getRight) / 2
+    val cy = (button.getTop + button.getBottom) / 2
+
+    val animator = ViewAnimationUtils.createCircularReveal(container, cx, cy, start, er)
+    animator.setInterpolator(new AccelerateDecelerateInterpolator)
+    animator.setDuration(250)
+    if (listener != null) {
+      animator.addListener(listener)
+    }
+    animator.start()
+  }
+
+  val closeListener = new AnimatorListener {
+    override def onAnimationEnd() = {
+      container.setVisibility(View.GONE)
+      button.show(false)
+    }
+
+    override def onAnimationRepeat() = ()
+    override def onAnimationStart() = ()
+    override def onAnimationCancel() = ()
+  }
+
+}
+
+class ObservableFab(c: Context, attrs: AttributeSet) extends FloatingActionButton(c, attrs) {
+  private[this] val _vis: Subject[Boolean] = Subject()
+  def visibility: Observable[Boolean] = _vis
+
+  override def show(animate: Boolean) = {
+    super.show(animate)
+    _vis.onNext(true)
+  }
+
+  override def hide(animate: Boolean) = {
+    super.hide(animate)
+    _vis.onNext(false)
   }
 }
