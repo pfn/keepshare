@@ -60,11 +60,11 @@ class GroupEditFragment extends AuthorizedFragment {
       group.onGroupChange(g => obs.onNext(g))
       Subscription(group.onGroupChange(null))
     }
-    iconObservable.subscribeOn(mainThread).subscribe { icon =>
+    iconObservable.observeOn(mainThread).subscribe { icon =>
       model = model.copy(icon = icon)
       title.icon = icon
     }
-    groupObservable.subscribeOn(mainThread).subscribe { g =>
+    groupObservable.observeOn(mainThread).subscribe { g =>
       model = model.copy(group = g.getUuid)
     }
     WidgetObservable.text(title.textfield).subscribe((n: OnTextChangeEvent) => {

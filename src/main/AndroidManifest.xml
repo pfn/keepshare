@@ -104,6 +104,8 @@
 
         <service android:name=".PINHolderService"
                  android:exported="false"/>
+        <service android:name=".DatabaseSaveService"
+                 android:exported="false"/>
         <service android:name=".CredentialHolderService"
                  android:exported="false"/>
         <service android:name=".AccessibilityService"

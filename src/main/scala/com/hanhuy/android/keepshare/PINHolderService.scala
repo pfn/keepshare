@@ -15,6 +15,7 @@ object Notifications {
   val NOTIF_FOUND = 0
   val NOTIF_DATABASE_UNLOCKED = 1
   val NOTIF_CREDENTIALS_READY = 2
+  val NOTIF_DATABASE_SAVING = 3
 }
 object PINHolderService {
   var instance = Option.empty[PINHolderService]

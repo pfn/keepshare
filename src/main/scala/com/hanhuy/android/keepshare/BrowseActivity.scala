@@ -22,7 +22,7 @@ import io.codetail.animation.SupportAnimator
 import io.codetail.widget.RevealFrameLayout
 import rx.android.schedulers.AndroidSchedulers.mainThread
 import rx.lang.scala.JavaConversions._
-import rx.lang.scala.{Observable, Subject}
+import rx.lang.scala.{Subscription, Observable, Subject}
 
 import collection.JavaConverters._
 import Futures._
@@ -127,18 +127,30 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
     refresher.setOnRefreshListener(this)
   }
 
-
   override def onRefresh() = {
-    Database.close()
-    database onSuccessMain { case db =>
-      refresher.setRefreshing(false)
-      navigateTo(groupId)
-    }
-    database onFailureMain { case t =>
-      refresher.setRefreshing(false)
-      Toast.makeText(this, "Unable to reload database: " + t.getMessage, Toast.LENGTH_LONG).show()
-      finish()
-    }
+    var p: Option[ProgressDialog] = None
+    // because side-effects OP
+    var sub: Subscription = null
+    sub = DatabaseSaveService.saving.observeOn(mainThread).subscribe(b => {
+      if (b) {
+        p = Some(ProgressDialog.show(this,
+          getString(R.string.saving_database), getString(R.string.please_wait),
+          true, false))
+      } else {
+        p foreach { _.dismiss() }
+        sub.unsubscribe()
+        Database.close()
+        database onSuccessMain { case db =>
+          refresher.setRefreshing(false)
+          navigateTo(groupId)
+        }
+        database onFailureMain { case t =>
+          refresher.setRefreshing(false)
+          Toast.makeText(this, "Unable to reload database: " + t.getMessage, Toast.LENGTH_LONG).show()
+          finish()
+        }
+      }
+    })
   }
 
   override def onOptionsItemSelected(item: MenuItem) = item.getItemId match {
@@ -151,16 +163,7 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
     case R.id.empty_recycle_bin =>
       Database.emptyRecycleBin()
       list.getAdapter.asInstanceOf[GroupAdapter].notifyDataSetChanged()
-      val p = ProgressDialog.show(this, getString(R.string.saving_database),
-        getString(R.string.please_wait), true, false)
-      Database.save() onCompleteMain {
-        case Success(_) => p.dismiss()
-        case Failure(ex) => p.dismiss()
-          Toast.makeText(this,
-            "Failed to save database: " + ex.getMessage,
-            Toast.LENGTH_LONG).show()
-          android.util.Log.v("BrowseActivity", ex.getMessage, ex)
-      }
+      DatabaseSaveService.save()
       true
     case R.id.database_sort =>
       settings.set(Settings.BROWSE_SORT_ALPHA, !item.isChecked)
@@ -413,7 +416,7 @@ class FabToolbar(c: Context, attrs: AttributeSet) extends RevealFrameLayout(c, a
     if (container != null)
       container.setBackgroundColor(b.getColorNormal)
     b onClick show()
-    b.visibility.subscribeOn(mainThread).subscribe(b => if (b && showing) hide())
+    b.visibility.observeOn(mainThread).subscribe(b => if (b && showing) hide())
   }
 
   private[this] var _container: ViewGroup = _
