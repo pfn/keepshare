@@ -47,13 +47,8 @@ class GroupEditFragment extends AuthorizedFragment {
     val creating = Option(getArguments) map (
       _.getBoolean(EntryViewActivity.EXTRA_CREATE, false)) exists identity
 
-    val fieldlist = view.findView(TR.field_list)
-    val newfield = view.findView(TR.new_field_button)
     val group = view.findView(TR.edit_group)
     val title = view.findView(TR.edit_title)
-    val username = view.findView(TR.edit_username)
-    val password = view.findView(TR.edit_password)
-    val url = view.findView(TR.edit_url)
     val notes = view.findView(TR.edit_notes)
     val iconObservable: Subject[Int] = Subject()
     val groupObservable: Observable[PwGroup] = Observable.create { obs =>

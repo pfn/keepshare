@@ -1,6 +1,6 @@
 package com.hanhuy.android.keepshare
 
-import android.app.{Fragment, FragmentTransaction, Activity}
+import android.app.{AlertDialog, Fragment, FragmentTransaction, Activity}
 import android.content.{Context, Intent}
 import android.graphics.BitmapFactory
 import android.graphics.drawable.{LayerDrawable, BitmapDrawable}
@@ -57,13 +57,29 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
   lazy val editBar = getLayoutInflater.inflate(
     TR.layout.entry_edit_action_bar, null, false)
 
+  def confirmPrompt[A](onCancel: => A): Unit = {
+    new AlertDialog.Builder(this)
+      .setTitle(R.string.cancel)
+      .setMessage(R.string.discard_confirm)
+      .setNegativeButton(R.string.discard, () => onCancel)
+      .setPositiveButton(R.string.keep_editing, null)
+      .show()
+  }
   override def onBackPressed() = {
     if (isEditing && !isCreating) {
-      editing(false)
+      confirmPrompt { editing(false) }
     } else {
-      super.onBackPressed()
-      overridePendingTransition(
-        android.R.anim.slide_in_left, android.R.anim.slide_out_right)
+      if (isCreating) {
+        confirmPrompt {
+          super.onBackPressed()
+          overridePendingTransition(
+            android.R.anim.slide_in_left, android.R.anim.slide_out_right)
+        }
+      } else {
+        super.onBackPressed()
+        overridePendingTransition(
+          android.R.anim.slide_in_left, android.R.anim.slide_out_right)
+      }
     }
   }
 

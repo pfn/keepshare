@@ -158,8 +158,8 @@ class ShareActivity extends Activity with TypedViewHolder {
     setContentView(R.layout.share)
     val extras = getIntent.getExtras
     val (url, subject) = {
-      val u = extras.getString(Intent.EXTRA_TEXT)
-      val s = extras.getString(Intent.EXTRA_SUBJECT)
+      val u = extras.getString(Intent.EXTRA_TEXT, "").trim
+      val s = extras.getString(Intent.EXTRA_SUBJECT, "").trim
       if (u.charAt(0) == '"') {
         val end = u.lastIndexOf('"')
         if (u.length > end + 2)

@@ -417,4 +417,13 @@ object EntryEditModel {
 case class EntryEditModel(icon: Int, title: Option[String],
                           username: Option[String], password: Option[String],
                           url: Option[String], notes: Option[String], group: PwUuid,
-                          fields: Map[String,ProtectedString])
+                          fields: Map[String,ProtectedString]) {
+
+  def needsBackup(other: EntryEditModel): Boolean = {
+    val pairs = this.productIterator.toList zip other.productIterator.toList
+    val diffs = pairs.zipWithIndex.collect {
+      case ((a,b),i) if a != b && !Set(0,7)(i) => i
+    }
+    diffs.nonEmpty
+  }
+}

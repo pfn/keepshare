@@ -182,13 +182,23 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
 
   override def onBackPressed() = {
 //    navigateUp()
-    val shouldBack = (searchView exists (_.isIconified)) && !isEditing
-    if (isEditing) editing(false)
-    searchView foreach (_.setIconified(true))
-    if (shouldBack) {
-      super.onBackPressed()
-      if (Option(getIntent) exists (_.hasExtra(EXTRA_GROUP_ID)))
-        overridePendingTransition(0, 0)
+    if (isEditing) {
+      new AlertDialog.Builder(this)
+        .setTitle(R.string.cancel)
+        .setMessage(R.string.discard_confirm)
+        .setNegativeButton(R.string.discard, () => {
+          editing(false)
+        })
+        .setPositiveButton(R.string.keep_editing, null)
+        .show()
+    } else {
+      val shouldBack = searchView exists (_.isIconified)
+      searchView foreach (_.setIconified(true))
+      if (shouldBack) {
+        super.onBackPressed()
+        if (Option(getIntent) exists (_.hasExtra(EXTRA_GROUP_ID)))
+          overridePendingTransition(0, 0)
+      }
     }
   }
 

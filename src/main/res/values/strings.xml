@@ -69,6 +69,9 @@
     <string name="not_a_url">Not a URL</string>
     <string name="clear">Clear</string>
     <string name="cancel">Cancel</string>
+    <string name="discard_confirm">Are you sure you want to discard these changes?</string>
+    <string name="discard">Discard</string>
+    <string name="keep_editing">Keep Editing</string>
     <string name="continu">Continue</string>
     <string name="copy_username">Username</string>
     <string name="copy_password">Password</string>
