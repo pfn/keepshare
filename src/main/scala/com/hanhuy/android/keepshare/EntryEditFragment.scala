@@ -1,6 +1,6 @@
 package com.hanhuy.android.keepshare
 
-import android.app.{AlertDialog, Fragment}
+import android.app.{Activity, AlertDialog, Fragment}
 import android.content.Context
 import android.os.{Parcel, Parcelable, Bundle}
 import android.text.TextUtils
@@ -37,7 +37,47 @@ object EntryEditFragment {
     f.setArguments(b)
     f
   }
+  def create(parent: String) = {
+    val f = new EntryEditFragment
+    val b = new Bundle
+    f.setArguments(b)
+    b.putString(BrowseActivity.EXTRA_GROUP_ID, parent)
+    f
+  }
+  def iconPicker[A](activity: Activity, anchor: View, onClick: Int => A): Unit = {
+    val panel = new GridView(activity)
+    val dm = activity.getResources.getDisplayMetrics
+    val density = dm.density
+    panel.setNumColumns(GridView.AUTO_FIT)
+    val popup = new PopupWindow(panel)
+    val adapter = new BaseAdapter {
+      override def getItemId(i: Int) = getItem(i).toLong
+      override def getCount = Database.Icons.size
+      override def getItem(i: Int) = Database.Icons(i): java.lang.Integer
+
+      override def getView(i: Int, v: View, viewGroup: ViewGroup) = {
+        val b = if (v == null) {
+          LayoutInflater.from(activity).inflate(
+            TR.layout.entry_icon_picker_item, viewGroup, false)
+        } else v.asInstanceOf[ImageButton]
+        b.setImageResource(getItem(i))
+        b.onClick {
+          onClick(getItem(i))
+          popup.dismiss()
+        }
+        b
+      }
+    }
+    panel.setAdapter(adapter)
+    panel.setColumnWidth((density * 48).toInt)
+    popup.setBackgroundDrawable(activity.getResources.getDrawable(android.R.drawable.picture_frame))
+    popup.setHeight((density * 5 * 48).toInt)
+    popup.setWidth(dm.widthPixels - (density * 64).toInt)
+    popup.setFocusable(true)
+    popup.showAsDropDown(anchor)
+  }
 }
+
 class EntryEditFragment extends AuthorizedFragment {
   setRetainInstance(true)
   private var model: EntryEditModel = EntryEditModel.blank
@@ -48,6 +88,8 @@ class EntryEditFragment extends AuthorizedFragment {
 
     val entryId = Option(getArguments) flatMap(a =>
       Option(a.getString(EntryViewActivity.EXTRA_ENTRY_ID)))
+    val groupId = Option(getArguments) flatMap(a =>
+      Option(a.getString(BrowseActivity.EXTRA_GROUP_ID)))
 
     val fieldlist = view.findView(TR.field_list)
     val newfield = view.findView(TR.new_field_button)
@@ -85,6 +127,17 @@ class EntryEditFragment extends AuthorizedFragment {
       model = model.copy(notes = Option(n.text))
     })
 
+    activity.database map { db =>
+      groupId map { id =>
+        val uuid = new PwUuid(KeyManager.bytes(id))
+        db.getRootGroup.FindGroup(uuid, true)
+      }
+    } onSuccessMain { case g =>
+      g foreach { grp =>
+        group.group = grp
+        view.findView(TR.delete).setVisibility(View.GONE)
+      }
+    }
     activity.database map { db =>
       entryId map { id =>
         val uuid = new PwUuid(KeyManager.bytes(id))
@@ -173,39 +226,11 @@ class EntryEditFragment extends AuthorizedFragment {
     }
 
     title.iconfield.onClick {
-      val panel = new GridView(activity)
-      val dm = getResources.getDisplayMetrics
-      val density = dm.density
-      panel.setNumColumns(GridView.AUTO_FIT)
-      val popup = new PopupWindow(panel)
-      val adapter = new BaseAdapter {
-        override def getItemId(i: Int) = getItem(i).toLong
-        override def getCount = Database.Icons.size
-        override def getItem(i: Int) = Database.Icons(i): java.lang.Integer
-
-        override def getView(i: Int, v: View, viewGroup: ViewGroup) = {
-          val b = if (v == null) {
-            LayoutInflater.from(activity).inflate(
-              TR.layout.entry_icon_picker_item, viewGroup, false)
-          } else v.asInstanceOf[ImageButton]
-          b.setImageResource(getItem(i))
-          b.onClick {
-            iconObservable.onNext(getItem(i))
-            popup.dismiss()
-          }
-          b
-        }
-      }
-      panel.setAdapter(adapter)
-      panel.setColumnWidth((density * 48).toInt)
-      popup.setBackgroundDrawable(getResources.getDrawable(android.R.drawable.picture_frame))
-      popup.setHeight((density * 5 * 48).toInt)
-      popup.setWidth(dm.widthPixels - (density * 64).toInt)
-      popup.setFocusable(true)
-      popup.showAsDropDown(title.iconfield)
+      EntryEditFragment.iconPicker(activity, title.iconfield, iconObservable.onNext)
     }
     view
   }
+
 }
 
 object StandardEditView {
@@ -332,15 +357,18 @@ class GroupEditView(c: Context, attrs: AttributeSet) extends StandardFieldView(c
 
   override def onSaveInstanceState() = {
     val ss = new GroupEditView.SavedState(super.onSaveInstanceState())
-    ss.uuid = group.getUuid.ToHexString
+    if (group != null)
+      ss.uuid = group.getUuid.ToHexString
     ss
   }
   override def onRestoreInstanceState(state: Parcelable) = {
     state match {
       case s: GroupEditView.SavedState =>
         super.onRestoreInstanceState(s.getSuperState)
-        groupId = Some(new PwUuid(KeyManager.bytes(s.uuid)))
-        Option(group) foreach { group = _ }
+        if (s.uuid != null) {
+          groupId = Some(new PwUuid(KeyManager.bytes(s.uuid)))
+          Option(group) foreach { group = _ }
+        }
     }
   }
   def showGroupsList(): Unit = {

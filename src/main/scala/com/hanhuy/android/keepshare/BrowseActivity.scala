@@ -5,11 +5,13 @@ import android.graphics.BitmapFactory
 import android.graphics.drawable.{BitmapDrawable, LayerDrawable}
 import android.os.Bundle
 import android.support.v4.widget.SwipeRefreshLayout
+import android.support.v7.app.ActionBar
+import android.support.v7.widget.Toolbar
 import android.util.AttributeSet
 import android.view.animation.AccelerateDecelerateInterpolator
 import com.hanhuy.android.common.AndroidConversions._
 
-import android.app.{ProgressDialog, Activity, SearchManager}
+import android.app._
 import android.view._
 import android.widget._
 import com.hanhuy.keepassj._
@@ -28,6 +30,8 @@ import BrowseActivity._
 
 import scala.concurrent.Future
 import scala.util.{Success, Failure}
+
+import TypedResource._
 
 /**
  * @author pfnguyen
@@ -58,28 +62,37 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
   lazy val list = findView(TR.list)
   lazy val refresher = findView(TR.refresher)
   private var searchView = Option.empty[SearchView]
+  private var isEditing = false
+  private var isCreating = false
+  lazy val editBar = getLayoutInflater.inflate(
+    TR.layout.entry_edit_action_bar, null, false)
 
   override def onCreateOptionsMenu(menu: Menu) = {
-    super.onCreateOptionsMenu(menu)
-    getMenuInflater.inflate(R.menu.browse, menu)
-    searchView = Option(menu.findItem(R.id.menu_search).getActionView.asInstanceOf[SearchView])
-    searchView foreach { search =>
-      search.setIconifiedByDefault(getResources.getBoolean(R.bool.is_phone))
-      search.setSearchableInfo(
-        this.systemService[SearchManager].getSearchableInfo(
-          new ComponentName(getPackageName, "com.hanhuy.android.keepshare.SearchableActivity")))
-    }
+    if (!isEditing) {
+      super.onCreateOptionsMenu(menu)
+      getMenuInflater.inflate(R.menu.browse, menu)
+      searchView = Option(menu.findItem(R.id.menu_search).getActionView.asInstanceOf[SearchView])
+      searchView foreach { search =>
+        search.setIconifiedByDefault(getResources.getBoolean(R.bool.is_phone))
+        search.setSearchableInfo(
+          this.systemService[SearchManager].getSearchableInfo(
+            new ComponentName(getPackageName, "com.hanhuy.android.keepshare.SearchableActivity")))
+      }
 
-    Option(menu.findItem(R.id.database_sort)) foreach { m =>
-      m.setChecked(settings.get(Settings.BROWSE_SORT_ALPHA))
-    }
+      Option(menu.findItem(R.id.database_sort)) foreach { m =>
+        m.setChecked(settings.get(Settings.BROWSE_SORT_ALPHA))
+      }
 
-    database onSuccessMain { case d =>
-      if (groupId.contains(d.getRecycleBinUuid) &&
-        d.getRootGroup.FindGroup(
-          d.getRecycleBinUuid, true).GetEntriesCount(true) > 0 &&
-        Database.writeSupported) {
-        menu.findItem(R.id.empty_recycle_bin).setVisible(true)
+      if (Database.writeSupported) menu.findItem(R.id.edit_group).setVisible(true)
+
+      database onSuccessMain { case d =>
+        if (groupId.contains(d.getRecycleBinUuid) && Database.writeSupported) {
+          menu.findItem(R.id.empty_recycle_bin).setVisible(true)
+        }
+      }
+
+      editBar.findView(TR.cancel).onClick {
+        updating(false, null)
       }
     }
     true
@@ -93,6 +106,21 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
     findView(TR.fab_close) onClick findView(TR.fab_toolbar).hide()
     findView(TR.fab_toolbar).button = fab
     findView(TR.fab_toolbar).container = findView(TR.container)
+
+    findView(TR.create_entry) onClick {
+      database.onSuccessMain { case db =>
+        val root = db.getRootGroup
+
+        EntryViewActivity.create(this,
+          groupId map (root.FindGroup(_, true)) getOrElse root)
+      }
+    }
+    findView(TR.create_group) onClick {
+      creating()
+    }
+    getSupportActionBar.setCustomView(editBar, new ActionBar.LayoutParams(
+      ViewGroup.LayoutParams.MATCH_PARENT,
+      ViewGroup.LayoutParams.MATCH_PARENT))
     fab.attachToListView(list)
     if (!Database.writeSupported)
       fab.setVisibility(View.GONE)
@@ -117,12 +145,15 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
     case android.R.id.home =>
       onBackPressed()
       true
+    case R.id.edit_group =>
+      editing(true)
+      true
     case R.id.empty_recycle_bin =>
       Database.emptyRecycleBin()
       list.getAdapter.asInstanceOf[GroupAdapter].notifyDataSetChanged()
       val p = ProgressDialog.show(this, getString(R.string.saving_database),
         getString(R.string.please_wait), true, false)
-      Database.save() onComplete {
+      Database.save() onCompleteMain {
         case Success(_) => p.dismiss()
         case Failure(ex) => p.dismiss()
           Toast.makeText(this,
@@ -148,7 +179,8 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
 
   override def onBackPressed() = {
 //    navigateUp()
-    val shouldBack = searchView exists (_.isIconified)
+    val shouldBack = (searchView exists (_.isIconified)) && !isEditing
+    if (isEditing) editing(false)
     searchView foreach (_.setIconified(true))
     if (shouldBack) {
       super.onBackPressed()
@@ -250,6 +282,54 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
   override def onResume() = {
     super.onResume()
     handleIntent()
+  }
+
+  def creating(): Unit = {
+    database.map { db =>
+      val root = db.getRootGroup
+      groupId flatMap { id =>
+        Option(root.FindGroup(id, true)) } getOrElse root
+    }.onSuccessMain { case group =>
+      updating(true, GroupEditFragment.create(group))
+      isCreating = true
+      editBar.findView(TR.title).setText("Create group")
+    }
+  }
+  def editing(b: Boolean): Unit = {
+    database.map { db =>
+      val root = db.getRootGroup
+      groupId flatMap { id =>
+        Option(root.FindGroup(id, true)) } getOrElse root
+    }.onSuccessMain { case group =>
+      updating(b, if (b) GroupEditFragment.edit(group) else null)
+      editBar.findView(TR.title).setText("Update group")
+    }
+  }
+
+  def updating(b: Boolean, f: Fragment) {
+    getSupportActionBar.setHomeButtonEnabled(!b)
+    getSupportActionBar.setDisplayShowHomeEnabled(!b)
+    getSupportActionBar.setDisplayHomeAsUpEnabled(!b)
+    getSupportActionBar.setDisplayShowTitleEnabled(!b)
+    getSupportActionBar.setDisplayShowCustomEnabled(b)
+    if (b) {
+      editBar.getParent match {
+        case t: Toolbar => t.setContentInsetsAbsolute(0, 0)
+        case _ =>
+      }
+      findView(TR.observable_fab).hide()
+      if (getFragmentManager.findFragmentByTag("editor") == null)
+        getFragmentManager.beginTransaction()
+          .add(R.id.content, f, "editor")
+          .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
+          .addToBackStack("edit")
+          .commit()
+    } else {
+      findView(TR.observable_fab).show()
+      getFragmentManager.popBackStack()
+    }
+    isEditing = b
+    invalidateOptionsMenu()
   }
 
   override def onSaveInstanceState(outState: Bundle) = {
@@ -357,7 +437,7 @@ class FabToolbar(c: Context, attrs: AttributeSet) extends RevealFrameLayout(c, a
   }
 
   def animate(sr: Float, er: Float, listener: SupportAnimator.AnimatorListener) {
-    val start = math.max(0, math.abs(button.getTop - button.getBottom))
+    val start = math.max(0, math.abs(button.getTop - button.getBottom)) / 2
     val cx = (button.getLeft + button.getRight) / 2
     val cy = (button.getTop + button.getBottom) / 2
 

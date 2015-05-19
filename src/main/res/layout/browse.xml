@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
              xmlns:app="http://schemas.android.com/apk/res-auto"
+             android:id="@+id/content"
              android:layout_width="match_parent"
              android:layout_height="wrap_content">
     <android.support.v4.widget.SwipeRefreshLayout
@@ -23,6 +24,7 @@
                 android:src="@drawable/ic_add_white_24dp"/>
         <LinearLayout
                 android:id="@+id/container"
+                android:clickable="true"
                 android:visibility="gone"
                 android:layout_gravity="bottom"
                 android:layout_width="match_parent"
@@ -30,6 +32,8 @@
 
             <ImageButton
                     style="@android:style/Widget.DeviceDefault.Light.ActionButton"
+                    android:contentDescription="New group"
+                    android:id="@+id/create_group"
                     android:layout_gravity="center"
                     android:gravity="center"
                     android:scaleType="center"
@@ -38,6 +42,8 @@
                     android:src="@drawable/ic_folder_open_white_36dp"/>
             <ImageButton
                     style="@android:style/Widget.DeviceDefault.Light.ActionButton"
+                    android:contentDescription="New entry"
+                    android:id="@+id/create_entry"
                     android:layout_gravity="center"
                     android:gravity="center"
                     android:scaleType="center"
@@ -49,6 +55,7 @@
                   android:layout_height="wrap_content"/>
             <ImageButton
                     style="@android:style/Widget.DeviceDefault.Light.ActionButton"
+                    android:contentDescription="Close toolbar"
                     android:id="@+id/fab_close"
                     android:layout_gravity="center"
                     android:gravity="center"

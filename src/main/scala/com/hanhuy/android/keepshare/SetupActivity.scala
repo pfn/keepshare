@@ -486,7 +486,7 @@ class SetupFragment extends android.preference.PreferenceFragment {
         "com.android.settings.LanguageSettings")))
     import android.provider.Settings.Secure
     val services = Option(Secure.getString(getActivity.getContentResolver, Secure.ENABLED_ACCESSIBILITY_SERVICES))
-    ae.setChecked(services exists (_ contains "com.hanhuy.android.keepshare"))
+    ae.setChecked((services exists (_ contains "com.hanhuy.android.keepshare")) && AccessibilityService.running)
 
     val imm = getActivity.systemService[InputMethodManager]
     val list = imm.getEnabledInputMethodList

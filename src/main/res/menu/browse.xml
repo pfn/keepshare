@@ -8,6 +8,9 @@
     <item android:id="@+id/database_sort"
           android:checkable="true"
           android:title="Sort Alphabetically"/>
+    <item android:id="@+id/edit_group"
+            android:title="Edit Group"
+            android:visible="false"/>
     <item android:id="@+id/empty_recycle_bin"
             android:title="Empty Recycle Bin"
             android:visible="false"/>

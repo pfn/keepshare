@@ -37,6 +37,8 @@ import Futures._
  * @author pfnguyen
  */
 object AccessibilityService {
+  private var _running = false
+  def running = _running
   lazy val lollipopAndNewer = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
   // flag to disable fill prompt/processing during lock screen
   var filling: Boolean = false
@@ -243,9 +245,11 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
     registerReceiver(receiver, Seq(ACTION_CANCEL, ACTION_SEARCH,
       Intent.ACTION_SCREEN_OFF, Intent.ACTION_USER_PRESENT))
     filling = !systemService[KeyguardManager].isKeyguardLocked
+    AccessibilityService._running = true
   }
 
   override def onDestroy() {
+    AccessibilityService._running = false
     super.onDestroy()
     d("Exiting accessibility service")
     thread.quit()

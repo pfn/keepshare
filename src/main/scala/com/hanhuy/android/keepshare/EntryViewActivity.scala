@@ -1,6 +1,6 @@
 package com.hanhuy.android.keepshare
 
-import android.app.{FragmentTransaction, Activity}
+import android.app.{Fragment, FragmentTransaction, Activity}
 import android.content.{Context, Intent}
 import android.graphics.BitmapFactory
 import android.graphics.drawable.{LayerDrawable, BitmapDrawable}
@@ -24,6 +24,7 @@ import TypedResource._
  * @author pfnguyen
  */
 object EntryViewActivity {
+  val EXTRA_CREATE = "keepshare.extra.CREATE"
   val EXTRA_ENTRY_ID = "keepshare.extra.ENTRY_ID"
   val EXTRA_HISTORY_IDX = "keepshare.extra.HISTORY_IDX"
   val STATE_IS_EDITING = "keepshare.isEditing"
@@ -41,15 +42,23 @@ object EntryViewActivity {
     a.startActivity(intent)
     PINHolderService.ping()
   }
+  def create(a: Activity, g: PwGroup): Unit = {
+    val intent = new Intent(a, classOf[EntryViewActivity])
+    intent.putExtra(EXTRA_CREATE, true)
+    intent.putExtra(BrowseActivity.EXTRA_GROUP_ID, g.getUuid.ToHexString)
+    a.startActivity(intent)
+    PINHolderService.ping()
+  }
 }
 class EntryViewActivity extends AuthorizedActivity with TypedActivity {
   private var pwentry = Option.empty[PwEntry]
   private var isEditing = false
+  private var isCreating = false
   lazy val editBar = getLayoutInflater.inflate(
     TR.layout.entry_edit_action_bar, null, false)
 
   override def onBackPressed() = {
-    if (isEditing) {
+    if (isEditing && !isCreating) {
       editing(false)
     } else {
       super.onBackPressed()
@@ -72,8 +81,9 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
     }
     editBar.findView(TR.cancel).onClick {
       editing(false)
+      if (isCreating)
+        finish()
     }
-
 
     getSupportActionBar.setCustomView(editBar, new ActionBar.LayoutParams(
       ViewGroup.LayoutParams.MATCH_PARENT,
@@ -93,9 +103,26 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
         }
       }
     }
+    for {
+      intent <- Option(getIntent)
+    } {
+      if (intent.getBooleanExtra(EXTRA_CREATE, false)) {
+        creating(intent.getStringExtra(BrowseActivity.EXTRA_GROUP_ID))
+      }
+    }
   }
 
-  def editing(b: Boolean) {
+  def creating(parent: String): Unit = {
+    updating(true, EntryEditFragment.create(parent))
+    isCreating = true
+    editBar.findView(TR.title).setText("Create entry")
+  }
+  def editing(b: Boolean): Unit = {
+    updating(b, if (b) EntryEditFragment.edit(pwentry.get) else null)
+    editBar.findView(TR.title).setText("Update entry")
+  }
+
+  def updating(b: Boolean, f: Fragment) {
     getSupportActionBar.setHomeButtonEnabled(!b)
     getSupportActionBar.setDisplayShowHomeEnabled(!b)
     getSupportActionBar.setDisplayHomeAsUpEnabled(!b)
@@ -109,7 +136,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
       findView(TR.fab).hide()
       if (getFragmentManager.findFragmentByTag("editor") == null)
         getFragmentManager.beginTransaction()
-          .add(R.id.content, EntryEditFragment.edit(pwentry.get), "editor")
+          .add(R.id.content, f, "editor")
           .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
           .addToBackStack("edit")
           .commit()

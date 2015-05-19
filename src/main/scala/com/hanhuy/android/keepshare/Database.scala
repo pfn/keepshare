@@ -20,9 +20,12 @@ import ManagedResource._
  * @author pfnguyen
  */
 object Database {
-  val writeSupported = true
+  lazy val writeSupported =
+    Application.instance.getPackageName == "com.hanhuy.android.keepshare"
 
-  def rootGroupid = database map (_.getRootGroup.getUuid)
+  def rootGroup = database map (_.getRootGroup)
+  def rootGroupId = rootGroup map (_.getUuid)
+
   private var database = Option.empty[PwDatabase]
   private var databasePath = Option.empty[String]
   def pwdatabase = database.get
@@ -122,7 +125,7 @@ object Database {
     ByteBuffer.wrap(group.getUuid.getUuidBytes).getLong
   }
 
-  def save(): Future[Unit] = {
+  def save(): Future[PwDatabase] = {
     (for {
       d    <- database
       path <- databasePath
@@ -144,6 +147,7 @@ object Database {
             }
           }
         }
+        d
       }
     }) getOrElse Future.failed(KeyError.NeedLoad)
   }
