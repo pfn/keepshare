@@ -12,7 +12,7 @@ import android.text.util.Linkify
 import android.util.AttributeSet
 import android.view._
 import android.widget.FrameLayout
-import com.hanhuy.keepassj.{PwGroup, PwDefs, PwUuid, PwEntry}
+import com.hanhuy.keepassj._
 
 import Futures._
 import EntryViewActivity._
@@ -100,6 +100,53 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
       if (isCreating)
         finish()
     }
+    editBar.findView(TR.save).onClick {
+      val f = Option(getFragmentManager.findFragmentByTag("editor"))
+      f foreach { case editor: EntryEditFragment =>
+        def setField(e: PwEntry, field: String, value: Option[String], isPassword: Boolean): Unit = {
+          value.foreach { s =>
+            e.getStrings.Set(field, new ProtectedString(false, s))
+          }
+        }
+        def copyFromModel(e: PwEntry, needMove: Boolean): Unit = {
+          val custom = e.getStrings.asScala.map { case entry => entry.getKey } filterNot PwDefs.IsStandardField
+          custom foreach e.getStrings.Remove
+
+          setField(e, PwDefs.TitleField,    editor.model.title,    false)
+          setField(e, PwDefs.UserNameField, editor.model.username, false)
+          setField(e, PwDefs.PasswordField, editor.model.password, true)
+          setField(e, PwDefs.NotesField,    editor.model.notes,    false)
+          setField(e, PwDefs.UrlField,      editor.model.url,      false)
+          e.setIconId(PwIcon.values()(Database.Icons.indexOf(editor.model.icon)))
+          editor.model.fields foreach { case (k, v) => e.getStrings.Set(k, v) }
+
+          if (needMove) {
+            Option(e.getParentGroup) foreach (_.getEntries.Remove(e))
+            Database.rootGroup foreach { root =>
+              val group = root.FindGroup(editor.model.group, true)
+              group.getEntries.Add(e)
+              e.setParentGroup(group)
+            }
+          }
+        }
+        if (isCreating) {
+          val e = new PwEntry(true, true)
+          copyFromModel(e, true)
+          showEntry(e)
+        } else {
+          val needBackup = editor.baseModel.exists(_.needsBackup(editor.model))
+          val needMove = editor.baseModel.exists(_.group != editor.model.group)
+          pwentry foreach { e =>
+            if (needBackup) e.CreateBackup(null)
+            copyFromModel(e, needMove)
+            e.Touch(true, false)
+            showEntry(e)
+          }
+        }
+      }
+      editing(false)
+      DatabaseSaveService.save()
+    }
 
     getSupportActionBar.setCustomView(editBar, new ActionBar.LayoutParams(
       ViewGroup.LayoutParams.MATCH_PARENT,
@@ -157,6 +204,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
           .addToBackStack("edit")
           .commit()
     } else {
+      isCreating = false
       findView(TR.fab).show()
       getFragmentManager.popBackStack()
     }
@@ -206,6 +254,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
 //    }
 
     val fieldlist = findView(TR.field_list)
+    fieldlist.removeAllViews()
 
     var first = true
     if (Option(strings.Get(PwDefs.UserNameField)) exists (_.Length > 0)) {

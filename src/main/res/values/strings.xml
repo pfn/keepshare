@@ -75,6 +75,9 @@
     <string name="continu">Continue</string>
     <string name="copy_username">Username</string>
     <string name="copy_password">Password</string>
+    <string name="delete_name">Delete %s?</string>
+    <string name="move_to_recycle">This can be found in the recycle bin later if you change your mind</string>
+    <string name="delete_permanently">This item will be permanently deleted</string>
     <string name="failed_verify">
         Failed to verify encrypted data, run setup!</string>
     <string name="failed_to_open">Failed to open database: </string>

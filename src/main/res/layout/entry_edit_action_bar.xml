@@ -24,6 +24,7 @@
             android:layout_weight="1"/>
     <Button android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:id="@+id/save"
             style="@android:style/Widget.DeviceDefault.Light.ActionButton"
             android:text="@string/save"
             android:textColor="@android:color/white"

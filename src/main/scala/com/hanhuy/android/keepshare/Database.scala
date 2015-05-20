@@ -25,6 +25,7 @@ object Database {
 
   def rootGroup = database map (_.getRootGroup)
   def rootGroupId = rootGroup map (_.getUuid)
+  def recycleBinId = database map (_.getRecycleBinUuid)
 
   private var database = Option.empty[PwDatabase]
   private var databasePath = Option.empty[String]

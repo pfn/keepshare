@@ -80,8 +80,15 @@ object EntryEditFragment {
 
 class EntryEditFragment extends AuthorizedFragment {
   setRetainInstance(true)
-  private var model: EntryEditModel = EntryEditModel.blank
-  private var baseModel = Option.empty[EntryEditModel]
+  var model: EntryEditModel = EntryEditModel.blank
+  var baseModel = Option.empty[EntryEditModel]
+  lazy val recycleBinId = Database.recycleBinId getOrElse PwUuid.Zero
+  @tailrec
+  final def inRecycleBin(g: PwGroup): Boolean =
+    if (g.getUuid == recycleBinId) true
+    else if (g.getParentGroup == null) false
+    else inRecycleBin(g.getParentGroup)
+
   override def onCreateView(inflater: LayoutInflater, container: ViewGroup,
                             savedInstanceState: Bundle) = {
     val view = inflater.inflate(TR.layout.entry_edit, container, false)
@@ -158,6 +165,23 @@ class EntryEditFragment extends AuthorizedFragment {
           model = model.copy(fields = s.asScala map { e =>
             (e.getKey,e.getValue)
           } filterNot (f => PwDefs.IsStandardField(f._1)) toMap)
+
+          view.findView(TR.delete).onClick {
+            val t = getString(R.string.delete_name, s.ReadSafe(PwDefs.TitleField))
+            val msg = if (inRecycleBin(e.getParentGroup)) R.string.delete_permanently
+            else R.string.move_to_recycle
+
+            new AlertDialog.Builder(activity)
+              .setTitle(t)
+              .setMessage(msg)
+              .setPositiveButton(android.R.string.ok, () => {
+                Database.delete(e)
+//                DatabaseSaveService.save()
+                activity.finish()
+              })
+              .setNegativeButton(android.R.string.cancel, null)
+              .show()
+          }
 
           baseModel = Some(model)
         }
@@ -334,6 +358,7 @@ class GroupEditView(c: Context, attrs: AttributeSet) extends StandardFieldView(c
 
     groupId = None
     text = _group.getName
+    groupChangeListener foreach (_(_group))
     //  if (PwUuid.Zero == g.getCustomIconUuid) {
     imagefield.setImageResource(Database.Icons(_group.getIconId.ordinal))
     //  }
@@ -421,8 +446,9 @@ case class EntryEditModel(icon: Int, title: Option[String],
 
   def needsBackup(other: EntryEditModel): Boolean = {
     val pairs = this.productIterator.toList zip other.productIterator.toList
+    // don't need a backup if the icon or parent group changes
     val diffs = pairs.zipWithIndex.collect {
-      case ((a,b),i) if a != b && !Set(0,7)(i) => i
+      case ((a,b),i) if a != b && !Set(0,6)(i) => i
     }
     diffs.nonEmpty
   }

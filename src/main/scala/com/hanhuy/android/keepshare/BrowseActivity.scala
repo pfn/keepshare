@@ -90,10 +90,6 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
           menu.findItem(R.id.empty_recycle_bin).setVisible(true)
         }
       }
-
-      editBar.findView(TR.cancel).onClick {
-        updating(false, null)
-      }
     }
     true
   }
@@ -125,6 +121,45 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
     if (!Database.writeSupported)
       fab.setVisibility(View.GONE)
     refresher.setOnRefreshListener(this)
+
+    editBar.findView(TR.cancel).onClick {
+      updating(false, null)
+    }
+    editBar.findView(TR.save).onClick {
+      val f = Option(getFragmentManager.findFragmentByTag("editor"))
+      f foreach { case editor: GroupEditFragment =>
+        def copyFromModel(e: PwGroup, needMove: Boolean): Unit = {
+          editor.model.title foreach e.setName
+          editor.model.notes foreach e.setNotes
+          e.setIconId(PwIcon.values()(Database.Icons.indexOf(editor.model.icon)))
+
+          if (needMove) {
+            Option(e.getParentGroup) foreach (_.getGroups.Remove(e))
+            Database.rootGroup foreach { root =>
+              val group = root.FindGroup(editor.model.group, true)
+              group.getGroups.Add(e)
+              e.setParentGroup(group)
+            }
+          }
+        }
+        if (isCreating) {
+          val e = new PwGroup(true, true)
+          copyFromModel(e, true)
+          navigateTo(Option(e.getUuid))
+        } else {
+          val needMove = editor.baseModel.exists(_.group != editor.model.group)
+          ((for {
+            root <- Database.rootGroup
+            gid  <- groupId
+          } yield root.FindGroup(gid, true)) orElse Database.rootGroup) foreach { g =>
+            copyFromModel(g, needMove)
+            navigateTo(Option(g.getUuid))
+          }
+        }
+      }
+      editing(false)
+      DatabaseSaveService.save()
+    }
   }
 
   override def onRefresh() = {

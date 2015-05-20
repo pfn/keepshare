@@ -35,8 +35,8 @@ object GroupEditFragment {
 }
 class GroupEditFragment extends AuthorizedFragment {
   setRetainInstance(true)
-  private var model: GroupEditModel = GroupEditModel.blank
-  private var baseModel = Option.empty[GroupEditModel]
+  var model: GroupEditModel = GroupEditModel.blank
+  var baseModel = Option.empty[GroupEditModel]
   override def onCreateView(inflater: LayoutInflater, container: ViewGroup,
                             savedInstanceState: Bundle) = {
     val view = inflater.inflate(TR.layout.group_edit, container, false)
