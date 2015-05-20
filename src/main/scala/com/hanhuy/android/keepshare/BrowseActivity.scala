@@ -1,5 +1,6 @@
 package com.hanhuy.android.keepshare
 
+import android.app.FragmentManager.OnBackStackChangedListener
 import android.content.{Context, ComponentName, Intent}
 import android.graphics.BitmapFactory
 import android.graphics.drawable.{BitmapDrawable, LayerDrawable}
@@ -111,9 +112,9 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
           groupId map (root.FindGroup(_, true)) getOrElse root)
       }
     }
-    findView(TR.create_group) onClick {
-      creating()
-    }
+    findView(TR.create_group) onClick  creating()
+    findView(TR.group_edit) onClick editing(true)
+
     getSupportActionBar.setCustomView(editBar, new ActionBar.LayoutParams(
       ViewGroup.LayoutParams.MATCH_PARENT,
       ViewGroup.LayoutParams.MATCH_PARENT))
@@ -161,6 +162,16 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
       editing(false)
       DatabaseSaveService.save()
     }
+
+    getFragmentManager.addOnBackStackChangedListener(new OnBackStackChangedListener {
+      override def onBackStackChanged() = {
+        if (!Option(getFragmentManager.findFragmentByTag("editor")).exists(_.isVisible)) {
+          editing(false)
+          if (!isCreating)
+            navigateTo(groupId)
+        }
+      }
+    })
   }
 
   override def onRefresh() = {
@@ -263,8 +274,8 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
       }
     } onSuccessMain { case db =>
       val root = db.getRootGroup
-      val group = groupId map { id =>
-        root.FindGroup(id, true) } getOrElse root
+      val group = groupId flatMap { id =>
+        Option(root.FindGroup(id, true)) } getOrElse root
       val ab = getSupportActionBar
       ab.setSubtitle(group.getName)
 //      if (PwUuid.Zero == group.getCustomIconUuid) {
@@ -330,7 +341,8 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
 
   override def onResume() = {
     super.onResume()
-    handleIntent()
+    if (!isEditing)
+      handleIntent()
   }
 
   def creating(): Unit = {
@@ -374,6 +386,7 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
           .addToBackStack("edit")
           .commit()
     } else {
+      isCreating = false
       findView(TR.observable_fab).show()
       getFragmentManager.popBackStack()
     }

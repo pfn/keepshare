@@ -55,6 +55,20 @@
                   android:layout_height="wrap_content"/>
             <ImageButton
                     style="@android:style/Widget.DeviceDefault.Light.ActionButton"
+                    android:contentDescription="Edit group"
+                    android:id="@+id/group_edit"
+                    android:layout_gravity="center"
+                    android:gravity="center"
+                    android:scaleType="center"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@drawable/ic_edit_white_24dp"/>
+
+            <View android:layout_width="0dp"
+                  android:layout_weight="1"
+                  android:layout_height="wrap_content"/>
+            <ImageButton
+                    style="@android:style/Widget.DeviceDefault.Light.ActionButton"
                     android:contentDescription="Close toolbar"
                     android:id="@+id/fab_close"
                     android:layout_gravity="center"
