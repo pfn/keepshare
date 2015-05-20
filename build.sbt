@@ -9,6 +9,8 @@ resolvers ++= Resolver.sonatypeRepo("snapshots") ::
 
 javacOptions in Global ++= "-target" :: "1.7" :: "-source" :: "1.7" :: Nil
 
+scalacOptions in Global += "-feature"
+
 scalaVersion in Global := "2.11.6"
 
 retrolambdaEnable in Android := false

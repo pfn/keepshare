@@ -153,6 +153,7 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
             gid  <- groupId
           } yield root.FindGroup(gid, true)) orElse Database.rootGroup) foreach { g =>
             copyFromModel(g, needMove)
+            g.Touch(true, false)
             navigateTo(Option(g.getUuid))
           }
         }

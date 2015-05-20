@@ -26,6 +26,11 @@ object Database {
   def rootGroup = database map (_.getRootGroup)
   def rootGroupId = rootGroup map (_.getUuid)
   def recycleBinId = database map (_.getRecycleBinUuid)
+  def recycleBin = for {
+    root <- rootGroup
+    id   <- recycleBinId
+    r    <- Option(root.FindGroup(id, true))
+  } yield r
 
   private var database = Option.empty[PwDatabase]
   private var databasePath = Option.empty[String]
@@ -156,47 +161,90 @@ object Database {
   def emptyRecycleBin(): Unit = {
     for {
       db  <- database
-      bin <- Option(db.getRootGroup.FindGroup(db.getRecycleBinUuid, true))
+      bin <- recycleBin
     } {
       bin.DeleteAllObjects(db)
     }
   }
 
-  def delete(entries: PwEntry*): Unit = {
+  def delete(group: PwGroup): Unit = {
     val now = new java.util.Date
-    database foreach { db =>
-      val del = if (db.isRecycleBinEnabled) {
-        (e: PwEntry) => {
-          e.getParentGroup.getEntries.Remove(e)
-
-          val recycle = Option(db.getRootGroup.FindGroup(db.getRecycleBinUuid, true)) getOrElse {
-            val group = new PwGroup(true, true, "Recycle Bin", PwIcon.TrashBin)
-            group.setEnableAutoType(false)
-            group.setEnableSearching(false)
-            group.setExpanded(false)
-            db.getRootGroup.AddGroup(group, true)
-            db.setRecycleBinUuid(group.getUuid)
-            group
-          }
-
-          if (e.getParentGroup == recycle) {
-            recycle.getEntries.Remove(e)
-            val pdo = new PwDeletedObject(e.getUuid, now)
-            db.getDeletedObjects.Add(pdo)
+    for {
+      db <- database
+      r  <- ensureRecycleBin(db)
+      p  <- Option(group.getParentGroup)
+    } {
+      p.getGroups.Remove(group)
+      if (db.isRecycleBinEnabled) {
+        Option(group.getParentGroup) foreach { p =>
+          if (p == r || p.IsContainedIn(r)) {
+            deletePermanent(group, db, now)
           } else {
-            recycle.AddEntry(e, true, true)
-            e.Touch(false)
+            r.AddGroup(group, true, true)
+            group.Touch(false)
           }
         }
       } else {
-        (e: PwEntry) => {
-          e.getParentGroup.getEntries.Remove(e)
-          val pdo = new PwDeletedObject(e.getUuid, now)
-          db.getDeletedObjects.Add(pdo)
+        deletePermanent(group, db, now)
+      }
+    }
+  }
+
+  def delete(entries: PwEntry*): Unit = {
+    val now = new java.util.Date
+    for {
+      db <- database
+      r  <- ensureRecycleBin(db)
+    } {
+      val del = if (db.isRecycleBinEnabled) (e: PwEntry) => {
+        e.getParentGroup.getEntries.Remove(e)
+
+        Option(e.getParentGroup) foreach { p =>
+          if (p == r || p.IsContainedIn(r)) {
+            deletePermanent(e, db, now)
+          } else {
+            r.AddEntry(e, true, true)
+            e.Touch(false)
+          }
         }
+      }
+      else (e: PwEntry) => {
+        deletePermanent(e, db, now)
       }
 
       entries foreach del
+    }
+  }
+
+  private[this] def deletePermanent(e: PwEntry, db: PwDatabase, now: java.util.Date) {
+    Option(e.getParentGroup) foreach { p =>
+      p.getEntries.Remove(e)
+      val pdo = new PwDeletedObject(e.getUuid, now)
+      db.getDeletedObjects.Add(pdo)
+    }
+  }
+  private[this] def deletePermanent(g: PwGroup, db: PwDatabase, now: java.util.Date) {
+    Option(g.getParentGroup) foreach { p =>
+      g.DeleteAllObjects(db)
+      val pdo = new PwDeletedObject(g.getUuid, now)
+      db.getDeletedObjects.Add(pdo)
+    }
+  }
+
+  private[this] def ensureRecycleBin(db: PwDatabase): Option[PwGroup] = {
+    for {
+      root <- rootGroup
+      id   <- recycleBinId
+    } yield {
+      Option(root.FindGroup(id, true)) getOrElse {
+        val group = new PwGroup(true, true, "Recycle Bin", PwIcon.TrashBin)
+        group.setEnableAutoType(false)
+        group.setEnableSearching(false)
+        group.setExpanded(false)
+        db.getRootGroup.AddGroup(group, true)
+        db.setRecycleBinUuid(group.getUuid)
+        group
+      }
     }
   }
 

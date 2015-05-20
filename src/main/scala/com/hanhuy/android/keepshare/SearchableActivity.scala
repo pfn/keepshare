@@ -17,6 +17,7 @@ import android.view.{MenuItem, View, ViewGroup, Menu}
 import com.hanhuy.keepassj.{PwUuid, PwDefs}
 import Futures._
 
+import scala.language.postfixOps
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.Try

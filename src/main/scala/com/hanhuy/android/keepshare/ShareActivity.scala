@@ -3,16 +3,17 @@ package com.hanhuy.android.keepshare
 import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common._
 import com.hanhuy.android.common.RichLogger._
-import com.hanhuy.keepassj.{PwDatabase, PwDefs, PwEntry}
+import com.hanhuy.keepassj.{PwDefs, PwEntry}
 
 import collection.JavaConversions._
+import language.postfixOps
 
 import android.provider.Settings.Secure
 import android.app.{AlertDialog, Activity}
 import android.os.Bundle
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
-import android.content.{ComponentName, ContentResolver, Context, Intent}
+import android.content.{ComponentName, Context, Intent}
 import java.net.URI
 import android.widget.{BaseAdapter, Toast}
 import android.view.{ViewGroup, View}
@@ -22,7 +23,6 @@ import TypedResource._
 import Futures._
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
 
 object ShareActivity {
   implicit val TAG = LogcatTag("ShareActivity")

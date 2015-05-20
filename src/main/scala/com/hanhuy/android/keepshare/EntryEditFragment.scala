@@ -20,6 +20,7 @@ import rx.lang.scala.JavaConversions._
 import rx.lang.scala.{Observable, Subscription, Subject}
 
 import scala.annotation.tailrec
+import scala.language.postfixOps
 import scala.collection.JavaConverters._
 
 class AuthorizedFragment extends Fragment {
@@ -76,18 +77,19 @@ object EntryEditFragment {
     popup.setFocusable(true)
     popup.showAsDropDown(anchor)
   }
+
+  private lazy val recycleBinId = Database.recycleBinId getOrElse PwUuid.Zero
+  @tailrec
+  final def inRecycleBin(g: PwGroup): Boolean =
+    if (g.getUuid == recycleBinId) true
+    else if (g.getParentGroup == null) false
+    else inRecycleBin(g.getParentGroup)
 }
 
 class EntryEditFragment extends AuthorizedFragment {
   setRetainInstance(true)
   var model: EntryEditModel = EntryEditModel.blank
   var baseModel = Option.empty[EntryEditModel]
-  lazy val recycleBinId = Database.recycleBinId getOrElse PwUuid.Zero
-  @tailrec
-  final def inRecycleBin(g: PwGroup): Boolean =
-    if (g.getUuid == recycleBinId) true
-    else if (g.getParentGroup == null) false
-    else inRecycleBin(g.getParentGroup)
 
   override def onCreateView(inflater: LayoutInflater, container: ViewGroup,
                             savedInstanceState: Bundle) = {
@@ -141,6 +143,7 @@ class EntryEditFragment extends AuthorizedFragment {
       }
     } onSuccessMain { case g =>
       g foreach { grp =>
+        iconObservable.onNext(Database.Icons(grp.getIconId.ordinal))
         group.group = grp
         view.findView(TR.delete).setVisibility(View.GONE)
       }
@@ -168,15 +171,15 @@ class EntryEditFragment extends AuthorizedFragment {
 
           view.findView(TR.delete).onClick {
             val t = getString(R.string.delete_name, s.ReadSafe(PwDefs.TitleField))
-            val msg = if (inRecycleBin(e.getParentGroup)) R.string.delete_permanently
-            else R.string.move_to_recycle
+            val msg = if (EntryEditFragment.inRecycleBin(e.getParentGroup))
+              R.string.delete_permanently else R.string.move_to_recycle
 
             new AlertDialog.Builder(activity)
               .setTitle(t)
               .setMessage(msg)
               .setPositiveButton(android.R.string.ok, () => {
                 Database.delete(e)
-//                DatabaseSaveService.save()
+                DatabaseSaveService.save()
                 activity.finish()
               })
               .setNegativeButton(android.R.string.cancel, null)

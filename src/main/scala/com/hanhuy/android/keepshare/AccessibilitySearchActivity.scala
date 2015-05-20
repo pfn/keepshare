@@ -11,6 +11,8 @@ import com.hanhuy.android.common.{ServiceBus, UiBus}
 
 import com.hanhuy.android.common.AndroidConversions._
 
+import language.postfixOps
+
 import TypedResource._
 import com.hanhuy.keepassj.PwDefs
 import Futures._

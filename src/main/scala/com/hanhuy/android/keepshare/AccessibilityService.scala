@@ -18,6 +18,7 @@ import scala.collection.JavaConversions._
 import scala.collection.immutable.Queue
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
+import scala.language.postfixOps
 import scala.util.Try
 
 import Futures._

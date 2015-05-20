@@ -79,6 +79,7 @@ class GroupEditFragment extends AuthorizedFragment {
         if (creating) {
           group.group = grp
           view.findView(TR.delete).setVisibility(View.GONE)
+          iconObservable.onNext(Database.Icons(grp.getIconId.ordinal))
         } else {
           if (grp.getParentGroup == null) {
             group.setVisibility(View.GONE)
@@ -90,6 +91,24 @@ class GroupEditFragment extends AuthorizedFragment {
             iconObservable.onNext(Database.Icons(grp.getIconId.ordinal))
             title.text = grp.getName
             notes.text = grp.getNotes
+
+            view.findView(TR.delete).onClick {
+              val t = getString(R.string.delete_name, grp.getName)
+              val msg = if (EntryEditFragment.inRecycleBin(grp.getParentGroup))
+                R.string.delete_permanently else R.string.move_to_recycle
+
+              new AlertDialog.Builder(activity)
+                .setTitle(t)
+                .setMessage(msg)
+                .setPositiveButton(android.R.string.ok, () => {
+                  Database.delete(grp)
+                  DatabaseSaveService.save()
+                  activity.getFragmentManager.popBackStack()
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+            }
+
             baseModel = Some(model)
           }
         }
