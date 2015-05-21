@@ -103,10 +103,10 @@ object AccessibilityService {
     }
   }
 
-  val EXCLUDED_PACKAGES = if (lollipopAndNewer)
-    Set("com.hanhuy.android.keepshare", "com.android.systemui", "")
+  lazy val EXCLUDED_PACKAGES = if (lollipopAndNewer)
+    Set(Application.instance.getPackageName, "com.android.systemui", "")
   else
-    Set("com.hanhuy.android.keepshare", "com.android.chrome", "com.android.systemui")
+    Set(Application.instance.getPackageName, "com.android.chrome", "com.android.systemui")
 }
 
 @TargetApi(18)

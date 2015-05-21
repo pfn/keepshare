@@ -106,7 +106,7 @@ object ShareActivity {
   def selectHandler(a: Activity, settings: Settings, entry: PwEntry) = {
     val imm = a.systemService[InputMethodManager]
     val keyboardEnabled =  imm.getEnabledInputMethodList exists {
-      _.getPackageName == "com.hanhuy.android.keepshare" }
+      _.getPackageName startsWith "com.hanhuy.android.keepshare" }
 
     if (!keyboardEnabled) {
       val d = new AlertDialog.Builder(a)

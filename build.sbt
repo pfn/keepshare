@@ -1,7 +1,5 @@
 import android.Keys._
 
-android.Plugin.androidBuild
-
 name := "keepshare"
 
 resolvers ++= Resolver.sonatypeRepo("snapshots") ::
@@ -48,3 +46,9 @@ run <<= run in android.Keys.Android
 proguardOptions in Android ++=
   "-keep class * extends junit.framework.TestCase { *; }" ::
   "-keep class scala.runtime.BoxesRunTime { *; }" :: Nil // for debugging only
+
+packageName in (lite,Android) := "com.hanhuy.android.keepshare.lite"
+
+manifestPlaceholders in Android := Map(("appname", "@string/appname"))
+
+manifestPlaceholders in (lite,Android) := Map(("appname", "KeepShare Lite"))

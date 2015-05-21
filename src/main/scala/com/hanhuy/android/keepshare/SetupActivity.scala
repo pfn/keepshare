@@ -42,8 +42,7 @@ object RequestCodes {
 object SetupActivity {
   lazy val intent = {
     val intent = Intent.makeMainActivity(
-      new ComponentName("com.hanhuy.android.keepshare",
-        "com.hanhuy.android.keepshare.SetupActivity"))
+      new ComponentName(Application.instance, classOf[SetupActivity]))
     intent.putExtra(RequestCodes.EXTRA_FOR_RESULT, true)
     intent
   }
@@ -491,7 +490,7 @@ class SetupFragment extends android.preference.PreferenceFragment {
     val imm = getActivity.systemService[InputMethodManager]
     val list = imm.getEnabledInputMethodList
     val enabled = list exists (
-      _.getPackageName == "com.hanhuy.android.keepshare")
+      _.getPackageName startsWith "com.hanhuy.android.keepshare")
     kt.setChecked(enabled)
     pwoverride.setChecked(
       settings.get(Settings.PASSWORD_OVERRIDE))

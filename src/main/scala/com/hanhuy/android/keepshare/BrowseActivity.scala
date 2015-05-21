@@ -77,7 +77,7 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
         search.setIconifiedByDefault(getResources.getBoolean(R.bool.is_phone))
         search.setSearchableInfo(
           this.systemService[SearchManager].getSearchableInfo(
-            new ComponentName(getPackageName, "com.hanhuy.android.keepshare.SearchableActivity")))
+            new ComponentName(this, classOf[SearchableActivity])))
       }
 
       Option(menu.findItem(R.id.database_sort)) foreach { m =>

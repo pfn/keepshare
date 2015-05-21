@@ -16,7 +16,13 @@ import android.os.Bundle
 import android.content.Intent
 
 object PasswordIME {
-  val NAME = "com.hanhuy.android.keepshare/.PasswordIME"
+  lazy val NAME = {
+    val pkg = Application.instance.getPackageName
+    if (pkg == "com.hanhuy.android.keepshare")
+      "com.hanhuy.android.keepshare/.PasswordIME"
+    else
+      pkg + "/com.hanhuy.android.keepshare.PasswordIME"
+  }
 
   val EXTRA_PACKAGE = "com.hanhuy.android.keepshare.extra.PACKAGE"
 }
