@@ -2,6 +2,7 @@ package com.hanhuy.android.keepshare
 
 import java.io.{InputStream, OutputStream}
 import java.nio.{ByteOrder, ByteBuffer}
+import javax.crypto.spec.SecretKeySpec
 
 import android.support.v8.renderscript.{Element, Allocation, RenderScript}
 import com.hanhuy.keepassj.{StandardAesEngine, ICipherEngine}
@@ -74,12 +75,35 @@ class RenderscriptAESEngine extends BlockCipher {
   }
 }
 
+class JceAESEngine extends BlockCipher {
+  var cipher: javax.crypto.Cipher = _
+  override def getAlgorithmName = "AES"
+  override def getBlockSize = 16
+
+  override def init(b: Boolean, cipherParameters: CipherParameters) = {
+    cipherParameters match {
+      case kp: KeyParameter =>
+        val key = kp.getKey
+        val keyspec = new SecretKeySpec(key, getAlgorithmName)
+        cipher = javax.crypto.Cipher.getInstance(getAlgorithmName + "/ECB/NoPadding")
+        cipher.init(if (b) javax.crypto.Cipher.ENCRYPT_MODE else
+          javax.crypto.Cipher.DECRYPT_MODE,
+          keyspec)
+    }
+  }
+
+  override def processBlock(bytes: Array[Byte], i: Int, bytes1: Array[Byte], i1: Int) =
+    cipher.update(bytes, i, 16, bytes1, i1)
+
+  override def reset() = cipher = null
+}
+
 class AesEngine extends ICipherEngine {
   override def getDisplayName = "AES"
   override def getCipherUuid = StandardAesEngine.getAesUuid
 
   def makeCipher(mode: Boolean, key: Array[Byte], iv: Array[Byte]): BufferedBlockCipher = {
-    val aes = new RenderscriptAESEngine
+    val aes = new JceAESEngine
     val k = new KeyParameter(key.clone())
     val i = new ParametersWithIV(k, iv.clone())
     val cipher = new PaddedBufferedBlockCipher(new CBCBlockCipher(aes))
