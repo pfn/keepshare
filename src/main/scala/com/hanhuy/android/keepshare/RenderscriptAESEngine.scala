@@ -70,7 +70,7 @@ class RenderscriptAESEngine extends BlockCipher {
     out.putInt(outbuf(2))
     out.putInt(outbuf(3))
 
-    getBlockSize
+    16
   }
 }
 

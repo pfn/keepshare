@@ -22,8 +22,8 @@ import ManagedResource._
  */
 object Database {
 
-//  CipherPool.getGlobalPool.Clear()
-//  CipherPool.getGlobalPool.AddCipher(new AesEngine)
+  CipherPool.getGlobalPool.Clear()
+  CipherPool.getGlobalPool.AddCipher(new AesEngine)
 
   lazy val writeSupported =
     Application.instance.getPackageName == "com.hanhuy.android.keepshare"
