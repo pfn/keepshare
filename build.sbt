@@ -43,10 +43,6 @@ proguardCache in Android += ProguardCache("com.google.common") % "com.google.gua
 
 ndkBuild in Android := Nil
 
-rsSupportMode in Android := true
-
-rsTargetApi in Android := "18"
-
 run <<= run in android.Keys.Android
 
 proguardOptions in Android ++=
