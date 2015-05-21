@@ -6,7 +6,7 @@ import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.view.{MenuItem, Menu}
 import android.widget.Toast
-import com.hanhuy.android.common.{UiBus, EventBus, ServiceBus}
+import com.hanhuy.android.common._
 import com.hanhuy.keepassj.PwDatabase
 
 import scala.concurrent.{Promise, Future}
@@ -19,6 +19,7 @@ import scala.util.Try
  * @author pfnguyen
  */
 class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner {
+  private implicit val TAG = LogcatTag("AuthorizedActivity")
   lazy val settings = Settings(this)
   lazy val km = new KeyManager(this, settings)
   private var running = false
@@ -140,6 +141,7 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner {
               UiBus.post {
                 Toast.makeText(this, getString(R.string.failed_to_open) +
                   e.getMessage, Toast.LENGTH_LONG).show()
+                RichLogger.e(e.getMessage, e)
               }
               startActivityForResult(SetupActivity.intent,
                 RequestCodes.REQUEST_SETUP)
