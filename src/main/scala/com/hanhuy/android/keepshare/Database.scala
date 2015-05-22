@@ -6,6 +6,7 @@ import java.nio.ByteBuffer
 import android.annotation.TargetApi
 import android.content.Intent
 import android.net.Uri
+import android.os.SystemClock
 import android.provider.DocumentsContract
 import com.hanhuy.android.common.{ManagedResource, Futures, ServiceBus}
 import com.hanhuy.keepassj._
@@ -22,6 +23,9 @@ import ManagedResource._
 object Database {
   lazy val writeSupported =
     Application.instance.getPackageName == "com.hanhuy.android.keepshare"
+
+  CipherPool.getGlobalPool.Clear()
+  CipherPool.getGlobalPool.AddCipher(new AesEngine)
 
   def rootGroup = database map (_.getRootGroup)
   def rootGroupId = rootGroup map (_.getUuid)
@@ -91,7 +95,10 @@ object Database {
       pw find (_.nonEmpty) foreach { p => key.AddUserKey(new KcpPassword(p)) }
       keyf find (_.nonEmpty) foreach { f => key.AddUserKey(new KcpKeyFile(f)) }
 
+      val start = SystemClock.uptimeMillis
       pwdb.Open(IOConnectionInfo.FromPath(p), key, null)
+      val end = SystemClock.uptimeMillis
+      android.util.Log.v("Database", s"open time: ${end - start}ms")
       database = Some(pwdb)
       pwdb
     }

@@ -42,7 +42,8 @@ proguardCache in Android ++= "com.google.common" :: "org.bouncycastle" :: Nil
 
 shrinkResources in Android := true
 
-ndkBuild in Android := Nil
+//ndkBuild in Android := Nil
+watchSources ++= { ((projectLayout in Android).value.jni ***) get }
 
 proguardOptions in Android ++=
   "-keep class * extends junit.framework.TestCase { *; }" ::
