@@ -1,8 +1,7 @@
 package com.hanhuy.android.keepshare;
 
-import org.bouncycastle.crypto.BlockCipher;
-import org.bouncycastle.crypto.CipherParameters;
-import org.bouncycastle.crypto.DataLengthException;
+import org.bouncycastle.crypto.*;
+import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
 import org.bouncycastle.crypto.params.KeyParameter;
 
 /**
@@ -30,9 +29,12 @@ public class NdkAESEngine implements BlockCipher {
         }
     }
 
-    private static native void scheduleKey(byte[] key, int[] scheduleOut);
+    public static native void scheduleKey(byte[] key, int[] scheduleOut);
     private static native void encrypt(byte[] in, int inoff, byte[] out, int outoff, int[] keyschedule, int keysize);
     private static native void decrypt(byte[] in, int inoff, byte[] out, int outoff, int[] keyschedule, int keysize);
+
+    public static native boolean decrypt_cbc(byte[] in, int inoff, byte[] out, int outoff, int len, int[] keyschedule, int keysize, byte[] iv);
+    public static native boolean encrypt_cbc(byte[] in, int inoff, byte[] out, int outoff, int len, int[] keyschedule, int keysize, byte[] iv);
 
     @Override
     public String getAlgorithmName() {

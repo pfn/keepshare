@@ -22,13 +22,14 @@
 #include <stdio.h>
 
 #include <com_hanhuy_android_keepshare_NdkAESEngine.h>
+#define AES_BLOCK_SIZE 16
+#define WORD  uint32_t
+#define BYTE  uint8_t
 
 /****************************** MACROS ******************************/
 // The least significant byte of the word is rotated to the end.
 #define KE_ROTWORD(x) (((x) << 8) | ((x) >> 24))
 
-#define WORD  uint32_t
-#define BYTE  uint8_t
 #define TRUE  1
 #define FALSE 0
 
@@ -753,6 +754,66 @@ void aes_decrypt(const BYTE in[], BYTE out[], const WORD key[], int keysize)
 	out[15] = state[3][3];
 }
 
+/*********************** FUNCTION DEFINITIONS ***********************/
+// XORs the in and out buffers, storing the result in out. Length is in bytes.
+void xor_buf(const BYTE in[], BYTE out[], size_t len)
+{
+	size_t idx;
+
+	for (idx = 0; idx < len; idx++)
+		out[idx] ^= in[idx];
+}
+
+/*******************
+* AES - CBC
+*******************/
+int aes_encrypt_cbc(const BYTE in[], size_t in_len, BYTE out[], const WORD key[], int keysize, const BYTE iv[])
+{
+	BYTE buf_in[AES_BLOCK_SIZE], buf_out[AES_BLOCK_SIZE], iv_buf[AES_BLOCK_SIZE];
+	int blocks, idx;
+
+	if (in_len % AES_BLOCK_SIZE != 0)
+		return(FALSE);
+
+	blocks = in_len / AES_BLOCK_SIZE;
+
+	memcpy(iv_buf, iv, AES_BLOCK_SIZE);
+
+	for (idx = 0; idx < blocks; idx++) {
+		memcpy(buf_in, &in[idx * AES_BLOCK_SIZE], AES_BLOCK_SIZE);
+		xor_buf(iv_buf, buf_in, AES_BLOCK_SIZE);
+		aes_encrypt(buf_in, buf_out, key, keysize);
+		memcpy(&out[idx * AES_BLOCK_SIZE], buf_out, AES_BLOCK_SIZE);
+		memcpy(iv_buf, buf_out, AES_BLOCK_SIZE);
+	}
+
+	return(TRUE);
+}
+
+int aes_decrypt_cbc(const BYTE in[], size_t in_len, BYTE out[], const WORD key[], int keysize, const BYTE iv[])
+{
+	BYTE buf_in[AES_BLOCK_SIZE], buf_out[AES_BLOCK_SIZE], iv_buf[AES_BLOCK_SIZE];
+	int blocks, idx;
+
+	if (in_len % AES_BLOCK_SIZE != 0)
+		return(FALSE);
+
+	blocks = in_len / AES_BLOCK_SIZE;
+
+	memcpy(iv_buf, iv, AES_BLOCK_SIZE);
+
+	for (idx = 0; idx < blocks; idx++) {
+		memcpy(buf_in, &in[idx * AES_BLOCK_SIZE], AES_BLOCK_SIZE);
+		aes_decrypt(buf_in, buf_out, key, keysize);
+		xor_buf(iv_buf, buf_out, AES_BLOCK_SIZE);
+		memcpy(&out[idx * AES_BLOCK_SIZE], buf_out, AES_BLOCK_SIZE);
+		memcpy(iv_buf, buf_in, AES_BLOCK_SIZE);
+	}
+
+	return(TRUE);
+}
+
+// NDK
 JNIEXPORT void JNICALL Java_com_hanhuy_android_keepshare_NdkAESEngine_scheduleKey
   (JNIEnv *env, jclass cls, jbyteArray key, jintArray scheduleOut) {
   WORD out[60];
@@ -783,4 +844,36 @@ JNIEXPORT void JNICALL Java_com_hanhuy_android_keepshare_NdkAESEngine_decrypt
   (*env)->GetIntArrayRegion(env, keysched, 0, 60, schedule);
   aes_decrypt(block, block, schedule, keysize);
   (*env)->SetByteArrayRegion(env, out, outoff, 16, block);
+}
+
+
+JNIEXPORT jboolean JNICALL Java_com_hanhuy_android_keepshare_NdkAESEngine_decrypt_1cbc
+  (JNIEnv * env, jclass cls, jbyteArray in, jint inoff, jbyteArray out, jint outoff, jint len, jintArray keysched, jint keysize, jbyteArray iv) {
+  BYTE ivdata[16];
+  BYTE *databuffer = (BYTE *)malloc(len);
+  WORD schedule[60];
+
+  (*env)->GetByteArrayRegion(env, iv, 0, 16, ivdata);
+  (*env)->GetByteArrayRegion(env, in, inoff, len, databuffer);
+  (*env)->GetIntArrayRegion(env, keysched, 0, 60, schedule);
+  jboolean result = aes_decrypt_cbc(databuffer, len, databuffer, schedule, keysize, ivdata);
+  (*env)->SetByteArrayRegion(env, out, outoff, len, databuffer);
+  free(databuffer);
+  return result;
+}
+
+JNIEXPORT jboolean JNICALL Java_com_hanhuy_android_keepshare_NdkAESEngine_encrypt_1cbc
+  (JNIEnv *env, jclass cls, jbyteArray in, jint inoff, jbyteArray out, jint outoff, jint len, jintArray keysched, jint keysize, jbyteArray iv) {
+
+  BYTE ivdata[16];
+  BYTE *databuffer = (BYTE *)malloc(len);
+  WORD schedule[60];
+
+  (*env)->GetByteArrayRegion(env, iv, 0, 16, ivdata);
+  (*env)->GetByteArrayRegion(env, in, inoff, len, databuffer);
+  (*env)->GetIntArrayRegion(env, keysched, 0, 60, schedule);
+  jboolean result = aes_encrypt_cbc(databuffer, len, databuffer, schedule, keysize, ivdata);
+  (*env)->SetByteArrayRegion(env, out, outoff, len, databuffer);
+  free(databuffer);
+  return result;
 }
