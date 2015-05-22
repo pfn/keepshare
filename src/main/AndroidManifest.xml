@@ -15,7 +15,7 @@
     <application
             android:theme="@style/AppTheme"
             android:name=".Application"
-            android:label="${appname}"
+            android:label="@string/appname"
             android:taskAffinity="com.hanhuy.android.keepshare.browsing"
             android:icon="@drawable/ic_launcher">
         <meta-data android:name="com.google.android.gms.version"
@@ -23,12 +23,12 @@
         <activity android:name=".SetupActivity"
                   android:windowSoftInputMode="adjustResize"
                   android:theme="@style/AppTheme"
-                  android:label="${appname}">
+                  android:label="@string/appname">
         </activity>
         <activity android:name=".PINSetupActivity"
                   android:windowSoftInputMode="adjustResize"
                   android:theme="@style/AppTheme"
-                  android:label="${appname}">
+                  android:label="@string/appname">
         </activity>
         <activity android:name=".ShareActivity"
                   android:theme="@style/AppTheme.Dialog"
@@ -37,7 +37,7 @@
                   android:launchMode="singleTop"
                   android:excludeFromRecents="true"
                   android:taskAffinity="com.hanhuy.android.keepshare.share"
-                  android:label="${appname}">
+                  android:label="@string/appname">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <data android:mimeType="text/plain" />
@@ -51,7 +51,7 @@
                   android:launchMode="singleTop"
                   android:excludeFromRecents="true"
                   android:taskAffinity="com.hanhuy.android.keepshare.fill_search"
-                  android:label="${appname}">
+                  android:label="@string/appname">
         </activity>
         <activity android:name=".BrowseActivity"
                   android:theme="@style/AppTheme">
@@ -88,12 +88,12 @@
                   android:noHistory="true"
                   android:theme="@style/AppTheme"/>
         <provider android:name=".SearchProvider"
-                  android:authorities="com.hanhuy.android.keepshare"
+                  android:authorities="@string/search_suggest_authority"
                   android:readPermission="android.permission.GLOBAL_SEARCH"
                   android:exported="true"
-                  android:label="${appname}"/>
+                  android:label="@string/appname"/>
         <service android:name=".PasswordIME"
-                 android:label="${appname}"
+                 android:label="@string/appname"
                  android:permission="android.permission.BIND_INPUT_METHOD">
             <intent-filter>
                 <action android:name="android.view.InputMethod"/>

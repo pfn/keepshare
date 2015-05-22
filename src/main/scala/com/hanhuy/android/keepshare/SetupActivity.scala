@@ -485,12 +485,11 @@ class SetupFragment extends android.preference.PreferenceFragment {
         "com.android.settings.LanguageSettings")))
     import android.provider.Settings.Secure
     val services = Option(Secure.getString(getActivity.getContentResolver, Secure.ENABLED_ACCESSIBILITY_SERVICES))
-    ae.setChecked((services exists (_ contains "com.hanhuy.android.keepshare")) && AccessibilityService.running)
+    ae.setChecked((services exists (_ contains (getActivity.getPackageName + "/"))) && AccessibilityService.running)
 
     val imm = getActivity.systemService[InputMethodManager]
     val list = imm.getEnabledInputMethodList
-    val enabled = list exists (
-      _.getPackageName startsWith "com.hanhuy.android.keepshare")
+    val enabled = list exists (_.getPackageName == getActivity.getPackageName)
     kt.setChecked(enabled)
     pwoverride.setChecked(
       settings.get(Settings.PASSWORD_OVERRIDE))

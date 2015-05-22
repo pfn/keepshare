@@ -5,7 +5,7 @@
             android:label="@string/appname"
             android:hint="@string/search_usernames_passwords"
             android:searchMode="queryRewriteFromText"
-            android:searchSuggestAuthority="com.hanhuy.android.keepshare"
+            android:searchSuggestAuthority="@string/search_suggest_authority"
             android:searchSuggestThreshold="3"
             android:queryAfterZeroResults="true"
             android:searchSuggestIntentData="content://com.hanhuy.android.keepshare/entry"
