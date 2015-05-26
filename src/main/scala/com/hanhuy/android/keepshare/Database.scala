@@ -127,12 +127,9 @@ object Database {
     Option(SprEngine.Compile(entry.getStrings.ReadSafe(field), ctx))
   }
 
-  def getId(entry: PwEntry) = {
-    ByteBuffer.wrap(entry.getUuid.getUuidBytes).getLong
-  }
-  def getId(group: PwGroup) = {
-    ByteBuffer.wrap(group.getUuid.getUuidBytes).getLong
-  }
+  def getUuid(entry: PwEntry) = entry.getUuid.ToHexString
+  def getId(entry: PwEntry) = ByteBuffer.wrap(entry.getUuid.getUuidBytes).getLong
+  def getId(group: PwGroup) = ByteBuffer.wrap(group.getUuid.getUuidBytes).getLong
 
   def save(): Future[PwDatabase] = {
     (for {

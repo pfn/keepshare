@@ -64,7 +64,7 @@ class SearchableActivity extends AuthorizedActivity {
         v("extras: " + intent.getExtras)
         queryInput foreach { q =>
           doSearch(q, Option(
-            intent.getStringExtra(SearchManager.EXTRA_DATA_KEY)) map (_.toLong))
+            intent.getStringExtra(SearchManager.EXTRA_DATA_KEY)))
           searchView foreach { s =>
             s.setQuery(q, false)
             this.systemService[InputMethodManager].hideSoftInputFromWindow(s.getWindowToken, 0)
@@ -99,7 +99,7 @@ class SearchableActivity extends AuthorizedActivity {
     case _ => super.onOptionsItemSelected(item)
   }
 
-  private def doSearch(query: String, id: Option[Long]) {
+  private def doSearch(query: String, id: Option[String]) {
     v("Query is: " + query)
     v("id is: " + id)
     if (settings.get(Settings.NEEDS_PIN) && PINHolderService.instance.isEmpty) {
@@ -116,7 +116,7 @@ class SearchableActivity extends AuthorizedActivity {
       val selected = (for {
         i <- id
         f <- result.zipWithIndex find { case (e, _) =>
-          i == Database.getId(e)
+          i == e.getUuid.ToHexString
         }
       } yield f._2) getOrElse -1
       val adapter = new BaseAdapter {
@@ -219,6 +219,7 @@ class SearchProvider extends ContentProvider {
         SearchManager.SUGGEST_COLUMN_INTENT_DATA_ID,
         SearchManager.SUGGEST_COLUMN_INTENT_EXTRA_DATA)
 
+      def getUuid(row: Int) = Right(results map { r => Database.getUuid(r(row)) } orNull)
       def getId(row: Int) =
         Left(results map { r => Database.getId(r(row)) } getOrElse -1L)
 
@@ -230,14 +231,14 @@ class SearchProvider extends ContentProvider {
         (1, getStr(PwDefs.TitleField, _: Int)),
         (2, getStr(PwDefs.UserNameField, _: Int)),
         3 -> getId,
-        4 -> getId)
+        4 -> getUuid)
 
       override def getType(column: Int) = column match {
         case 0 => Cursor.FIELD_TYPE_INTEGER
         case 1 => Cursor.FIELD_TYPE_STRING
         case 2 => Cursor.FIELD_TYPE_STRING
         case 3 => Cursor.FIELD_TYPE_INTEGER
-        case 4 => Cursor.FIELD_TYPE_INTEGER
+        case 4 => Cursor.FIELD_TYPE_STRING
       }
 
       def getCount            = results map (_.size) getOrElse 0

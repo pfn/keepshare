@@ -3,7 +3,7 @@ package com.hanhuy.android.keepshare
 import android.app.{Activity, AlertDialog, Fragment}
 import android.content.Context
 import android.os.{Parcel, Parcelable, Bundle}
-import android.text.TextUtils
+import android.text.{InputType, TextUtils}
 import android.util.{SparseArray, AttributeSet}
 import android.view.{View, ViewGroup, LayoutInflater}
 import android.widget._
@@ -289,6 +289,9 @@ class StandardEditView(c: Context, attrs: AttributeSet) extends StandardFieldVie
 
   val a = c.obtainStyledAttributes(attrs, R.styleable.StandardEditView)
   first = a.getBoolean(R.styleable.StandardEditView_first, false)
+  // vis password workaround for swiftkey stupidity
+  textfield.setInputType(a.getInt(R.styleable.StandardEditView_android_inputType,
+    InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD))
   long = a.getBoolean(R.styleable.StandardEditView_longform, false)
   password = a.getBoolean(R.styleable.StandardEditView_android_password, false)
   icon = a.getResourceId(R.styleable.StandardEditView_android_icon,

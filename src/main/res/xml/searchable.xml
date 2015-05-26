@@ -8,6 +8,6 @@
             android:searchSuggestAuthority="@string/search_suggest_authority"
             android:searchSuggestThreshold="3"
             android:queryAfterZeroResults="true"
-            android:searchSuggestIntentData="content://com.hanhuy.android.keepshare/entry"
+            android:searchSuggestIntentData="@string/search_suggest_intent_data"
             android:searchSettingsDescription="Usernames and passwords"
         />

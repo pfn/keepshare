@@ -26,6 +26,7 @@
                     android:layout_height="wrap_content"/>
             <com.hanhuy.android.keepshare.StandardEditView
                     android:id="@+id/edit_title"
+                    android:inputType="text"
                     android:hint="Title"
                     android:icon="@drawable/i00_password"
                     android:layout_width="match_parent"
@@ -53,6 +54,7 @@
                     android:id="@+id/edit_notes"
                     android:hint="Notes"
                     app:longform="true"
+                    android:inputType="text"
                     android:icon="@drawable/ic_speaker_notes_black_36dp"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"/>

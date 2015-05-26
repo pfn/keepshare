@@ -2,11 +2,13 @@ package com.hanhuy.android.keepshare
 
 import java.net.URI
 
-import android.app.Activity
-import android.content.Intent
+import android.app.{SearchManager, Activity}
+import android.content.{ComponentName, Intent}
 import android.os.Bundle
+import android.view.inputmethod.InputMethodManager
 import android.view.{View, ViewGroup}
-import android.widget.BaseAdapter
+import android.widget.SearchView.{OnSuggestionListener, OnQueryTextListener}
+import android.widget.{SearchView, BaseAdapter}
 import com.hanhuy.android.common.{ServiceBus, UiBus}
 
 import com.hanhuy.android.common.AndroidConversions._
@@ -14,8 +16,10 @@ import com.hanhuy.android.common.AndroidConversions._
 import language.postfixOps
 
 import TypedResource._
-import com.hanhuy.keepassj.PwDefs
+import com.hanhuy.keepassj.{PwEntry, PwUuid, PwDefs}
 import Futures._
+
+import scala.concurrent.Future
 
 /**
  * @author pfnguyen
@@ -40,7 +44,44 @@ class AccessibilitySearchActivity extends Activity with TypedViewHolder {
       finish()
     }
 
-    findView(TR.subject).setText(url)
+    val subject = findView(TR.subject)
+    subject.setText(url)
+    val search = findView(TR.search)
+    search.setSearchableInfo(
+      this.systemService[SearchManager].getSearchableInfo(
+        new ComponentName(this, classOf[SearchableActivity])))
+    search.setOnQueryTextListener(new OnQueryTextListener {
+      override def onQueryTextSubmit(s: String) = {
+        Future {
+          Database.search(s)
+        } onSuccessMain { case r =>
+          Option(getCurrentFocus) foreach { focused =>
+            AccessibilitySearchActivity.this.systemService[InputMethodManager].hideSoftInputFromWindow(focused.getWindowToken, 0)
+          }
+          r foreach { result =>
+            showResults(result, windowId, packageName, url)
+          }
+        }
+        true
+      }
+      override def onQueryTextChange(s: String) = {
+        subject.setVisibility(View.GONE)
+        true
+      }
+    })
+    search.setOnSuggestionListener(new OnSuggestionListener {
+      override def onSuggestionClick(i: Int) = {
+        val c = search.getSuggestionsAdapter.getCursor
+        c.move(i)
+        val idx = c.getColumnIndex(SearchManager.SUGGEST_COLUMN_INTENT_EXTRA_DATA)
+        val uuid = new PwUuid(KeyManager.bytes(c.getString(idx)))
+        Database.rootGroup foreach { root =>
+          selectItem(root.FindEntry(uuid, true), windowId, packageName, url)
+        }
+        true
+      }
+      override def onSuggestionSelect(i: Int) = onSuggestionClick(i)
+    })
 
     async {
       val uri = new URI(url)
@@ -54,48 +95,52 @@ class AccessibilitySearchActivity extends Activity with TypedViewHolder {
           findView(TR.flipper).showNext()
           val list = findView(TR.list)
           list.setEmptyView(findView(TR.empty))
-
-            val adapter = new BaseAdapter {
-
-              override def getCount = result.size
-
-              override def getItemId(i: Int) = Database.getId(getItem(i))
-
-              override def getView(i: Int, view: View, c: ViewGroup) = {
-                val row = Option(view) getOrElse getLayoutInflater.inflate(R.layout.pwitem, c, false)
-                row.findView(TR.name).setText(
-                  Database.getField(getItem(i), PwDefs.TitleField) orNull)
-                row.findView(TR.username).setText(
-                  Database.getField(getItem(i), PwDefs.UserNameField) orNull)
-                row
-              }
-
-              override def getItem(i: Int) = result(i)
-
-            }
-            val onClickHandler = { pos: Int =>
-              findView(TR.continu).setEnabled(true)
-              findView(TR.continu).onClick {
-                ServiceBus.send(AccessibilityFillEvent(
-                  packageName, windowId, url,
-                  Database.getField(result(pos), PwDefs.UserNameField) orNull,
-                  Database.getField(result(pos), PwDefs.PasswordField) orNull))
-                finish()
-              }
-            }
-            list.onItemClick(onClickHandler)
-            list.setAdapter(adapter)
-            if (adapter.getCount < 2) {
-              findView(TR.select_prompt).setVisibility(View.GONE)
-              if (adapter.getCount == 1) {
-                list.setItemChecked(0, true)
-                onClickHandler(0)
-                findView(TR.continu).setEnabled(true)
-              }
-            }
+          showResults(result, windowId, packageName, url)
         }
       }
     }
+  }
+
+  def showResults(result: List[PwEntry], windowId: Int, packageName: String, url: String): Unit = {
+    val adapter = new BaseAdapter {
+      override def getCount = result.size
+      override def getItemId(i: Int) = Database.getId(getItem(i))
+      override def getItem(i: Int) = result(i)
+
+      override def getView(i: Int, view: View, c: ViewGroup) = {
+        val row = Option(view) getOrElse getLayoutInflater.inflate(R.layout.pwitem, c, false)
+        row.findView(TR.name).setText(
+          Database.getField(getItem(i), PwDefs.TitleField) orNull)
+        row.findView(TR.username).setText(
+          Database.getField(getItem(i), PwDefs.UserNameField) orNull)
+        row
+      }
+    }
+    val onClickHandler = { pos: Int =>
+      findView(TR.continu).setEnabled(true)
+      findView(TR.continu).onClick {
+        selectItem(result(pos), windowId, packageName, url)
+      }
+    }
+    val list = findView(TR.list)
+    list.onItemClick(onClickHandler)
+    list.setAdapter(adapter)
+    if (adapter.getCount < 2) {
+      findView(TR.select_prompt).setVisibility(View.GONE)
+      if (adapter.getCount == 1) {
+        list.setItemChecked(0, true)
+        onClickHandler(0)
+        findView(TR.continu).setEnabled(true)
+      }
+    }
+  }
+
+  def selectItem(entry: PwEntry, windowId: Int, packageName: String, url: String): Unit = {
+    ServiceBus.send(AccessibilityFillEvent(
+      packageName, windowId, url,
+      Database.getField(entry, PwDefs.UserNameField) orNull,
+      Database.getField(entry, PwDefs.PasswordField) orNull))
+    finish()
   }
 
   override def onCreate(savedInstanceState: Bundle) {

@@ -39,7 +39,7 @@
             android:singleLine="true"
             android:textAppearance="?android:textAppearanceMedium"
             android:gravity="center|left"
-            android:inputType="textNoSuggestions"
+            android:inputType="textVisiblePassword"
             tools:text="Username goes here"
             android:hint="Username"
             android:layout_width="match_parent"

@@ -51,6 +51,7 @@
         <attr name="android:text"/>
         <attr name="android:icon"/>
         <attr name="android:password"/>
+        <attr name="android:inputType"/>
         <attr name="first" format="boolean"/>
         <attr name="longform" format="boolean"/>
     </declare-styleable>

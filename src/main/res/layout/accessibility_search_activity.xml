@@ -6,18 +6,25 @@
               android:padding="12dp"
               android:layout_height="320dp">
 
-    <TextView android:id="@+id/subject"
-              android:layout_width="wrap_content"
-              android:layout_height="wrap_content"
-              android:layout_marginBottom="12dp"
-              android:maxLines="4"
-              android:ellipsize="end"
-              android:layout_alignParentLeft="true"
-              />
+    <TextView
+            android:id="@+id/subject"
+            android:iconifiedByDefault="false"
+            android:layout_alignParentLeft="true"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    <SearchView
+            android:id="@+id/search"
+            android:iconifiedByDefault="true"
+            android:layout_below="@+id/subject"
+            android:layout_alignWithParentIfMissing="true"
+            android:layout_alignLeft="@+id/subject"
+            android:layout_alignParentLeft="true"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
 
     <ViewFlipper android:id="@+id/flipper"
-                 android:layout_below="@+id/subject"
-                 android:layout_alignLeft="@+id/subject"
+                 android:layout_below="@+id/search"
+                 android:layout_alignLeft="@+id/search"
                  android:layout_alignParentBottom="true"
                  android:layout_alignParentRight="true"
                  android:inAnimation="@android:anim/slide_in_left"
@@ -78,11 +85,11 @@
     </ViewFlipper>
     <TextView android:id="@+id/empty"
               android:visibility="gone"
-              android:layout_below="@+id/subject"
+              android:layout_below="@+id/search"
               android:text="@string/no_logins_found"
               android:textColor="#ffff0000"
               android:textAppearance="?android:attr/textAppearanceMedium"
-              android:layout_alignLeft="@+id/subject"
+              android:layout_alignLeft="@+id/search"
               android:layout_alignParentBottom="true"
               android:layout_alignParentRight="true"
               android:layout_width="wrap_content"
