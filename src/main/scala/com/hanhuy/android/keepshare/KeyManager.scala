@@ -44,6 +44,7 @@ object KeyManager {
   private var _cloudFutureKey = Option.empty[Future[SecretKey]]
 
   def clear() {
+    // Should clear be run on session timeout? Otherwise cloud key stays in RAM
     _cloudFutureKey = None
   }
 

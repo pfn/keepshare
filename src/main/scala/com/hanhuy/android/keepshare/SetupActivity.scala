@@ -149,11 +149,11 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
       // go to next step!
     }
 
-    def browseHandler(id: Int) = { () =>
+    def browseHandler(id: Int, mimeType: String) = { () =>
       val intent = new Intent(if (kitkatAndNewer)
         Intent.ACTION_OPEN_DOCUMENT else Intent.ACTION_GET_CONTENT)
       intent.addCategory(Intent.CATEGORY_OPENABLE)
-      intent.setType(if (kitkatAndNewer) "application/*" else "file/*")
+      intent.setType(mimeType)
 
       try {
         startActivityForResult(intent, id match {
@@ -168,8 +168,8 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
       }
     }
 
-    fragment datafileOnClick browseHandler(1)
-    fragment keyfileOnClick browseHandler(2)
+    fragment datafileOnClick browseHandler(1, if (kitkatAndNewer) "application/*" else "file/*")
+    fragment keyfileOnClick browseHandler(2, "*/*")
 
     val watcher = (p: Preference, a: Any) => {
       findView(TR.save).setEnabled(true)
@@ -201,9 +201,8 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
             error(R.string.database_no_exist)
           } else {
             findView(TR.progress2).setVisibility(View.VISIBLE)
-            val keyfilepath = if (keyf.isFile) keyf.getAbsolutePath else ""
             val f = Database.open(database.trim, Option(password.trim),
-                if (keyf.isFile) Some(keyf.getAbsolutePath) else None) flatMap {
+                Option(keyfile.trim) filterNot (_.isEmpty)) flatMap {
               _ => keymanager.localKey  }
 
             f onSuccessMain {
@@ -216,7 +215,7 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
                 case Right(k) =>
                   val encdb = KeyManager.encrypt(k, database.trim)
                   val encpw = KeyManager.encrypt(k, password.trim)
-                  val enckeyf = KeyManager.encrypt(k, keyfilepath)
+                  val enckeyf = KeyManager.encrypt(k, keyfile.trim)
                   val verifier = KeyManager.encrypt(k, KeyManager.VERIFIER)
 
                   settings.set(Settings.VERIFY_DATA, verifier)

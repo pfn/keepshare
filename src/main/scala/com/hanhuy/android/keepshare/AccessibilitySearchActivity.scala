@@ -114,6 +114,7 @@ class AccessibilitySearchActivity extends Activity with TypedViewHolder {
 
   override def onActivityResult(request: Int, result: Int, data: Intent) {
     val success = request match {
+      case RequestCodes.REQUEST_SIGN_IN => result == Activity.RESULT_OK
       case RequestCodes.REQUEST_SETUP => result == Activity.RESULT_OK
       case RequestCodes.REQUEST_PIN => result == Activity.RESULT_OK
     }

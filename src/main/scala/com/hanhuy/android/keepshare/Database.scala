@@ -81,12 +81,15 @@ object Database {
   def open(db: String, pw: Option[String], keyfile: Option[String]): Future[PwDatabase] = {
     databasePath = Option(db)
     close()
-    resolvePath(db) map { p =>
+    for {
+      p    <- resolvePath(db)
+      keyf <- Futures.traverseO(keyfile)(resolvePath)
+    } yield {
       val pwdb = new PwDatabase
       val key = new CompositeKey
 
       pw find (_.nonEmpty) foreach { p => key.AddUserKey(new KcpPassword(p)) }
-      keyfile find (_.nonEmpty) foreach { f => key.AddUserKey(new KcpKeyFile(f)) }
+      keyf find (_.nonEmpty) foreach { f => key.AddUserKey(new KcpKeyFile(f)) }
 
       pwdb.Open(IOConnectionInfo.FromPath(p), key, null)
       database = Some(pwdb)

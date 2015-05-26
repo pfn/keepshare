@@ -53,6 +53,9 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner {
 
   override def onActivityResult(requestCode: Int, resultCode: Int, data: Intent) = {
     val success = requestCode match {
+      case RequestCodes.REQUEST_SIGN_IN =>
+        recreate()
+        false
       case RequestCodes.REQUEST_SETUP =>
         if (resultCode == Activity.RESULT_OK) {
           true

@@ -44,4 +44,7 @@ object Futures {
 
     def ~[A >: T](f: Future[A]): Future[A] = f.flatMap(_ => f)
   }
+  def traverseO[A, B](o: Option[A])(f: A => Future[B])(implicit ev: ExecutionContext): Future[Option[B]] =
+    (o map f).fold(Future.successful(Option.empty[B]))(_.flatMap(x => Future.successful(Some(x)))(ev))
+  def sequenceO[A](o: Option[Future[A]])(implicit ev: ExecutionContext): Future[Option[A]] = traverseO(o)(identity)(ev)
 }

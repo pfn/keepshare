@@ -1,6 +1,6 @@
 package com.hanhuy.android.keepshare
 
-import java.io.Closeable
+import java.io.{InputStream, OutputStream}
 
 import ManagedResource._
 import android.database.Cursor
@@ -13,8 +13,15 @@ object ManagedResource {
     def dispose(resource: A): Unit
   }
 
-  implicit val closeableManager = new ResourceManager[java.io.Closeable] {
-    override def dispose(resource: Closeable) = resource.close()
+  // cannot use closeable because Cursor does not implement Closeable in 4.0
+//  implicit val closeableManager = new ResourceManager[java.io.Closeable] {
+//    override def dispose(resource: Closeable) = resource.close()
+//  }
+  implicit val inputStreamManager = new ResourceManager[InputStream] {
+    override def dispose(resource: InputStream) = resource.close()
+  }
+  implicit val outputStreamManager = new ResourceManager[OutputStream] {
+    override def dispose(resource: OutputStream) = resource.close()
   }
 
   implicit val cursorCloseManager = new ResourceManager[Cursor] {
