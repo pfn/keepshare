@@ -141,7 +141,7 @@ class SearchableActivity extends AuthorizedActivity {
 
       }
       list.setAdapter(adapter)
-      list.onItemClick { pos: Int =>
+      list.onItemClick { (_,_,pos,_)=>
         EntryViewActivity.show(this, adapter.getItem(pos))
         overridePendingTransition(R.anim.slide_in_right,
           R.anim.slide_out_left)

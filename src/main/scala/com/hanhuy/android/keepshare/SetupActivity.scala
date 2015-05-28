@@ -144,7 +144,7 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
         findView(TR.progress2).setVisibility(View.GONE)
       }
     }
-    connect onClick {
+    connect onClick0 {
       connect.setEnabled(false)
       onNext()
       // go to next step!
@@ -325,7 +325,7 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
       val progress = ProgressDialog.show(this,
         "Downloading", "Please Wait", false, true)
       var canceled = false
-      progress.onCancel {
+      progress.onCancel0 {
         canceled = true
       }
       async {
@@ -584,7 +584,7 @@ class BrowsableTextPreference(ctx: Context, attrs: AttributeSet, res: Int)
 
   override def onCreateView(parent: ViewGroup) = {
     val v = super.onCreateView(parent)
-    v.asInstanceOf[ViewGroup].getChildAt(1).onClick({
+    v.asInstanceOf[ViewGroup].getChildAt(1).onClick0({
       _onClick foreach (_())
     })
     v

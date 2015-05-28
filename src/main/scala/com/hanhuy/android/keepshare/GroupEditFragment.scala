@@ -93,7 +93,7 @@ class GroupEditFragment extends AuthorizedFragment {
             title.text = grp.getName
             notes.text = grp.getNotes
 
-            view.findView(TR.delete).onClick {
+            view.findView(TR.delete).onClick0 {
               val t = getString(R.string.delete_name, grp.getName)
               val msg = if (EntryEditFragment.inRecycleBin(grp.getParentGroup))
                 R.string.delete_permanently else R.string.move_to_recycle
@@ -116,7 +116,7 @@ class GroupEditFragment extends AuthorizedFragment {
       }
     }
 
-    title.iconfield.onClick {
+    title.iconfield.onClick0 {
       EntryEditFragment.iconPicker(activity, title.iconfield, iconObservable.onNext)
     }
     view

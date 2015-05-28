@@ -94,15 +94,15 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
     setContentView(R.layout.entry_view)
 
     findView(TR.fab).attachToScrollView(findView(TR.scroll_view))
-    findView(TR.fab).onClick {
+    findView(TR.fab).onClick0 {
       editing(true)
     }
-    editBar.findView(TR.cancel).onClick {
+    editBar.findView(TR.cancel).onClick0 {
       editing(false)
       if (isCreating)
         finish()
     }
-    editBar.findView(TR.save).onClick {
+    editBar.findView(TR.save).onClick0 {
       val f = Option(getFragmentManager.findFragmentByTag("editor"))
       f foreach { case editor: EntryEditFragment =>
         def setField(e: PwEntry, field: String, value: Option[String], isPassword: Boolean): Unit = {
@@ -362,7 +362,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
         field.textfield.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].bottomMargin = (getResources.getDisplayMetrics.density * 1).toInt
         field.textfield.setTextIsSelectable(false)
         field.setBackgroundResource(R.drawable.list_selector_background)
-        field.onClick(EntryViewActivity.show(this, h, i))
+        field.onClick0(EntryViewActivity.show(this, h, i))
         field.iconfield.setVisibility(View.GONE)
         field.icon = R.drawable.ic_history_black_36dp
         field.first = true
@@ -392,7 +392,7 @@ class StandardFieldView(c: Context, attrs: AttributeSet) extends FrameLayout(c, 
   lazy val divider = findView(TR.field_divider)
   lazy val visibility = {
     val cb = findView(TR.field_visibility)
-    cb.onCheckedChange((_: CompoundButton, b: Boolean) =>
+    cb.onCheckedChange((_, b) =>
       textfield.setTransformationMethod(if (b)
         null else PasswordTransformationMethod.getInstance)
     )
@@ -464,7 +464,7 @@ class GroupFieldView(a: AuthorizedActivity, g: PwGroup) extends StandardFieldVie
 
 //  textfield onClick openGroup()
 //  imagefield onClick openGroup()
-  this onClick openGroup()
+  this onClick0 openGroup()
 
 //  if (PwUuid.Zero == g.getCustomIconUuid) {
     imagefield.setImageResource(

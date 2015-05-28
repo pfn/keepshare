@@ -102,11 +102,11 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
     setContentView(R.layout.browse)
 
     val fab = findView(TR.observable_fab)
-    findView(TR.fab_close) onClick findView(TR.fab_toolbar).hide()
+    findView(TR.fab_close) onClick0 findView(TR.fab_toolbar).hide()
     findView(TR.fab_toolbar).button = fab
     findView(TR.fab_toolbar).container = findView(TR.container)
 
-    findView(TR.create_entry) onClick {
+    findView(TR.create_entry) onClick0 {
       database.onSuccessMain { case db =>
         val root = db.getRootGroup
 
@@ -114,8 +114,8 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
           groupId map (root.FindGroup(_, true)) getOrElse root)
       }
     }
-    findView(TR.create_group) onClick  creating()
-    findView(TR.group_edit) onClick editing(true)
+    findView(TR.create_group) onClick0 creating()
+    findView(TR.group_edit) onClick0 editing(true)
 
     getSupportActionBar.setCustomView(editBar, new ActionBar.LayoutParams(
       ViewGroup.LayoutParams.MATCH_PARENT,
@@ -125,10 +125,10 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
       fab.setVisibility(View.GONE)
     refresher.setOnRefreshListener(this)
 
-    editBar.findView(TR.cancel).onClick {
+    editBar.findView(TR.cancel).onClick0 {
       updating(false, null)
     }
-    editBar.findView(TR.save).onClick {
+    editBar.findView(TR.save).onClick0 {
       val f = Option(getFragmentManager.findFragmentByTag("editor"))
       f foreach { case editor: GroupEditFragment =>
         def copyFromModel(e: PwGroup, needMove: Boolean): Unit = {
@@ -296,7 +296,7 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
         Option(group.getParentGroup), groups, entries)
       list.setDividerHeight(0)
       list.setAdapter(adapter)
-      list.onItemClick { (_:AdapterView[_],_:View,row: Int,_:Long) =>
+      list.onItemClick { (_,_,row,_) =>
         val item = adapter.getItem(row)
         item.left foreach { grp =>
           browse(this, grp)
@@ -476,7 +476,7 @@ class FabToolbar(c: Context, attrs: AttributeSet) extends RevealFrameLayout(c, a
     _button = b
     if (container != null)
       container.setBackgroundColor(b.getColorNormal)
-    b onClick show()
+    b onClick0 show()
     b.visibility.observeOn(mainThread).subscribe(b => if (b && showing) hide())
   }
 

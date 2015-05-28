@@ -16,7 +16,7 @@ import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.content.{ComponentName, Context, Intent}
 import java.net.URI
-import android.widget.{BaseAdapter, Toast}
+import android.widget.{AdapterView, BaseAdapter, Toast}
 import android.view.{ViewGroup, View}
 import android.view.inputmethod.InputMethodManager
 
@@ -168,7 +168,7 @@ class ShareActivity extends Activity with TypedViewHolder {
       } else (u, s)
     }
 
-    findView(TR.cancel) onClick {
+    findView(TR.cancel) onClick0 {
       ServiceBus.send(ShareActivityCancel)
       finish()
     }
@@ -218,9 +218,9 @@ class ShareActivity extends Activity with TypedViewHolder {
 
               override def getItem(i: Int) = result(i)
             }
-            val onClickHandler = { pos: Int =>
+            val onClickHandler = { (_:AdapterView[_], _:View, pos: Int, _: Long) =>
               findView(TR.continu).setEnabled(true)
-              findView(TR.continu).onClick {
+              findView(TR.continu).onClick0 {
                 ShareActivity.selectHandler(this, settings, adapter.getItem(pos))
                 finish()
               }
@@ -231,7 +231,7 @@ class ShareActivity extends Activity with TypedViewHolder {
               findView(TR.select_prompt).setVisibility(View.GONE)
               if (adapter.getCount == 1) {
                 list.setItemChecked(0, true)
-                onClickHandler(0)
+                onClickHandler(null, null, 0, 0)
                 findView(TR.continu).setEnabled(true)
               }
             }

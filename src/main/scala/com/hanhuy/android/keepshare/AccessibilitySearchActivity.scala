@@ -38,7 +38,7 @@ class AccessibilitySearchActivity extends Activity with TypedViewHolder {
         extras.getString(AccessibilityService.EXTRA_URI))
     }
 
-    findView(TR.cancel) onClick {
+    findView(TR.cancel) onClick0 {
       finish()
     }
 
@@ -116,7 +116,7 @@ class AccessibilitySearchActivity extends Activity with TypedViewHolder {
     }
     val onClickHandler = { (av: AdapterView[_], v: View, pos: Int, id: Long) =>
       findView(TR.continu).setEnabled(true)
-      findView(TR.continu).onClick {
+      findView(TR.continu).onClick0 {
         selectItem(result(pos), windowId, packageName, url)
       }
     }

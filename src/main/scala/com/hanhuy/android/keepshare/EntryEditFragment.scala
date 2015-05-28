@@ -64,7 +64,7 @@ object EntryEditFragment {
             TR.layout.entry_icon_picker_item, viewGroup, false)
         } else v.asInstanceOf[ImageButton]
         b.setImageResource(getItem(i))
-        b.onClick {
+        b.onClick0 {
           onClick(getItem(i))
           popup.dismiss()
         }
@@ -171,7 +171,7 @@ class EntryEditFragment extends AuthorizedFragment {
             (e.getKey,e.getValue)
           } filterNot (f => PwDefs.IsStandardField(f._1)) toMap)
 
-          view.findView(TR.delete).onClick {
+          view.findView(TR.delete).onClick0 {
             val t = getString(R.string.delete_name, s.ReadSafe(PwDefs.TitleField))
             val msg = if (EntryEditFragment.inRecycleBin(e.getParentGroup))
               R.string.delete_permanently else R.string.move_to_recycle
@@ -196,7 +196,7 @@ class EntryEditFragment extends AuthorizedFragment {
         field.hint = k
         field.text = v.ReadString()
         field.password = v.isProtected
-        field.iconfield.onClick { handleFieldUpdate(field, k) }
+        field.iconfield.onClick0 { handleFieldUpdate(field, k) }
         WidgetObservable.text(field.textfield).subscribe((n: OnTextChangeEvent) => {
           model = model.copy(fields = model.fields.updated(k, new ProtectedString(v.isProtected, n.text.toString)))
         })
@@ -237,7 +237,7 @@ class EntryEditFragment extends AuthorizedFragment {
       } getOrElse builder).create().show()
     }
 
-    newfield onClick showFieldOptions("Create", "Create new field", None, false) { (n,c) =>
+    newfield onClick0 showFieldOptions("Create", "Create new field", None, false) { (n,c) =>
       if (n.getText.toString.nonEmpty) {
         model = model.copy(fields = model.fields.updated(
           n.getText.toString, new ProtectedString(c.isChecked, "")))
@@ -245,7 +245,7 @@ class EntryEditFragment extends AuthorizedFragment {
         val field = new StandardEditView(activity, null)
         field.hint = n.getText.toString
         field.password = c.isChecked
-        field.iconfield.onClick { handleFieldUpdate(field, field.hint.toString) }
+        field.iconfield.onClick0 { handleFieldUpdate(field, field.hint.toString) }
         WidgetObservable.text(field.textfield).subscribe((n: OnTextChangeEvent) => {
           model = model.copy(fields = model.fields.updated(field.hint.toString, new ProtectedString(c.isChecked, n.text.toString)))
         })
@@ -254,7 +254,7 @@ class EntryEditFragment extends AuthorizedFragment {
       ()
     }
 
-    title.iconfield.onClick {
+    title.iconfield.onClick0 {
       EntryEditFragment.iconPicker(activity, title.iconfield, iconObservable.onNext)
     }
     view
@@ -382,7 +382,7 @@ class GroupEditView(c: Context, attrs: AttributeSet) extends StandardFieldView(c
   setSaveEnabled(true)
   setSaveFromParentEnabled(true)
 
-  this onClick showGroupsList()
+  this onClick0 showGroupsList()
 
   @tailrec
   final def rootGroup(g: PwGroup): PwGroup =
@@ -426,7 +426,7 @@ class GroupEditView(c: Context, attrs: AttributeSet) extends StandardFieldView(c
         val icon = b.findView(TR.entry_image)
         icon.setImageResource(Database.Icons(getItem(i).getIconId.ordinal))
         b.findView(TR.name).setText(getItem(i).getName)
-        b.onClick {
+        b.onClick0 {
           group = getItem(i)
           groupChangeListener foreach (_(group))
           popup.dismiss()

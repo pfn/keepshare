@@ -187,11 +187,11 @@ class IMESearchActivity extends Activity with TypedViewHolder {
     setTitle(getTitle + getString(R.string.ime_search_title))
     findView(TR.text).setText(
       getString(R.string.ime_search_prompt, packageName))
-    findView(TR.confirm) onClick {
+    findView(TR.confirm) onClick0 {
       UiBus.send(IMESearchOk)
       finish()
     }
-    findView(TR.cancel) onClick { finish() }
+    findView(TR.cancel) onClick0 { finish() }
   }
 
   override def onStop() {
