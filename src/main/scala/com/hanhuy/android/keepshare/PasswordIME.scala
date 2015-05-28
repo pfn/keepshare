@@ -3,7 +3,7 @@ package com.hanhuy.android.keepshare
 import android.view.ViewGroup
 import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common._
-import com.hanhuy.android.common.RichLogger._
+import com.hanhuy.android.extensions._
 import TypedResource._
 
 import android.inputmethodservice.{Keyboard, InputMethodService}
@@ -11,7 +11,7 @@ import android.inputmethodservice.KeyboardView.OnKeyboardActionListener
 import android.view.inputmethod.{EditorInfo, ExtractedTextRequest, InputMethodManager}
 import android.text.InputType
 import android.widget.Toast
-import android.app.{Activity, AlertDialog}
+import android.app.Activity
 import android.os.Bundle
 import android.content.Intent
 
@@ -28,9 +28,7 @@ object PasswordIME {
 }
 class PasswordIME extends InputMethodService with OnKeyboardActionListener
 with EventBus.RefOwner {
-  implicit val TAG = LogcatTag("PasswordIME")
-  val _implicit: RichContext = this
-  import _implicit._
+  val log = Logcat("PasswordIME")
 
   lazy val settings = Settings(this)
   lazy val inputView = getLayoutInflater.inflate(TR.layout.password_ime, null)
@@ -87,13 +85,13 @@ with EventBus.RefOwner {
         case _ => false
       }
     } else {
-      v("Prompting for password search")
+      log.v("Prompting for password search")
       if (!packagePrompted.exists(_==info.packageName)) {
         packagePrompted = Option(info.packageName)
 
         UiBus += {
           case IMESearchCancel =>
-            v("Received cancel, quitting IME")
+            log.v("Received cancel, quitting IME")
             quitIME()
             EventBus.Remove
           case IMESearchOk =>
@@ -151,7 +149,7 @@ with EventBus.RefOwner {
   private def quitIME() {
     val token = getWindow.getWindow.getAttributes.token
     if (honeycombAndNewer) {
-      systemService[InputMethodManager].switchToLastInputMethod(token)
+      this.systemService[InputMethodManager].switchToLastInputMethod(token)
     } else {
       val oldIME = settings.get(Settings.IME)
       if (oldIME != null)

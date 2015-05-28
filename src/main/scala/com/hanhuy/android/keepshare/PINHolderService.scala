@@ -1,11 +1,10 @@
 package com.hanhuy.android.keepshare
 
-import com.hanhuy.android.common.{ServiceBus, LogcatTag, AndroidConversions, RichLogger}
-import RichLogger._
+import com.hanhuy.android.common.{Logcat, ServiceBus, AndroidConversions}
 import AndroidConversions._
 
 import android.app.{NotificationManager, Notification, PendingIntent, Service}
-import android.content.{IntentFilter, Context, BroadcastReceiver, Intent}
+import android.content.{Context, BroadcastReceiver, Intent}
 import javax.crypto.spec.{PBEKeySpec, SecretKeySpec}
 import javax.crypto.{SecretKey, SecretKeyFactory}
 import android.os.{SystemClock, Handler}
@@ -43,7 +42,7 @@ object PINHolderService {
   */
 class PINHolderService extends Service {
   import PINHolderService._
-  implicit private val TAG = LogcatTag("PINHolderService")
+  private val log = Logcat("PINHolderService")
 
   private val handler = new Handler
 

@@ -2,6 +2,7 @@ package com.hanhuy.android.keepshare
 
 import android.support.v7.app.AppCompatActivity
 import com.hanhuy.android.common.AndroidConversions._
+import com.hanhuy.android.extensions._
 
 import android.app.Activity
 import android.os.Bundle

@@ -10,6 +10,8 @@ import android.support.v7.app.ActionBar
 import android.support.v7.widget.Toolbar
 import android.util.AttributeSet
 import android.view.animation.AccelerateDecelerateInterpolator
+import com.hanhuy.android.conversions._
+import com.hanhuy.android.extensions._
 import com.hanhuy.android.common.AndroidConversions._
 
 import android.app._
@@ -294,7 +296,7 @@ class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRef
         Option(group.getParentGroup), groups, entries)
       list.setDividerHeight(0)
       list.setAdapter(adapter)
-      list.onItemClick { row =>
+      list.onItemClick { (_:AdapterView[_],_:View,row: Int,_:Long) =>
         val item = adapter.getItem(row)
         item.left foreach { grp =>
           browse(this, grp)

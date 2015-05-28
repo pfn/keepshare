@@ -7,8 +7,7 @@ import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.common.api.GoogleApiClient.{ConnectionCallbacks, OnConnectionFailedListener}
 import com.google.android.gms.drive.{DriveContents, DriveFile, MetadataChangeSet, Drive}
 import com.google.android.gms.drive.query.{Query, SearchableField, Filters}
-import com.hanhuy.android.common.{UiBus, LogcatTag}
-import com.hanhuy.android.common.RichLogger._
+import com.hanhuy.android.common.{Logcat, UiBus}
 
 import collection.JavaConversions._
 
@@ -100,7 +99,7 @@ class KeyManager(c: Context, settings: Settings) {
   import RequestCodes._
 
   import KeyManager._
-  implicit val TAG = LogcatTag("KeyManager")
+  val log = Logcat("KeyManager")
 
 //  def accountName = credential.getSelectedAccountName
 //  def accountName_=(a: String) = {
@@ -194,16 +193,16 @@ class KeyManager(c: Context, settings: Settings) {
         }
         b.flip()
         if (b.remaining != 32) {
-          e("wrong buffer size: " + b.remaining)
+          log.e("wrong buffer size: " + b.remaining)
           throw KeyError.LoadFailed("wrong buffer size: " + b.remaining)
         }
         b.get(buf)
         val hash = settings.get(Settings.CLOUD_KEY_HASH)
         if (hash != null && sha1(buf) != hash) {
-          e("cloud key has changed")
+          log.e("cloud key has changed")
           throw KeyError.LoadFailed("cloud key has changed")
         }
-        v("Loaded cloud key")
+        log.v("Loaded cloud key")
         new SecretKeySpec(buf, ALG)
       } getOrElse createKey()
       result.release()
@@ -219,7 +218,7 @@ class KeyManager(c: Context, settings: Settings) {
         requestAuthz(e, STATE_LOAD)
         throw KeyError.LoadFailed("need authz")
       case ex: IOException =>
-        e("IO error loading cloud key", ex)
+        log.e("IO error loading cloud key", ex)
         UiBus.post {
           Toast.makeText(Application.instance,
             Application.instance.getString(

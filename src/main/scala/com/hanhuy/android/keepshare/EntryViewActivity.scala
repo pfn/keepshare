@@ -7,15 +7,17 @@ import android.graphics.drawable.{LayerDrawable, BitmapDrawable}
 import android.os.Bundle
 import android.support.v7.app.ActionBar
 import android.support.v7.widget.Toolbar
-import android.text.method.{LinkMovementMethod, SingleLineTransformationMethod, PasswordTransformationMethod}
+import android.text.method.{LinkMovementMethod, PasswordTransformationMethod}
 import android.text.util.Linkify
 import android.util.AttributeSet
 import android.view._
-import android.widget.FrameLayout
+import android.widget.{CompoundButton, FrameLayout}
 import com.hanhuy.keepassj._
 
 import Futures._
 import EntryViewActivity._
+import com.hanhuy.android.conversions._
+import com.hanhuy.android.extensions._
 import com.hanhuy.android.common.AndroidConversions._
 import scala.collection.JavaConverters._
 import TypedResource._
@@ -390,7 +392,7 @@ class StandardFieldView(c: Context, attrs: AttributeSet) extends FrameLayout(c, 
   lazy val divider = findView(TR.field_divider)
   lazy val visibility = {
     val cb = findView(TR.field_visibility)
-    cb.onCheckedChanged(b =>
+    cb.onCheckedChange((_: CompoundButton, b: Boolean) =>
       textfield.setTransformationMethod(if (b)
         null else PasswordTransformationMethod.getInstance)
     )

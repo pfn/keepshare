@@ -3,7 +3,8 @@ package com.hanhuy.android.keepshare
 import android.app.AlertDialog
 import android.os.Bundle
 import android.view.{LayoutInflater, View, ViewGroup}
-import android.widget._
+import com.hanhuy.android.conversions._
+import com.hanhuy.android.extensions._
 import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.keepshare.Futures._
 import com.hanhuy.android.keepshare.TypedResource._
@@ -63,10 +64,10 @@ class GroupEditFragment extends AuthorizedFragment {
       model = model.copy(group = g.getUuid)
     }
     WidgetObservable.text(title.textfield).subscribe((n: OnTextChangeEvent) => {
-      model = model.copy(title = Option(n.text))
+      model = model.copy(title = Option(n.text) map (_.toString))
     })
     WidgetObservable.text(notes.textfield).subscribe((n: OnTextChangeEvent) => {
-      model = model.copy(notes = Option(n.text))
+      model = model.copy(notes = Option(n.text) map (_.toString))
     })
 
     activity.database map { db =>

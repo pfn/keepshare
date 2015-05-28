@@ -8,9 +8,10 @@ import android.os.Bundle
 import android.view.inputmethod.InputMethodManager
 import android.view.{View, ViewGroup}
 import android.widget.SearchView.{OnSuggestionListener, OnQueryTextListener}
-import android.widget.{SearchView, BaseAdapter}
+import android.widget.{AdapterView, BaseAdapter}
 import com.hanhuy.android.common.{ServiceBus, UiBus}
 
+import com.hanhuy.android.extensions._
 import com.hanhuy.android.common.AndroidConversions._
 
 import language.postfixOps
@@ -25,9 +26,6 @@ import scala.concurrent.Future
  * @author pfnguyen
  */
 class AccessibilitySearchActivity extends Activity with TypedViewHolder {
-
-  val _implicit: RichActivity = this
-  import _implicit._
 
   lazy val settings = new Settings(this)
 
@@ -116,12 +114,13 @@ class AccessibilitySearchActivity extends Activity with TypedViewHolder {
         row
       }
     }
-    val onClickHandler = { pos: Int =>
+    val onClickHandler = { (av: AdapterView[_], v: View, pos: Int, id: Long) =>
       findView(TR.continu).setEnabled(true)
       findView(TR.continu).onClick {
         selectItem(result(pos), windowId, packageName, url)
       }
     }
+
     val list = findView(TR.list)
     list.onItemClick(onClickHandler)
     list.setAdapter(adapter)
@@ -129,7 +128,7 @@ class AccessibilitySearchActivity extends Activity with TypedViewHolder {
       findView(TR.select_prompt).setVisibility(View.GONE)
       if (adapter.getCount == 1) {
         list.setItemChecked(0, true)
-        onClickHandler(0)
+        onClickHandler(null, null, 0, 0)
         findView(TR.continu).setEnabled(true)
       }
     }

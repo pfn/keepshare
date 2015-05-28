@@ -2,8 +2,8 @@ package com.hanhuy.android.keepshare
 
 import android.view.inputmethod.InputMethodManager
 import com.hanhuy.android.common.AndroidConversions._
-import com.hanhuy.android.common.{UiBus, LogcatTag}
-import com.hanhuy.android.common.RichLogger._
+import com.hanhuy.android.common.{Logcat, UiBus}
+import com.hanhuy.android.extensions._
 import TypedResource._
 
 import android.app.{ProgressDialog, SearchManager, Activity}
@@ -23,9 +23,7 @@ import scala.concurrent.duration._
 import scala.util.Try
 
 class SearchableActivity extends AuthorizedActivity {
-  implicit val TAG = LogcatTag("SearchableActivity")
-  val _implicit: RichActivity = this
-  import _implicit._
+  val log = Logcat("SearchableActivity")
 
   lazy val empty = findViewById(android.R.id.empty).asInstanceOf[TextView]
   lazy val list = findViewById(android.R.id.list).asInstanceOf[ListView]
@@ -61,7 +59,7 @@ class SearchableActivity extends AuthorizedActivity {
         queryInput = Option(intent.getStringExtra(SearchManager.QUERY)) orElse
           Option(intent.getCharSequenceExtra(SearchManager.USER_QUERY)) map (
           _.toString)
-        v("extras: " + intent.getExtras)
+        log.v("extras: " + intent.getExtras)
         queryInput foreach { q =>
           doSearch(q, Option(
             intent.getStringExtra(SearchManager.EXTRA_DATA_KEY)))
@@ -100,8 +98,8 @@ class SearchableActivity extends AuthorizedActivity {
   }
 
   private def doSearch(query: String, id: Option[String]) {
-    v("Query is: " + query)
-    v("id is: " + id)
+    log.v("Query is: " + query)
+    log.v("id is: " + id)
     if (settings.get(Settings.NEEDS_PIN) && PINHolderService.instance.isEmpty) {
         startActivityForResult(new Intent(this, classOf[PINEntryActivity]),
           RequestCodes.REQUEST_PIN)
@@ -143,7 +141,7 @@ class SearchableActivity extends AuthorizedActivity {
 
       }
       list.setAdapter(adapter)
-      list.onItemClick { pos =>
+      list.onItemClick { pos: Int =>
         EntryViewActivity.show(this, adapter.getItem(pos))
         overridePendingTransition(R.anim.slide_in_right,
           R.anim.slide_out_left)
@@ -175,7 +173,7 @@ class SearchableActivity extends AuthorizedActivity {
 }
 
 class SearchProvider extends ContentProvider {
-  implicit val TAG = LogcatTag("SearchProvider")
+  val log = Logcat("SearchProvider")
   lazy val settings = Settings(getContext)
 
   // noops
@@ -190,7 +188,7 @@ class SearchProvider extends ContentProvider {
   def query(u: Uri, proj: Array[String], arg: String,
             args: Array[String], order: String) = {
 
-    v("uri is: " + u)
+    log.v("uri is: " + u)
     val empty = Option(u.getPath) exists(_.endsWith("/"))
 
     val q = Uri.decode(u.getLastPathSegment).trim

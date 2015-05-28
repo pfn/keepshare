@@ -1,8 +1,9 @@
 package com.hanhuy.android.keepshare
 
+import com.hanhuy.android.conversions._
+import com.hanhuy.android.extensions._
 import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common._
-import com.hanhuy.android.common.RichLogger._
 import com.hanhuy.keepassj.{PwDefs, PwEntry}
 
 import collection.JavaConversions._
@@ -25,7 +26,7 @@ import Futures._
 import scala.concurrent.Future
 
 object ShareActivity {
-  implicit val TAG = LogcatTag("ShareActivity")
+  val log = Logcat("ShareActivity")
 
   def subhosts(host: String): Seq[String] =
     host.split("""\.""").tails.toList filter (_.length > 1) map (_ mkString ".")
@@ -40,7 +41,7 @@ object ShareActivity {
   }
   def queryDatabase(c: Context, settings: Settings,
                     query: Seq[String]): Future[List[PwEntry]] = {
-    v("possible queries: " + query)
+    log.v("possible queries: " + query)
     val km = new KeyManager(c, settings)
     val f: Future[Unit] = if (!Database.isOpen) {
       if (!settings.get(Settings.FIRST_RUN)) {
@@ -147,8 +148,6 @@ object ShareActivity {
 }
 class ShareActivity extends Activity with TypedViewHolder {
   import ShareActivity._
-  val _implicit: RichActivity = this
-  import _implicit._
 
   val EXTRA_SCREENSHOT = "share_screenshot"
   lazy val settings = new Settings(this)

@@ -8,6 +8,8 @@ import android.util.{SparseArray, AttributeSet}
 import android.view.{View, ViewGroup, LayoutInflater}
 import android.widget._
 
+import com.hanhuy.android.conversions._
+import com.hanhuy.android.extensions._
 import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.keepassj._
 
@@ -121,19 +123,19 @@ class EntryEditFragment extends AuthorizedFragment {
       model = model.copy(group = g.getUuid)
     }
     WidgetObservable.text(title.textfield).subscribe((n: OnTextChangeEvent) => {
-      model = model.copy(title = Option(n.text))
+      model = model.copy(title = Option(n.text) map (_.toString))
     })
     WidgetObservable.text(username.textfield).subscribe((n: OnTextChangeEvent) => {
-      model = model.copy(username = Option(n.text))
+      model = model.copy(username = Option(n.text) map (_.toString))
     })
     WidgetObservable.text(password.textfield).subscribe((n: OnTextChangeEvent) => {
-      model = model.copy(password = Option(n.text))
+      model = model.copy(password = Option(n.text) map (_.toString))
     })
     WidgetObservable.text(url.textfield).subscribe((n: OnTextChangeEvent) => {
-      model = model.copy(url = Option(n.text))
+      model = model.copy(url = Option(n.text) map (_.toString))
     })
     WidgetObservable.text(notes.textfield).subscribe((n: OnTextChangeEvent) => {
-      model = model.copy(notes = Option(n.text))
+      model = model.copy(notes = Option(n.text) map (_.toString))
     })
 
     activity.database map { db =>
@@ -196,7 +198,7 @@ class EntryEditFragment extends AuthorizedFragment {
         field.password = v.isProtected
         field.iconfield.onClick { handleFieldUpdate(field, k) }
         WidgetObservable.text(field.textfield).subscribe((n: OnTextChangeEvent) => {
-          model = model.copy(fields = model.fields.updated(k, new ProtectedString(v.isProtected, n.text)))
+          model = model.copy(fields = model.fields.updated(k, new ProtectedString(v.isProtected, n.text.toString)))
         })
         fieldlist.addView(field)
       }
@@ -228,7 +230,7 @@ class EntryEditFragment extends AuthorizedFragment {
 
       (field map { f =>
         builder.setNeutralButton("Delete", () => {
-          model = model.copy(fields = model.fields - f.hint)
+          model = model.copy(fields = model.fields - f.hint.toString)
           fieldlist.removeView(f)
           ()
         })
@@ -243,9 +245,9 @@ class EntryEditFragment extends AuthorizedFragment {
         val field = new StandardEditView(activity, null)
         field.hint = n.getText.toString
         field.password = c.isChecked
-        field.iconfield.onClick { handleFieldUpdate(field, field.hint) }
+        field.iconfield.onClick { handleFieldUpdate(field, field.hint.toString) }
         WidgetObservable.text(field.textfield).subscribe((n: OnTextChangeEvent) => {
-          model = model.copy(fields = model.fields.updated(field.hint, new ProtectedString(c.isChecked, n.text)))
+          model = model.copy(fields = model.fields.updated(field.hint.toString, new ProtectedString(c.isChecked, n.text.toString)))
         })
         fieldlist.addView(field)
       }
@@ -273,7 +275,7 @@ object StandardEditView {
     def this(p: Parcel) = {
       this(null: Parcelable)
       icon = p.readInt
-      text = TextUtils.CHAR_SEQUENCE_CREATOR.createFromParcel(p)
+      text = TextUtils.CHAR_SEQUENCE_CREATOR.createFromParcel(p).toString
     }
 
     val CREATOR = new Parcelable.Creator[SavedState] {
@@ -338,7 +340,7 @@ object GroupEditView {
 
     def this(p: Parcel) = {
       this(null: Parcelable)
-      uuid = TextUtils.CHAR_SEQUENCE_CREATOR.createFromParcel(p)
+      uuid = TextUtils.CHAR_SEQUENCE_CREATOR.createFromParcel(p).toString
     }
 
     val CREATOR = new Parcelable.Creator[SavedState] {

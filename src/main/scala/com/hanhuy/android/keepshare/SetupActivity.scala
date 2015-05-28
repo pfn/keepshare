@@ -2,11 +2,12 @@ package com.hanhuy.android.keepshare
 
 import android.annotation.TargetApi
 import android.preference.{ListPreference, CheckBoxPreference, Preference}
-import android.preference.Preference.{OnPreferenceChangeListener, OnPreferenceClickListener}
+import android.preference.Preference.OnPreferenceClickListener
 import android.support.v7.app.AppCompatActivity
 import android.text.method.PasswordTransformationMethod
 import android.util.AttributeSet
-import android.view.View.OnFocusChangeListener
+import com.hanhuy.android.conversions._
+import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
 import AndroidConversions._
 
@@ -14,7 +15,7 @@ import collection.JavaConversions._
 
 import android.app.{AlertDialog, ProgressDialog, Activity}
 import android.os.Bundle
-import android.content.{Context, ComponentName, ActivityNotFoundException, Intent}
+import android.content._
 import android.view.{ViewGroup, View, MenuItem, Menu}
 import android.widget._
 import java.io.{FileOutputStream, File}
@@ -48,7 +49,7 @@ object SetupActivity {
   }
 }
 class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus.RefOwner {
-  implicit val TAG = LogcatTag("SetupActivity")
+  val log = Logcat("SetupActivity")
   import KeyManager._
   import RequestCodes._
 
@@ -235,7 +236,7 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
 
             f onFailureMain { case e =>
               UiBus.post { error("Unable to open database: " + e.getMessage) }
-              RichLogger.e("failed to load database", e)
+              log.e("failed to load database", e)
             }
 
             f onCompleteMain { _ =>
@@ -398,22 +399,9 @@ class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus
 }
 
 object SetupFragment {
-  implicit class OnPreferenceChange(val pref: Preference) extends AnyVal {
-    def onPreferenceChange(f: (Preference, Any) => Boolean) = pref.setOnPreferenceChangeListener(new OnPreferenceChangeListener {
-      override def onPreferenceChange(preference: Preference, newValue: Any) = f(preference, newValue)
-    })
-  }
   implicit class OnPreferenceClick(val pref: Preference) extends AnyVal {
     def onPreferenceClick(f: Preference => Boolean) = pref.setOnPreferenceClickListener(new OnPreferenceClickListener {
       override def onPreferenceClick(preference: Preference) = f(preference)
-    })
-  }
-  implicit class OnFocusChangeView(val view: View) extends AnyVal {
-    def onFocusChange[A](f: Boolean => A) = view.setOnFocusChangeListener(new OnFocusChangeListener {
-      override def onFocusChange(v: View, hasFocus: Boolean) = f(hasFocus)
-    })
-    def onFocusChange[A](f: (View, Boolean) => A) = view.setOnFocusChangeListener(new OnFocusChangeListener {
-      override def onFocusChange(v: View, hasFocus: Boolean) = f(v, hasFocus)
     })
   }
 
@@ -476,9 +464,9 @@ class SetupFragment extends android.preference.PreferenceFragment {
   override def onStart() = {
     super.onStart()
     ae.setIntent(new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
-    df.onPreferenceChange(onPrefChange)
-    kf.onPreferenceChange(onPrefChange)
-    p.onPreferenceChange(onPrefChange)
+    df.onPreferenceChange(onPrefChange _)
+    kf.onPreferenceChange(onPrefChange _)
+    p.onPreferenceChange(onPrefChange _)
     kt.setIntent(Intent.makeMainActivity(
       new ComponentName("com.android.settings",
         "com.android.settings.LanguageSettings")))
@@ -576,9 +564,9 @@ class TextPreference(ctx: Context, attrs: AttributeSet, res: Int)
     edit.setSelection(_text.length)
     edit.onTextChanged { s =>
       if (callChangeListener(s))
-        _text = edit.getText
+        _text = edit.getText.toString
     }
-    edit.onFocusChange { f =>
+    edit.onFocusChange { (v: View,f: Boolean) =>
       if (f) wasfocused = true
       edit.setSelection(edit.getText.length)
     }

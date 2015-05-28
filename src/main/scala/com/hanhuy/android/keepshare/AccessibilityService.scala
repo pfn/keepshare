@@ -10,7 +10,7 @@ import android.support.v4.app.NotificationCompat
 import android.view.accessibility.{AccessibilityNodeInfo, AccessibilityEvent}
 import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common._
-import com.hanhuy.android.common.RichLogger._
+import com.hanhuy.android.conversions._
 
 import android.accessibilityservice.{AccessibilityService => Accessibility}
 
@@ -114,7 +114,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
   val _implicits: RichContext = this
   import _implicits._
   import AccessibilityService._
-  implicit val TAG = LogcatTag("AccessibilityService")
+  val log = Logcat("AccessibilityService")
   private var lastWindowId: Option[Int] = None
   private var lastCanceledWindowId: Option[Int] = None
 
@@ -167,7 +167,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
           Some(new URI("android-package://" + appHost))
         }
       } else None
-      Some(f(packageName, searchURI, tree, password))
+      Some(f(packageName.toString, searchURI, tree, password))
     } else {
       None
     }
@@ -242,7 +242,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
 
   override def onCreate() {
     super.onCreate()
-    d("Launching accessibility service")
+    log.d("Launching accessibility service")
     registerReceiver(receiver, Seq(ACTION_CANCEL, ACTION_SEARCH,
       Intent.ACTION_SCREEN_OFF, Intent.ACTION_USER_PRESENT))
     filling = !systemService[KeyguardManager].isKeyguardLocked
@@ -252,7 +252,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
   override def onDestroy() {
     AccessibilityService._running = false
     super.onDestroy()
-    d("Exiting accessibility service")
+    log.d("Exiting accessibility service")
     thread.quit()
     unregisterReceiver(receiver)
     systemService[NotificationManager].cancel(Notifications.NOTIF_FOUND)
@@ -288,7 +288,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
              searchURI: Option[URI],
              tree: AccessibilityTree,
              passwordField: Option[AccessibilityTree]): Unit = synchronized {
-    d("Fill in %s == %s ?" format (event.pkg, pkg))
+    log.d("Fill in %s == %s ?" format (event.pkg, pkg))
     if (event.pkg == pkg && passwordField.isDefined &&
         (searchURI.map (_.toString) == Option(event.uri))) {
       // needs to run on ui thread
@@ -325,7 +325,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
       } ~ Future.main {
         // unfortunately, this doesn't work for password fields...
         val text = node.getText
-        if (text != null && !text.isEmpty) {
+        if (text != null && !text.toString.isEmpty) {
           val args = new Bundle
           import AccessibilityNodeInfo._
           args.putInt(ACTION_ARGUMENT_SELECTION_START_INT, 0)

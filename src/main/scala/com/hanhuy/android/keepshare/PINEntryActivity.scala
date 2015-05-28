@@ -1,14 +1,15 @@
 package com.hanhuy.android.keepshare
 
 import android.support.v7.app.AppCompatActivity
-import com.hanhuy.android.common.{UiBus, RichLogger, AndroidConversions, LogcatTag}
+import com.hanhuy.android.conversions._
+import com.hanhuy.android.extensions._
+import com.hanhuy.android.common.{Logcat, UiBus, AndroidConversions}
 import AndroidConversions._
-import RichLogger._
 
 import android.app.{ProgressDialog, AlertDialog, Activity}
 import android.os.{Vibrator, Bundle}
 import android.view.{MenuItem, Menu, View}
-import android.content.Intent
+import android.content.{DialogInterface, Intent}
 
 import Futures._
 
@@ -21,7 +22,7 @@ object PINEntryActivity {
   }
 }
 class PINEntryActivity extends AppCompatActivity with TypedViewHolder {
-  private implicit val TAG = LogcatTag("PINEntryActivity")
+  private val log = Logcat("PINEntryActivity")
   lazy val prompt = findView(TR.pin_prompt)
   lazy val pinEntry = findView(TR.pin)
   lazy val ok = findView(TR.pin_ok)
