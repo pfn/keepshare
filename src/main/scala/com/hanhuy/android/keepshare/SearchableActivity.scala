@@ -70,7 +70,8 @@ class SearchableActivity extends AuthorizedActivity {
         }
       } else {
         if (!settings.get(Settings.NEEDS_PIN) || PINHolderService.instance.isDefined)
-          doSearch("", None)
+        BrowseActivity.open(this)
+        overridePendingTransition(0, 0)
       }
     }
   }
@@ -214,12 +215,15 @@ class SearchProvider extends ContentProvider {
         BaseColumns._ID,
         SearchManager.SUGGEST_COLUMN_TEXT_1,
         SearchManager.SUGGEST_COLUMN_TEXT_2,
+        SearchManager.SUGGEST_COLUMN_ICON_1,
         SearchManager.SUGGEST_COLUMN_INTENT_DATA_ID,
         SearchManager.SUGGEST_COLUMN_INTENT_EXTRA_DATA)
 
       def getUuid(row: Int) = Right(results map { r => Database.getUuid(r(row)) } orNull)
       def getId(row: Int) =
         Left(results map { r => Database.getId(r(row)) } getOrElse -1L)
+
+      def getIcon(row: Int) = Left(results map (r => Database.Icons(r(row).getIconId.ordinal).toLong) getOrElse 0l)
 
       def getStr(field: String, row: Int) =
         Right(results flatMap { r => Database.getField(r(row), field) } orNull)
@@ -228,15 +232,17 @@ class SearchProvider extends ContentProvider {
         0 -> getId,
         (1, getStr(PwDefs.TitleField, _: Int)),
         (2, getStr(PwDefs.UserNameField, _: Int)),
-        3 -> getId,
-        4 -> getUuid)
+        3 -> getIcon,
+        4 -> getId,
+        5 -> getUuid)
 
       override def getType(column: Int) = column match {
         case 0 => Cursor.FIELD_TYPE_INTEGER
         case 1 => Cursor.FIELD_TYPE_STRING
         case 2 => Cursor.FIELD_TYPE_STRING
         case 3 => Cursor.FIELD_TYPE_INTEGER
-        case 4 => Cursor.FIELD_TYPE_STRING
+        case 4 => Cursor.FIELD_TYPE_INTEGER
+        case 5 => Cursor.FIELD_TYPE_STRING
       }
 
       def getCount            = results map (_.size) getOrElse 0
