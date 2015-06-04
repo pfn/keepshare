@@ -25,8 +25,8 @@ libraryDependencies ++= Seq(
   "com.hanhuy.keepassj" % "keepassj" % "2.29.4" exclude("xpp3", "xpp3"),
   "com.google.code.findbugs" % "jsr305" % "2.0.1",
   "com.google.code.gson" % "gson" % "2.2.4",
-  "com.android.support" % "support-v4" % "22.1.0",
-  "com.android.support" % "appcompat-v7" % "22.1.0",
+  "com.android.support" % "design" % "22.2.0",
+  "com.android.support" % "appcompat-v7" % "22.2.0",
   "io.reactivex" %% "rxscala" % "0.24.1",
   "io.reactivex" % "rxandroid" % "0.24.0",
   "com.google.android.gms" % "play-services-drive" % "7.0.0"
@@ -51,7 +51,5 @@ packageName in (lite,Android) := "com.hanhuy.android.keepshare.lite"
 run <<= run in (pro,Android)
 
 run in lite <<= run in (lite,Android)
-
-// all of this is YUCK! find a better solution for the plugin
 
 extraResDirectories in (lite,Android) += baseDirectory.value / "src" / "lite" / "res"
