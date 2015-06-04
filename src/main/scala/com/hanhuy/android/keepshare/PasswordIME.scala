@@ -179,7 +179,7 @@ with EventBus.RefOwner {
   def onKey(p1: Int, p2: Array[Int]) {}
 }
 
-class IMESearchActivity extends Activity with TypedViewHolder {
+class IMESearchActivity extends Activity with TypedFindView {
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.ime_search_activity)

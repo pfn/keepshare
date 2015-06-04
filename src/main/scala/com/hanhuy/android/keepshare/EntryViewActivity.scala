@@ -52,7 +52,7 @@ object EntryViewActivity {
     PINHolderService.ping()
   }
 }
-class EntryViewActivity extends AuthorizedActivity with TypedActivity {
+class EntryViewActivity extends AuthorizedActivity with TypedFindView {
   private var pwentry = Option.empty[PwEntry]
   private var isEditing = false
   private var isCreating = false
@@ -385,7 +385,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedActivity {
   }
 }
 
-class StandardFieldView(c: Context, attrs: AttributeSet) extends FrameLayout(c, attrs) with TypedView {
+class StandardFieldView(c: Context, attrs: AttributeSet) extends FrameLayout(c, attrs) with TypedFindView {
   def this(c: Context) = this(c, null)
   lazy val textfield = findView(TR.field)
   lazy val iconfield = findView(TR.field_icon)

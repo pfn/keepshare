@@ -146,7 +146,7 @@ object ShareActivity {
     }
   }
 }
-class ShareActivity extends Activity with TypedViewHolder {
+class ShareActivity extends Activity with TypedFindView {
   import ShareActivity._
 
   val EXTRA_SCREENSHOT = "share_screenshot"

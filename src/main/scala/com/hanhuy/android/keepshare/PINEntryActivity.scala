@@ -21,7 +21,7 @@ object PINEntryActivity {
       RequestCodes.REQUEST_PIN)
   }
 }
-class PINEntryActivity extends AppCompatActivity with TypedViewHolder {
+class PINEntryActivity extends AppCompatActivity with TypedFindView {
   private val log = Logcat("PINEntryActivity")
   lazy val prompt = findView(TR.pin_prompt)
   lazy val pinEntry = findView(TR.pin)

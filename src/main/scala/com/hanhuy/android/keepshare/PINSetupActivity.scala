@@ -12,7 +12,7 @@ import com.hanhuy.android.common.UiBus
 
 import Futures._
 
-class PINSetupActivity extends AppCompatActivity with TypedViewHolder {
+class PINSetupActivity extends AppCompatActivity with TypedFindView {
 
   lazy val pinEntry = findView(TR.pin)
   lazy val ok = findView(TR.pin_ok)

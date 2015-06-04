@@ -48,7 +48,7 @@ object SetupActivity {
     intent
   }
 }
-class SetupActivity extends AppCompatActivity with TypedViewHolder with EventBus.RefOwner {
+class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.RefOwner {
   val log = Logcat("SetupActivity")
   import KeyManager._
   import RequestCodes._

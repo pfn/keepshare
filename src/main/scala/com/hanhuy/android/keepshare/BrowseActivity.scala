@@ -61,7 +61,7 @@ object BrowseActivity {
       x.getStrings.ReadSafe(PwDefs.TitleField).compareToIgnoreCase(y.getStrings.ReadSafe(PwDefs.TitleField))
   }
 }
-class BrowseActivity extends AuthorizedActivity with TypedActivity with SwipeRefreshLayout.OnRefreshListener {
+class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRefreshLayout.OnRefreshListener {
   lazy val list = findView(TR.list)
   lazy val refresher = findView(TR.refresher)
   private var searchView = Option.empty[SearchView]
