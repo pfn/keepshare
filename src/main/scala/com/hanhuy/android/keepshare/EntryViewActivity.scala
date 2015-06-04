@@ -98,9 +98,9 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
       editing(true)
     }
     editBar.findView(TR.cancel).onClick0 {
-      editing(false)
       if (isCreating)
         finish()
+      editing(false)
     }
     editBar.findView(TR.save).onClick0 {
       val f = Option(getFragmentManager.findFragmentByTag("editor"))

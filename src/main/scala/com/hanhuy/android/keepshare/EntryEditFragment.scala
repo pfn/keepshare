@@ -7,6 +7,7 @@ import android.text.{InputType, TextUtils}
 import android.util.{SparseArray, AttributeSet}
 import android.view.{View, ViewGroup, LayoutInflater}
 import android.widget._
+import com.hanhuy.android.common.UiBus
 
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
@@ -250,6 +251,9 @@ class EntryEditFragment extends AuthorizedFragment {
           model = model.copy(fields = model.fields.updated(field.hint.toString, new ProtectedString(c.isChecked, n.text.toString)))
         })
         fieldlist.addView(field)
+        UiBus.post {
+          view.findView(TR.scroll).scrollTo(0, fieldlist.getHeight)
+        }
       }
       ()
     }

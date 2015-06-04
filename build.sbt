@@ -38,7 +38,7 @@ proguardOptions in Android ++=
   "-dontwarn sun.misc.Unsafe" ::
   Nil
 
-proguardCache in Android += "com.google.common"
+proguardCache in Android ++= "com.google.common" :: "org.bouncycastle" :: Nil
 
 ndkBuild in Android := Nil
 
