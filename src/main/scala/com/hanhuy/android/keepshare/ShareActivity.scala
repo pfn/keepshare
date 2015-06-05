@@ -252,6 +252,7 @@ class ShareActivity extends Activity with TypedFindView {
     val success = request match {
       case RequestCodes.REQUEST_SETUP => result == Activity.RESULT_OK
       case RequestCodes.REQUEST_PIN => result == Activity.RESULT_OK
+      case RequestCodes.REQUEST_SIGN_IN => false
     }
     if (success) init() else finish()
   }
