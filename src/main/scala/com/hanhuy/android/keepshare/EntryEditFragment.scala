@@ -16,10 +16,10 @@ import com.hanhuy.keepassj._
 
 import TypedResource._
 import Futures._
+import Rx._
 
 import rx.android.schedulers.AndroidSchedulers.mainThread
-import rx.android.widget.{OnTextChangeEvent, WidgetObservable}
-import rx.lang.scala.JavaConversions._
+import rx.android.widget.WidgetObservable
 import rx.lang.scala.{Observable, Subscription, Subject}
 
 import scala.annotation.tailrec
@@ -123,21 +123,21 @@ class EntryEditFragment extends AuthorizedFragment {
     groupObservable.observeOn(mainThread).subscribe { g =>
       model = model.copy(group = g.getUuid)
     }
-    WidgetObservable.text(title.textfield).subscribe((n: OnTextChangeEvent) => {
+    WidgetObservable.text(title.textfield).asScala.subscribe(n =>
       model = model.copy(title = Option(n.text) map (_.toString))
-    })
-    WidgetObservable.text(username.textfield).subscribe((n: OnTextChangeEvent) => {
+    )
+    WidgetObservable.text(username.textfield).asScala.subscribe(n =>
       model = model.copy(username = Option(n.text) map (_.toString))
-    })
-    WidgetObservable.text(password.textfield).subscribe((n: OnTextChangeEvent) => {
+    )
+    WidgetObservable.text(password.textfield).asScala.subscribe(n =>
       model = model.copy(password = Option(n.text) map (_.toString))
-    })
-    WidgetObservable.text(url.textfield).subscribe((n: OnTextChangeEvent) => {
+    )
+    WidgetObservable.text(url.textfield).asScala.subscribe(n =>
       model = model.copy(url = Option(n.text) map (_.toString))
-    })
-    WidgetObservable.text(notes.textfield).subscribe((n: OnTextChangeEvent) => {
+    )
+    WidgetObservable.text(notes.textfield).asScala.subscribe(n =>
       model = model.copy(notes = Option(n.text) map (_.toString))
-    })
+    )
 
     activity.database map { db =>
       groupId map { id =>
@@ -198,9 +198,9 @@ class EntryEditFragment extends AuthorizedFragment {
         field.text = v.ReadString()
         field.password = v.isProtected
         field.iconfield.onClick0 { handleFieldUpdate(field, k) }
-        WidgetObservable.text(field.textfield).subscribe((n: OnTextChangeEvent) => {
+        WidgetObservable.text(field.textfield).asScala.subscribe(n =>
           model = model.copy(fields = model.fields.updated(k, new ProtectedString(v.isProtected, n.text.toString)))
-        })
+        )
         fieldlist.addView(field)
       }
     }
@@ -247,9 +247,9 @@ class EntryEditFragment extends AuthorizedFragment {
         field.hint = n.getText.toString
         field.password = c.isChecked
         field.iconfield.onClick0 { handleFieldUpdate(field, field.hint.toString) }
-        WidgetObservable.text(field.textfield).subscribe((n: OnTextChangeEvent) => {
+        WidgetObservable.text(field.textfield).asScala.subscribe(n =>
           model = model.copy(fields = model.fields.updated(field.hint.toString, new ProtectedString(c.isChecked, n.text.toString)))
-        })
+        )
         fieldlist.addView(field)
         UiBus.post {
           view.findView(TR.scroll).scrollTo(0, fieldlist.getHeight)

@@ -10,11 +10,12 @@ import com.hanhuy.android.keepshare.Futures._
 import com.hanhuy.android.keepshare.TypedResource._
 import com.hanhuy.keepassj._
 import rx.android.schedulers.AndroidSchedulers.mainThread
-import rx.android.widget.{OnTextChangeEvent, WidgetObservable}
-import rx.lang.scala.JavaConversions._
+import rx.android.widget.WidgetObservable
 import rx.lang.scala.{Observable, Subject, Subscription}
 
 import scala.collection.JavaConverters._
+
+import Rx._
 
 
 object GroupEditFragment {
@@ -63,12 +64,12 @@ class GroupEditFragment extends AuthorizedFragment {
     groupObservable.observeOn(mainThread).subscribe { g =>
       model = model.copy(group = g.getUuid)
     }
-    WidgetObservable.text(title.textfield).subscribe((n: OnTextChangeEvent) => {
+    WidgetObservable.text(title.textfield).asScala.subscribe(n =>
       model = model.copy(title = Option(n.text) map (_.toString))
-    })
-    WidgetObservable.text(notes.textfield).subscribe((n: OnTextChangeEvent) => {
+    )
+    WidgetObservable.text(notes.textfield).asScala.subscribe(n =>
       model = model.copy(notes = Option(n.text) map (_.toString))
-    })
+    )
 
     activity.database map { db =>
       groupId map { id =>
