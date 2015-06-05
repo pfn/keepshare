@@ -50,7 +50,7 @@ object Futures {
     def onFailureMain[U]  = f.onFailure( _: F[U])(MainThread)
     def onCompleteMain[U] = f.onComplete(_: C[U])(MainThread)
 
-    def ~[A >: T](f: Future[A]): Future[A] = f.flatMap(_ => f)
+    def ~[A >: T](next: => Future[A]): Future[A] = f.flatMap(_ => next)
   }
   def traverseO[A, B](o: Option[A])(f: A => Future[B])(implicit ev: ExecutionContext): Future[Option[B]] =
     (o map f).fold(Future.successful(Option.empty[B]))(_.flatMap(x => Future.successful(Some(x)))(ev))
