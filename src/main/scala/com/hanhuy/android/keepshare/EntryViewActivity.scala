@@ -11,14 +11,14 @@ import android.text.method.{LinkMovementMethod, PasswordTransformationMethod}
 import android.text.util.Linkify
 import android.util.AttributeSet
 import android.view._
-import android.widget.{CompoundButton, FrameLayout}
+import android.widget.FrameLayout
+import com.hanhuy.android.common.Futures
 import com.hanhuy.keepassj._
 
 import Futures._
 import EntryViewActivity._
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
-import com.hanhuy.android.common.AndroidConversions._
 import scala.collection.JavaConverters._
 import TypedResource._
 

@@ -2,7 +2,7 @@ package com.hanhuy.android.keepshare
 
 import android.view.inputmethod.InputMethodManager
 import com.hanhuy.android.common.AndroidConversions._
-import com.hanhuy.android.common.{Logcat, UiBus}
+import com.hanhuy.android.common.{Futures, Logcat, UiBus}
 import com.hanhuy.android.extensions._
 import TypedResource._
 
@@ -15,6 +15,7 @@ import android.net.Uri
 import android.provider.BaseColumns
 import android.view.{MenuItem, View, ViewGroup, Menu}
 import com.hanhuy.keepassj.{PwUuid, PwDefs}
+
 import Futures._
 
 import scala.language.postfixOps

@@ -3,7 +3,7 @@ package com.hanhuy.android.keepshare
 import android.support.v7.app.AppCompatActivity
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
-import com.hanhuy.android.common.{Logcat, UiBus, AndroidConversions}
+import com.hanhuy.android.common.{Futures, Logcat, UiBus, AndroidConversions}
 import AndroidConversions._
 
 import android.app.{ProgressDialog, AlertDialog, Activity}

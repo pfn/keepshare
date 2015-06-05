@@ -7,7 +7,7 @@ import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.common.api.GoogleApiClient.{ConnectionCallbacks, OnConnectionFailedListener}
 import com.google.android.gms.drive.{DriveContents, DriveFile, MetadataChangeSet, Drive}
 import com.google.android.gms.drive.query.{Query, SearchableField, Filters}
-import com.hanhuy.android.common.{Logcat, UiBus}
+import com.hanhuy.android.common.{Futures, Logcat, UiBus}
 
 import collection.JavaConversions._
 

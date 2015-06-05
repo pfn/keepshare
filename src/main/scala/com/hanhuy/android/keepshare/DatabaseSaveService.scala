@@ -5,6 +5,7 @@ import com.hanhuy.android.common.AndroidConversions._
 import android.app.{Notification, Service}
 import android.content.Intent
 import android.support.v4.app.NotificationCompat
+import com.hanhuy.android.common.Futures
 import com.hanhuy.keepassj.PwDatabase
 import rx.lang.scala.subjects.BehaviorSubject
 import rx.lang.scala.{Observable, Subject}

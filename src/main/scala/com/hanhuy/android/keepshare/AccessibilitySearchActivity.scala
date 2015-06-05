@@ -9,7 +9,7 @@ import android.view.inputmethod.InputMethodManager
 import android.view.{View, ViewGroup}
 import android.widget.SearchView.{OnSuggestionListener, OnQueryTextListener}
 import android.widget.{AdapterView, BaseAdapter}
-import com.hanhuy.android.common.{ServiceBus, UiBus}
+import com.hanhuy.android.common.{Futures, ServiceBus, UiBus}
 
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.common.AndroidConversions._

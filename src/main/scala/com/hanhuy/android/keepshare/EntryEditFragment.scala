@@ -7,11 +7,10 @@ import android.text.{InputType, TextUtils}
 import android.util.{SparseArray, AttributeSet}
 import android.view.{View, ViewGroup, LayoutInflater}
 import android.widget._
-import com.hanhuy.android.common.UiBus
+import com.hanhuy.android.common.{Futures, UiBus}
 
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
-import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.keepassj._
 
 import TypedResource._

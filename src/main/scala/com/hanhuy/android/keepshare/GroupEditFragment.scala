@@ -5,18 +5,14 @@ import android.os.Bundle
 import android.view.{LayoutInflater, View, ViewGroup}
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
-import com.hanhuy.android.common.AndroidConversions._
-import com.hanhuy.android.keepshare.Futures._
+import com.hanhuy.android.common.Futures._
 import com.hanhuy.android.keepshare.TypedResource._
 import com.hanhuy.keepassj._
 import rx.android.schedulers.AndroidSchedulers.mainThread
 import rx.android.widget.WidgetObservable
 import rx.lang.scala.{Observable, Subject, Subscription}
 
-import scala.collection.JavaConverters._
-
 import Rx._
-
 
 object GroupEditFragment {
   def edit(group: PwGroup) = {

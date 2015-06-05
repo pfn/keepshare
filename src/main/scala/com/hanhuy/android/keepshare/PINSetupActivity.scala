@@ -8,7 +8,7 @@ import android.app.Activity
 import android.os.Bundle
 import android.view.View
 import android.content.Intent
-import com.hanhuy.android.common.UiBus
+import com.hanhuy.android.common.{Futures, UiBus}
 
 import Futures._
 
