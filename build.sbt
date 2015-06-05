@@ -40,6 +40,8 @@ proguardOptions in Android ++=
 
 proguardCache in Android ++= "com.google.common" :: "org.bouncycastle" :: Nil
 
+shrinkResources in Android := true
+
 ndkBuild in Android := Nil
 
 proguardOptions in Android ++=
