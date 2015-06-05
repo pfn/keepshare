@@ -20,6 +20,11 @@ object Futures {
     override def reportFailure(cause: Throwable) = throw cause
   }
 
+  object MainThreadEx extends ExecutionContext {
+    override def execute(runnable: Runnable) = UiBus.post(runnable.run())
+    override def reportFailure(cause: Throwable) = throw cause
+  }
+
   implicit object AsyncThread extends ExecutionContext {
     override def execute(runnable: Runnable) =
       AndroidConversions._threadpool.execute(runnable)
@@ -29,6 +34,9 @@ object Futures {
 
   implicit class RichFuturesType(val f: Future.type) extends AnyVal {
     def main[A](b: => A) = f.apply(b)(MainThread)
+    // ensure posting at the end of the event queue, rather than
+    // running immediately if currently on the main thread
+    def mainEx[A](b: => A) = f.apply(b)(MainThreadEx)
   }
 
   implicit class RichFutures[T](val f: Future[T]) extends AnyVal {

@@ -53,3 +53,12 @@ run <<= run in (pro,Android)
 run in lite <<= run in (lite,Android)
 
 extraResDirectories in (lite,Android) += baseDirectory.value / "src" / "lite" / "res"
+
+onLoad in lite := {
+  val prev = (onLoad in lite).value
+  val f = (state: State) => {
+    val nav = new ProjectNavigation(state)
+    nav.selectProject(nav.rootRef.build, "pro")
+  }
+  f compose prev
+}

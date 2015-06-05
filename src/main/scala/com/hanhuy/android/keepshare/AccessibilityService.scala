@@ -89,10 +89,10 @@ object AccessibilityService {
     def findNodeById(id: String): Option[AccessibilityNodeInfo] =
       node flatMap { _.findAccessibilityNodeInfosByViewId(id).headOption }
 
-    override def toString = {
+    override def mkString = {
       val t = node map { _.getClassName } getOrElse "null"
       val tx = node map { _.getText } getOrElse "null"
-      val c = children map (_.toString)
+      val c = children map (_.mkString)
       "Node[%s: id=%s password=%s text=%s children=[%s]]" format (
         t, viewIdResourceName, isPassword, tx, c mkString ",")
     }
