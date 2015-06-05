@@ -61,9 +61,7 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView {
             KeyManager.decryptToString(key, verifier))).toOption
 
         if (decrypted contains PINHolderService.PIN_VERIFIER) {
-          val intent = new Intent(this, classOf[PINHolderService])
-          intent.putExtra(PINHolderService.EXTRA_PIN, pin)
-          startService(intent)
+          PINHolderService.start(pin)
           setResult(Activity.RESULT_OK)
           finish()
         } else {

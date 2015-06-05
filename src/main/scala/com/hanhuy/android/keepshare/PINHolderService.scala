@@ -32,6 +32,12 @@ object PINHolderService {
     new SecretKeySpec(kf.generateSecret(spec).getEncoded, KeyManager.ALG)
   }
 
+  def start(pin: String): Unit = {
+    val intent = new Intent(Application.instance, classOf[PINHolderService])
+    intent.putExtra(PINHolderService.EXTRA_PIN, pin)
+    Application.instance.startService(intent)
+  }
+
   def ping(): Unit = {
     instance foreach (_.ping())
   }
@@ -105,12 +111,17 @@ class PINHolderService extends Service {
   }
 
   override def onStartCommand(intent: Intent, flags: Int, startId: Int) = {
-    val pin = intent.getStringExtra(EXTRA_PIN)
-    _key = keyFor(pin)
-    ping()
-    handler.postDelayed(notificationRunner, 1000)
-    startForeground(Notifications.NOTIF_DATABASE_UNLOCKED, notification)
-    registerReceiver(receiver, ACTION_CANCEL)
+    val pin = Option(intent.getStringExtra(EXTRA_PIN))
+    pin match {
+      case Some(p) =>
+        _key = keyFor(p)
+        ping()
+        handler.postDelayed(notificationRunner, 1000)
+        startForeground(Notifications.NOTIF_DATABASE_UNLOCKED, notification)
+        registerReceiver(receiver, ACTION_CANCEL)
+      case None =>
+        stopSelf(startId)
+    }
     Service.START_NOT_STICKY
   }
 

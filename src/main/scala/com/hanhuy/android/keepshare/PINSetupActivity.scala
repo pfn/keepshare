@@ -28,10 +28,8 @@ class PINSetupActivity extends AppCompatActivity with TypedFindView {
 
   private def verifyMatch() {
     if (pin == selectedPin) {
-      val intent = new Intent(this, classOf[PINHolderService])
       val thePin = pin mkString ""
-      intent.putExtra(PINHolderService.EXTRA_PIN, thePin)
-      startService(intent)
+      PINHolderService.start(thePin)
       val km = new KeyManager(this, settings)
       for {
         key <- km.fetchCloudKey()
