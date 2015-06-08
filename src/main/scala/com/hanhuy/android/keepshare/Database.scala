@@ -7,7 +7,7 @@ import android.annotation.TargetApi
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
-import com.hanhuy.android.common.{Futures, ServiceBus}
+import com.hanhuy.android.common.{ManagedResource, Futures, ServiceBus}
 import com.hanhuy.keepassj._
 import com.hanhuy.keepassj.spr.{SprEngine, SprContext, SprCompileFlags}
 
