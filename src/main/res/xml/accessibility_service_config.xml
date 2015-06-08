@@ -3,7 +3,7 @@
                        xmlns:tools="http://schemas.android.com/tools"
                        tools:ignore="UnusedAttribute"
                        android:description="@string/accessibility_service_description"
-                       android:accessibilityEventTypes="typeAllMask"
+                       android:accessibilityEventTypes="typeWindowStateChanged|typeViewHoverEnter|typeViewHoverExit|typeWindowContentChanged"
                        android:accessibilityFlags="flagRequestEnhancedWebAccessibility|flagReportViewIds"
                        android:accessibilityFeedbackType="feedbackGeneric"
                        android:notificationTimeout="0"

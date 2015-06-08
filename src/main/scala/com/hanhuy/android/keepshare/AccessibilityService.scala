@@ -116,7 +116,8 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
   import AccessibilityService._
   val log = Logcat("AccessibilityService")
   private var lastWindowId: Option[Int] = None
-  private var lastCanceledWindowId: Option[Int] = None
+  private var lastCanceledSearchURI: Option[URI] = None
+  private var lastSearchURI: Option[URI] = None
 
   private val thread = new HandlerThread("AccessibilityService")
   private lazy val handler = {
@@ -190,7 +191,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
           val r: Runnable = { () =>
             withTree(windowId) { (pkg, searchURI, tree, password) =>
 
-              if (password.isDefined && !lastCanceledWindowId.contains(windowId)) {
+              if (password.isDefined && lastCanceledSearchURI != searchURI) {
 
                 fillInfo match {
                   case Some(x) => fillIn(x, pkg, searchURI, tree, password)
@@ -217,6 +218,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
 
                     systemService[NotificationManager].notify(
                       Notifications.NOTIF_FOUND, builder.build())
+                    lastSearchURI = searchURI
                   }
                 }
               } else {
@@ -265,7 +267,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
         systemService[NotificationManager].cancel(Notifications.NOTIF_FOUND)
       case Intent.ACTION_USER_PRESENT => filling = true
       case ACTION_CANCEL =>
-        lastCanceledWindowId = lastWindowId
+        lastCanceledSearchURI = lastSearchURI
       case ACTION_SEARCH =>
         val newIntent = new Intent(this, classOf[AccessibilitySearchActivity])
         newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
@@ -296,7 +298,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
       //val clip = clipboard.getPrimaryClip
 
       fillInfo = None
-      lastCanceledWindowId = None
+      lastCanceledSearchURI = None
       val edits = tree collect { case t if t.isEditable => t }
       val text = (edits takeWhile (!_.isPassword)).lastOption
 
