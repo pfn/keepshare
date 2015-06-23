@@ -29,7 +29,9 @@ object ShareActivity {
   val log = Logcat("ShareActivity")
 
   def subhosts(host: String): Seq[String] =
-    host.split("""\.""").tails.toList filter (_.length > 1) map (_ mkString ".")
+    if (host != null)
+      host.split("""\.""").tails.toList filter (_.length > 1) map (_ mkString ".")
+    else Nil
 
   //@tailrec -- can't be due to concat
   def goUp(uri: URI): Seq[URI] = {

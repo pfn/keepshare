@@ -98,8 +98,7 @@ object AccessibilityService {
     }
 
     def dispose() {
-      node foreach (_.recycle())
-      children foreach (_.dispose())
+      iterator foreach (_.node foreach (_.recycle))
     }
   }
 
@@ -304,11 +303,11 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
 
       // do password first because some username fields have autocompletes...
       passwordField foreach (_.node foreach { n =>
-          pasteData(n, event.password, event.username ++ event.password) })
+          pasteData(n, event.password) })
 
       text foreach (_.node foreach { n =>
         Thread.sleep(100)
-        pasteData(n, event.username, event.username ++ event.password)
+        pasteData(n, event.username)
       })
 
       //clipboard.setPrimaryClip(clip)
@@ -321,7 +320,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
     } getOrElse { fillInfo = Some(event) }
   }
 
-  def pasteData(node: AccessibilityNodeInfo, data: String, set: Seq[Char]) {
+  def pasteData(node: AccessibilityNodeInfo, data: String) {
     def preamble = Future.main {
         node.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
       } ~ Future.main {

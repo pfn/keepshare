@@ -13,12 +13,12 @@ import AndroidConversions._
 
 import collection.JavaConversions._
 
-import android.app.{AlertDialog, ProgressDialog, Activity}
+import android.app.{Dialog, AlertDialog, ProgressDialog, Activity}
 import android.os.Bundle
 import android.content._
 import android.view.{ViewGroup, View, MenuItem, Menu}
 import android.widget._
-import java.io.{FileOutputStream, File}
+import java.io.{IOException, FileOutputStream, File}
 import android.text.{InputType, Editable, TextWatcher}
 import android.view.inputmethod.InputMethodManager
 import android.provider.{DocumentsContract, OpenableColumns}
@@ -53,6 +53,7 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
   import KeyManager._
   import RequestCodes._
 
+  private var currentDialog = Option.empty[Dialog]
   lazy val fragment = getFragmentManager.findFragmentById(
     R.id.setup_fragment).asInstanceOf[SetupFragment]
   lazy val flipper = findView(TR.flipper)
@@ -319,11 +320,18 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
     }
   }
 
+  override def onDestroy() = {
+    currentDialog foreach (_.dismiss())
+    currentDialog = None
+    super.onDestroy()
+  }
+
   def setDataPath(data: Intent, setProperty: String => Unit): Unit = {
     val uri = data.getData
     if (uri.getScheme == "content") {
       val progress = ProgressDialog.show(this,
         "Downloading", "Please Wait", false, true)
+      currentDialog = Some(progress)
       var canceled = false
       progress.onCancel0 {
         canceled = true
@@ -372,22 +380,34 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
         }
 
         UiBus.post { setProperty(if (kitkatAndNewer) uri.toString else dest.getAbsolutePath) }
-        for {
-          input <- using(getContentResolver.openInputStream(uri))
-          out   <- using(new FileOutputStream(dest))
-        } {
-          var total = 0
-          val buf = Array.ofDim[Byte](32768)
-          Stream.continually(input.read(buf, 0, 32768)) takeWhile (
-            _ != -1 && !canceled) foreach { read =>
-            total += read
-            out.write(buf, 0, read)
-            UiBus.post { progress.setProgress(total) }
+        try {
+          for {
+            input <- using(getContentResolver.openInputStream(uri))
+            out <- using(new FileOutputStream(dest))
+          } {
+            var total = 0
+            val buf = Array.ofDim[Byte](32768)
+            Stream.continually(input.read(buf, 0, 32768)) takeWhile (
+              _ != -1 && !canceled) foreach { read =>
+              total += read
+              out.write(buf, 0, read)
+              UiBus.post {
+                progress.setProgress(total)
+              }
+            }
+            if (canceled)
+              dest.delete()
           }
-          if (canceled)
-            dest.delete()
+        } catch {
+          case e: IOException =>
+            UiBus.post {
+              Toast.makeText(this, "Failed to open file: " + e.getMessage, Toast.LENGTH_LONG).show()
+            }
         }
-        UiBus.post { progress.dismiss() }
+        UiBus.post {
+          currentDialog foreach (_.dismiss())
+          currentDialog = None
+        }
       }
     } else {
       setProperty(uri.getPath)

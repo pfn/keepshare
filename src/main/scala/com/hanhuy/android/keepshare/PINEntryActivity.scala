@@ -6,7 +6,7 @@ import com.hanhuy.android.extensions._
 import com.hanhuy.android.common.{Futures, Logcat, UiBus, AndroidConversions}
 import AndroidConversions._
 
-import android.app.{ProgressDialog, AlertDialog, Activity}
+import android.app.{Dialog, ProgressDialog, AlertDialog, Activity}
 import android.os.{Vibrator, Bundle}
 import android.view.{MenuItem, Menu, View}
 import android.content.{DialogInterface, Intent}
@@ -22,6 +22,7 @@ object PINEntryActivity {
   }
 }
 class PINEntryActivity extends AppCompatActivity with TypedFindView {
+  private var currentDialog = Option.empty[Dialog]
   private val log = Logcat("PINEntryActivity")
   lazy val prompt = findView(TR.pin_prompt)
   lazy val pinEntry = findView(TR.pin)
@@ -32,6 +33,13 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView {
   lazy val vibrator = this.systemService[Vibrator]
 
   private var pin = ""
+
+  override def onDestroy() = {
+    currentDialog foreach (_.dismiss())
+    currentDialog = None
+    super.onDestroy()
+  }
+
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
     setTitle(getTitle + getString(R.string.enter_pin_subtitle))
@@ -80,11 +88,11 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView {
       }
 
       if (!cloudKey.isCompleted) {
-        val pd = ProgressDialog.show(this, getString(R.string.loading_key),
-          getString(R.string.fetching_key), true, false)
+        currentDialog = Some(ProgressDialog.show(this, getString(R.string.loading_key),
+          getString(R.string.fetching_key), true, false))
         cloudKey onSuccessMain { case _ =>
-          if (!isFinishing && pd.isShowing)
-            pd.dismiss()
+          currentDialog foreach (_.dismiss())
+          currentDialog = None
         }
       }
     }

@@ -1,6 +1,6 @@
 package com.hanhuy.android.keepshare
 
-import android.app.{Activity, ProgressDialog}
+import android.app.{Dialog, Activity, ProgressDialog}
 import android.content.Intent
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
@@ -25,8 +25,16 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner {
   lazy val km = new KeyManager(this, settings)
   private var running = false
 
+  protected var currentDialog: Option[Dialog] = Option.empty
   private var dbFuture = Option.empty[Future[PwDatabase]]
   private val readyPromise = Promise[Unit]()
+
+  override def onDestroy() = {
+    currentDialog foreach (_.dismiss())
+    currentDialog = None
+    super.onDestroy()
+  }
+
   def ready = readyPromise.isCompleted
   def database = dbFuture getOrElse openDatabase()
   override def onCreate(savedInstanceState: Bundle) = {
@@ -40,15 +48,18 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner {
         startActivityForResult(SetupActivity.intent, RequestCodes.REQUEST_SETUP)
     } else {
       readyPromise.trySuccess()
-      val p = ProgressDialog.show(this, getString(R.string.loading_key),
-        getString(R.string.please_wait), true, false)
+      currentDialog = Some(ProgressDialog.show(this, getString(R.string.loading_key),
+        getString(R.string.please_wait), true, false))
       km.config flatMap {
         case Left(_) =>
           startActivityForResult(
             SetupActivity.intent, RequestCodes.REQUEST_SETUP)
           Future.failed(KeyError.LoadFailed("need setup"))
         case Right(_) => database
-      } onCompleteMain(_=> if (!isFinishing && p.isShowing) p.dismiss())
+      } onCompleteMain {_=>
+        currentDialog foreach (_.dismiss())
+        currentDialog = None
+      }
     }
   }
 
@@ -153,9 +164,12 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner {
           }
       }
       if (!f.isCompleted) {
-        val p = ProgressDialog.show(this, getString(R.string.loading_database),
-          getString(R.string.please_wait), true, false)
-        f onCompleteMain (_ => if (running && p.isShowing) p.dismiss())
+        currentDialog = Some(ProgressDialog.show(this, getString(R.string.loading_database),
+          getString(R.string.please_wait), true, false))
+        f onCompleteMain {_ =>
+          currentDialog foreach (_.dismiss())
+          currentDialog = None
+        }
       }
       dbFuture = Some(f)
       f

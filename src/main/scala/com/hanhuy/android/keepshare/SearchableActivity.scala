@@ -108,9 +108,9 @@ class SearchableActivity extends AuthorizedActivity {
       return
     }
 
-    val pd = ProgressDialog.show(this,
+    currentDialog = Some(ProgressDialog.show(this,
       getString(R.string.searching),
-      getString(R.string.running_search), true, false)
+      getString(R.string.running_search), true, false))
     val results = ShareActivity.queryDatabase(this, settings, query :: Nil)
     results onSuccessMain { case result =>
       val selected = (for {
@@ -148,8 +148,8 @@ class SearchableActivity extends AuthorizedActivity {
         overridePendingTransition(R.anim.slide_in_right,
           R.anim.slide_out_left)
       }
-      if (!isFinishing && pd.isShowing)
-        pd.dismiss()
+      currentDialog foreach (_.dismiss())
+      currentDialog = None
       if (selected != -1) {
         UiBus.post {
           list.setItemChecked(selected, true)
@@ -158,7 +158,8 @@ class SearchableActivity extends AuthorizedActivity {
       }
     }
     results onFailureMain { case e =>
-    if (!isFinishing && pd.isShowing) pd.dismiss()
+      currentDialog foreach (_.dismiss())
+      currentDialog = None
     }
   }
 

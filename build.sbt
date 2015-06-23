@@ -20,7 +20,7 @@ libraryDependencies ++= Seq(
   "com.rengwuxian.materialedittext" % "library" % "2.0.3" exclude("com.android.support", "appcompat-v7"),
   "com.melnykov" % "floatingactionbutton" % "1.3.0" exclude("com.android.support", "appcompat-v7"),
   "com.github.ozodrukh" % "CircularReveal" % "1.0.6",
-  "com.hanhuy.android" %% "scala-conversions" % "1.1",
+  "com.hanhuy.android" %% "scala-conversions" % "1.2",
   "com.hanhuy" %% "android-common" % "0.7",
   "com.hanhuy.keepassj" % "keepassj" % "2.29.4" exclude("xpp3", "xpp3"),
   "com.google.code.findbugs" % "jsr305" % "2.0.1",

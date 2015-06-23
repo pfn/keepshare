@@ -178,16 +178,16 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
   }
 
   override def onRefresh() = {
-    var p: Option[ProgressDialog] = None
     // because side-effects OP
     var sub: Subscription = null
     sub = DatabaseSaveService.saving.observeOn(mainThread).subscribe(b => {
       if (b) {
-        p = Some(ProgressDialog.show(this,
+        currentDialog = Some(ProgressDialog.show(this,
           getString(R.string.saving_database), getString(R.string.please_wait),
           true, false))
       } else {
-        p foreach { _.dismiss() }
+        currentDialog foreach { _.dismiss() }
+        currentDialog = None
         sub.unsubscribe()
         Database.close()
         database onSuccessMain { case db =>
