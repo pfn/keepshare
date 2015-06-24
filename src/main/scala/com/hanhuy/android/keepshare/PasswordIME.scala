@@ -1,7 +1,6 @@
 package com.hanhuy.android.keepshare
 
 import android.view.ViewGroup
-import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common._
 import com.hanhuy.android.extensions._
 import TypedResource._

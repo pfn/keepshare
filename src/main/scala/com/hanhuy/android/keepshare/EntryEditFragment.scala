@@ -296,7 +296,7 @@ class StandardEditView(c: Context, attrs: AttributeSet) extends StandardFieldVie
   first = a.getBoolean(R.styleable.StandardEditView_first, false)
   // vis password workaround for swiftkey stupidity
   textfield.setInputType(a.getInt(R.styleable.StandardEditView_android_inputType,
-    InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD))
+    InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD | InputType.TYPE_TEXT_VARIATION_NORMAL))
   long = a.getBoolean(R.styleable.StandardEditView_longform, false)
   password = a.getBoolean(R.styleable.StandardEditView_android_password, false)
   icon = a.getResourceId(R.styleable.StandardEditView_android_icon,

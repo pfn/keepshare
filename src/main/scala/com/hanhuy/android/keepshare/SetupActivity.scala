@@ -9,7 +9,6 @@ import android.util.AttributeSet
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
-import AndroidConversions._
 
 import collection.JavaConversions._
 
@@ -25,6 +24,8 @@ import android.provider.{DocumentsContract, OpenableColumns}
 
 import Futures._
 import ManagedResource._
+
+import scala.concurrent.Future
 
 object RequestCodes {
 
@@ -292,7 +293,7 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
           flipper.setDisplayedChild(0)
           data.getStringExtra(EXTRA_STATE) match {
             case STATE_LOAD => KeyManager.clear()
-            case STATE_SAVE => async {
+            case STATE_SAVE => Future {
               keymanager.createKey()
             }
             case _ =>
@@ -336,7 +337,7 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
       progress.onCancel0 {
         canceled = true
       }
-      async {
+      Future {
         var size = -1
         var name = uri.getLastPathSegment
         for {

@@ -10,10 +10,9 @@ import android.support.v7.app.ActionBar
 import android.support.v7.widget.Toolbar
 import android.util.AttributeSet
 import android.view.animation.AccelerateDecelerateInterpolator
-import com.hanhuy.android.common.Futures
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
-import com.hanhuy.android.common.AndroidConversions._
+import com.hanhuy.android.common._
 
 import android.app._
 import android.view._

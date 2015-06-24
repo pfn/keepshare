@@ -1,7 +1,6 @@
 package com.hanhuy.android.keepshare
 
-import com.hanhuy.android.common.{Logcat, ServiceBus, AndroidConversions}
-import AndroidConversions._
+import com.hanhuy.android.common._
 
 import android.app.{NotificationManager, Notification, PendingIntent, Service}
 import android.content.{Context, BroadcastReceiver, Intent}

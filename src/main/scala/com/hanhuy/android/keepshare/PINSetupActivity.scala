@@ -1,7 +1,7 @@
 package com.hanhuy.android.keepshare
 
 import android.support.v7.app.AppCompatActivity
-import com.hanhuy.android.common.AndroidConversions._
+import com.hanhuy.android.common._
 import com.hanhuy.android.extensions._
 
 import android.app.Activity
@@ -59,7 +59,7 @@ class PINSetupActivity extends AppCompatActivity with TypedFindView {
   }
 
   private def validatePin() {
-    clearError()
+    clearError.run()
     pinEntry.setText(pin mkString "")
     if (selectedPin.size > 0) {
       ok.setEnabled(true)

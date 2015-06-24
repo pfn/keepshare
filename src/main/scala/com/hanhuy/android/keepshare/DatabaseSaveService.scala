@@ -1,6 +1,6 @@
 package com.hanhuy.android.keepshare
 
-import com.hanhuy.android.common.AndroidConversions._
+import com.hanhuy.android.common._
 
 import android.app.{Notification, Service}
 import android.content.Intent

@@ -2,7 +2,6 @@ package com.hanhuy.android.keepshare
 
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
-import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common._
 import com.hanhuy.keepassj.{PwDefs, PwEntry}
 
@@ -142,7 +141,7 @@ object ShareActivity {
           a.getContentResolver, Secure.DEFAULT_INPUT_METHOD)
         if (PasswordIME.NAME != ime) {
           settings.set(Settings.IME, ime)
-          UiBus.handler.delayed(500) { imm.showInputMethodPicker() }
+          UiBus.handler.postDelayed(() => imm.showInputMethodPicker(), 500)
         }
       }
     }
@@ -189,7 +188,7 @@ class ShareActivity extends Activity with TypedFindView {
         new BitmapDrawable(getResources, bitmap))
     } else findView(TR.share_screenshot).setVisibility(View.GONE)
 
-    async {
+    Future {
       val uri = new URI(url)
       val uris = ShareActivity.goUp(uri) map (_.toString)
       val subhosts = ShareActivity.subhosts(uri.getHost)

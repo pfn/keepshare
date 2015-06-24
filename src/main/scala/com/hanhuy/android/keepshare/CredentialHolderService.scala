@@ -1,6 +1,6 @@
 package com.hanhuy.android.keepshare
 
-import com.hanhuy.android.common.AndroidConversions._
+import com.hanhuy.android.common._
 
 import android.app.{PendingIntent, Service}
 import android.content._
@@ -25,8 +25,6 @@ object CredentialHolderService {
   */
 class CredentialHolderService extends Service with EventBus.RefOwner {
   import CredentialHolderService._
-  val _implicit: RichContext = this
-  import _implicit._
   def onBind(i: Intent) = null
   val handler = new Handler
 
@@ -46,7 +44,7 @@ class CredentialHolderService extends Service with EventBus.RefOwner {
   ServiceBus += {
     case KeyboardExit =>
       handler.removeCallbacks(finishRunnable)
-      finishRunnable()
+      finishRunnable.run()
   }
 
   override def onCreate() {
@@ -99,7 +97,7 @@ class CredentialHolderService extends Service with EventBus.RefOwner {
             getContentResolver, Secure.DEFAULT_INPUT_METHOD)
           if (PasswordIME.NAME != ime) {
             settings.set(Settings.IME, ime)
-            systemService[InputMethodManager].showInputMethodPicker()
+            c.systemService[InputMethodManager].showInputMethodPicker()
           }
       }
     }

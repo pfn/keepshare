@@ -8,7 +8,6 @@ import android.content._
 import android.os.{Build, Handler, HandlerThread, Bundle}
 import android.support.v4.app.NotificationCompat
 import android.view.accessibility.{AccessibilityNodeInfo, AccessibilityEvent}
-import com.hanhuy.android.common.AndroidConversions._
 import com.hanhuy.android.common._
 import com.hanhuy.android.conversions._
 
@@ -110,8 +109,6 @@ object AccessibilityService {
 
 @TargetApi(18)
 class AccessibilityService extends Accessibility with EventBus.RefOwner {
-  val _implicits: RichContext = this
-  import _implicits._
   import AccessibilityService._
   val log = Logcat("AccessibilityService")
   private var lastWindowId: Option[Int] = None
@@ -215,14 +212,14 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
                         new Intent(ACTION_SEARCH).putExtras(extras),
                           PendingIntent.FLAG_UPDATE_CURRENT))
 
-                    systemService[NotificationManager].notify(
+                    this.systemService[NotificationManager].notify(
                       Notifications.NOTIF_FOUND, builder.build())
                     lastSearchURI = searchURI
                   }
                 }
               } else {
                 if (!lastWindowId.contains(windowId)) {
-                  systemService[NotificationManager].cancel(Notifications.NOTIF_FOUND)
+                  this.systemService[NotificationManager].cancel(Notifications.NOTIF_FOUND)
                 }
               }
             }
@@ -246,7 +243,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
     log.d("Launching accessibility service")
     registerReceiver(receiver, Seq(ACTION_CANCEL, ACTION_SEARCH,
       Intent.ACTION_SCREEN_OFF, Intent.ACTION_USER_PRESENT))
-    filling = !systemService[KeyguardManager].isKeyguardLocked
+    filling = !this.systemService[KeyguardManager].isKeyguardLocked
     AccessibilityService._running = true
   }
 
@@ -256,14 +253,14 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
     log.d("Exiting accessibility service")
     thread.quit()
     unregisterReceiver(receiver)
-    systemService[NotificationManager].cancel(Notifications.NOTIF_FOUND)
+    this.systemService[NotificationManager].cancel(Notifications.NOTIF_FOUND)
   }
 
   val receiver: BroadcastReceiver = (c: Context, intent: Intent) =>
     intent.getAction match {
       case Intent.ACTION_SCREEN_OFF =>
         filling = false
-        systemService[NotificationManager].cancel(Notifications.NOTIF_FOUND)
+        this.systemService[NotificationManager].cancel(Notifications.NOTIF_FOUND)
       case Intent.ACTION_USER_PRESENT => filling = true
       case ACTION_CANCEL =>
         lastCanceledSearchURI = lastSearchURI
@@ -344,7 +341,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
       }
     } else {
       Future.main {
-        systemService[ClipboardManager].setPrimaryClip(
+        this.systemService[ClipboardManager].setPrimaryClip(
           ClipData.newPlainText("", data))
       } ~ Future.main {
         node.performAction(AccessibilityNodeInfo.ACTION_PASTE)
@@ -353,7 +350,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
 
     def epilogue = Future.main {
         node.performAction(AccessibilityNodeInfo.ACTION_CLEAR_SELECTION)
-        systemService[ClipboardManager].setPrimaryClip(
+        this.systemService[ClipboardManager].setPrimaryClip(
           ClipData.newPlainText("", ""))
       } ~ Future.main {
         node.performAction(AccessibilityNodeInfo.ACTION_CLEAR_FOCUS)

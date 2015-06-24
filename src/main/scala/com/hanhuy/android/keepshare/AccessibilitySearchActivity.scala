@@ -12,7 +12,7 @@ import android.widget.{AdapterView, BaseAdapter}
 import com.hanhuy.android.common.{Futures, ServiceBus, UiBus}
 
 import com.hanhuy.android.extensions._
-import com.hanhuy.android.common.AndroidConversions._
+import com.hanhuy.android.common._
 
 import language.postfixOps
 
@@ -81,7 +81,7 @@ class AccessibilitySearchActivity extends Activity with TypedFindView {
       override def onSuggestionSelect(i: Int) = onSuggestionClick(i)
     })
 
-    async {
+    Future {
       val uri = new URI(url)
       val uris = ShareActivity.goUp(uri) map (_.toString)
       val subhosts = ShareActivity.subhosts(uri.getHost)

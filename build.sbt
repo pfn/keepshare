@@ -21,7 +21,7 @@ libraryDependencies ++= Seq(
   "com.melnykov" % "floatingactionbutton" % "1.3.0" exclude("com.android.support", "appcompat-v7"),
   "com.github.ozodrukh" % "CircularReveal" % "1.0.6",
   "com.hanhuy.android" %% "scala-conversions" % "1.2",
-  "com.hanhuy" %% "android-common" % "0.7",
+  "com.hanhuy.android" %% "scala-common" % "1.0",
   "com.hanhuy.keepassj" % "keepassj" % "2.29.4" exclude("xpp3", "xpp3"),
   "com.google.code.findbugs" % "jsr305" % "2.0.1",
   "com.google.code.gson" % "gson" % "2.2.4",
@@ -56,6 +56,7 @@ run in lite <<= run in (lite,Android)
 
 extraResDirectories in (lite,Android) += baseDirectory.value / "src" / "lite" / "res"
 
+/*
 onLoad in Global := {
   { (state: State) =>
     val nav = new ProjectNavigation(state)
@@ -64,3 +65,4 @@ onLoad in Global := {
     else state
   } compose (onLoad in Global).value
 }
+*/

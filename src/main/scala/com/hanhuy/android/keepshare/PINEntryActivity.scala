@@ -3,8 +3,7 @@ package com.hanhuy.android.keepshare
 import android.support.v7.app.AppCompatActivity
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
-import com.hanhuy.android.common.{Futures, Logcat, UiBus, AndroidConversions}
-import AndroidConversions._
+import com.hanhuy.android.common._
 
 import android.app.{Dialog, ProgressDialog, AlertDialog, Activity}
 import android.os.{Vibrator, Bundle}
@@ -97,7 +96,7 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView {
       }
     }
     val onClick = { view: View =>
-      clearError()
+      clearError.run()
       view.getId match {
         case R.id.pin_9    => pin += "9"
           validatePin()
