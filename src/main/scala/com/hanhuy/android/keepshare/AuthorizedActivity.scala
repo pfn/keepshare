@@ -25,7 +25,7 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner {
   lazy val km = new KeyManager(this, settings)
   private var running = false
 
-  protected var currentDialog: Option[Dialog] = Option.empty
+  private[this] var currentDialog: Option[Dialog] = Option.empty
   private var dbFuture = Option.empty[Future[PwDatabase]]
   private val readyPromise = Promise[Unit]()
 

@@ -5,7 +5,7 @@ import com.hanhuy.android.common._
 import com.hanhuy.android.extensions._
 import TypedResource._
 
-import android.app.{ProgressDialog, SearchManager, Activity}
+import android.app.{Dialog, ProgressDialog, SearchManager, Activity}
 import android.os.Bundle
 import android.content._
 import android.widget._
@@ -25,11 +25,18 @@ import scala.util.Try
 class SearchableActivity extends AuthorizedActivity {
   val log = Logcat("SearchableActivity")
 
+  private var currentDialog = Option.empty[Dialog]
   lazy val empty = findViewById(android.R.id.empty).asInstanceOf[TextView]
   lazy val list = findViewById(android.R.id.list).asInstanceOf[ListView]
 
   private var searchView = Option.empty[SearchView]
   private var queryInput = Option.empty[String]
+
+  override def onDestroy() = {
+    currentDialog foreach (_.dismiss())
+    currentDialog = None
+    super.onDestroy()
+  }
 
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)

@@ -64,9 +64,17 @@ object BrowseActivity {
 class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRefreshLayout.OnRefreshListener {
   lazy val list = findView(TR.list)
   lazy val refresher = findView(TR.refresher)
+  private var currentDialog = Option.empty[Dialog]
   private var searchView = Option.empty[SearchView]
   private var isEditing = false
   private var isCreating = false
+
+  override def onDestroy() = {
+    currentDialog foreach (_.dismiss())
+    currentDialog = None
+    super.onDestroy()
+  }
+
   lazy val editBar = getLayoutInflater.inflate(
     TR.layout.entry_edit_action_bar, null, false)
 
