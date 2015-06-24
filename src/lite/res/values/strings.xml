@@ -3,4 +3,5 @@
     <string name="search_suggest_authority">com.hanhuy.android.keepshare.lite</string>
     <string name="search_suggest_intent_data">content://com.hanhuy.android.keepshare.lite/entry</string>
     <string name="appname">KeepShare Lite</string>
+    <string name="accessibility_service_label">KeepShare Lite Form Filler</string>
 </resources>
