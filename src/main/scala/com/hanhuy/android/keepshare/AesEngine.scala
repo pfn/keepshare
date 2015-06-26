@@ -25,8 +25,10 @@ class AesEngine extends ICipherEngine {
     cipher
   }
 
+//  override def EncryptStream(sPlainText: OutputStream, pbKey: Array[Byte], pbIV: Array[Byte]) =
+//    new CipherOutputStream(sPlainText, makeCipher(true, pbKey, pbIV))
   override def EncryptStream(sPlainText: OutputStream, pbKey: Array[Byte], pbIV: Array[Byte]) =
-    new CipherOutputStream(sPlainText, makeCipher(true, pbKey, pbIV))
+    new StandardAesEngine().EncryptStream(sPlainText, pbKey, pbIV)
   override def DecryptStream(sEncrypted: InputStream, pbKey: Array[Byte], pbIV: Array[Byte]) =
     new AesInputStream(sEncrypted,pbKey, pbIV)
 }
