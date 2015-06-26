@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_suggest_authority">com.hanhuy.android.keepshare.test</string>
+    <string name="search_suggest_intent_data">content://com.hanhuy.android.keepshare.test/entry</string>
+    <string name="appname">KeepShare Test</string>
+    <string name="accessibility_service_label">KeepShare Test Form Filler</string>
+</resources>

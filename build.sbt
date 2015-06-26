@@ -57,6 +57,35 @@ run in lite <<= run in (lite,Android)
 
 extraResDirectories in (lite,Android) += baseDirectory.value / "src" / "lite" / "res"
 
+extraResDirectories in (test1,Android) += baseDirectory.value / "src" / "androidTest" / "res"
+
+debugIncludesTests in (test1,Android) := true
+
+apkbuildExcludes in (test1,Android) += "LICENSE.txt"
+
+packageName in (test1,Android) := "com.hanhuy.android.keepshare.test"
+
+mergeManifests in (test1, Android) := false
+
+proguardOptions in (test1,Android) ++= "-dontwarn **" ::
+  "-keep class android.support.test.** { *; }" ::
+  "-keepclasseswithmembers class * { @org.junit.Test <methods>; }" ::
+  "-keepclassmembers class scala.reflect.ScalaSignature { java.lang.String bytes(); }" ::
+  Nil
+
+instrumentTestRunner in (test1,Android) :=
+  "android.support.test.runner.AndroidJUnitRunner"
+
+proguardCache in (test1,Android) += "android.support"
+
+libraryDependencies in test1 ++=
+  "com.android.support.test" % "runner" % "0.3" ::
+    "com.android.support.test.espresso" % "espresso-core" % "2.2" ::
+    Nil
+
+watchSources in test1 <++= Def.task {
+  ((projectLayout in Android).value.testSources ***) get
+}
 /*
 onLoad in Global := {
   { (state: State) =>

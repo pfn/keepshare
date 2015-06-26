@@ -7,4 +7,6 @@ object ThisBuild extends Build {
     lazy val pro = project.in(file(".")).settings(androidBuild)
 
     lazy val lite = flavorOf(pro, "lite")
+
+    lazy val test1 = flavorOf(pro, "test1")
 }

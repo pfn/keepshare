@@ -32,13 +32,15 @@ class AesEngine extends ICipherEngine {
 }
 
 class AesInputStream(in: InputStream, key: Array[Byte], iv: Array[Byte]) extends InputStream {
-  val bufsize = 32768
+  val bufsize = 1024 * 1024
   val readbuffer = Array.ofDim[Byte](bufsize)
+  val padding = new PKCS7Padding
   var pos = 0
   var count = 0
   val currentIV = iv.clone()
   val keyschedule = Array.ofDim[Int](60)
-  var eof = false
+
+  private[this] var eof = false
   NdkAESEngine.scheduleKey(key, keyschedule)
   override def read() = {
     val b = Array.ofDim[Byte](1)
@@ -50,21 +52,38 @@ class AesInputStream(in: InputStream, key: Array[Byte], iv: Array[Byte]) extends
 
   override def read(buffer: Array[Byte], byteOffset: Int, byteCount: Int) = {
     if (eof && count == 0) -1 else if (byteCount == 0) byteCount else {
-      if (byteCount > bufsize) throw new IllegalArgumentException("Unsupported count: " + byteCount)
       System.arraycopy(readbuffer, pos, readbuffer, 0, count)
       pos = 0
 
-      val read = in.read(readbuffer, count, bufsize - count)
-      System.arraycopy(readbuffer, count + read - 16, currentIV, 0, 16)
-      if (!NdkAESEngine.decrypt_cbc(readbuffer, count, readbuffer, count, read, keyschedule, key.length * 8, currentIV)) {
-        throw new IllegalArgumentException("Bad input buffer size: " + count)
+      val toRead = bufsize - count
+      val willRead = toRead - (toRead % 16)
+      if (willRead > 0) {
+        val r = in.read(readbuffer, count, willRead)
+        if (r != -1) {
+          val lastIV = currentIV.clone()
+          System.arraycopy(readbuffer, count + r - 16, currentIV, 0, 16)
+          android.util.Log.v("AesEngine", "Reading and processing bytes: " + r)
+          if (!NdkAESEngine.decrypt_cbc(readbuffer, count, readbuffer, count, r, keyschedule, key.length * 8, lastIV)) {
+            throw new IllegalArgumentException("Bad input buffer size: " + r)
+          }
+          count = count + r
+        }
+        if (r < willRead && !eof) {
+          // TODO remove padding from final block
+          // assume eof
+          val lastBlock = Array.ofDim[Byte](16)
+          System.arraycopy(readbuffer, count - 16, lastBlock, 0, 16)
+          try {
+            count -= padding.padCount(lastBlock)
+          } catch {
+            case e: Exception =>
+              android.util.Log.v("AesEngine", KeyManager.hex(lastBlock))
+              android.util.Log.v("AesEngine", e.getMessage)
+          }
+          eof = true
+        }
       }
-      count = count + read
-      if (read < bufsize - count) {
-        // assume eof
-        eof = true
-      }
-      val c = math.min(count, byteCount)
+      val c = math.min(count, math.min(bufsize, byteCount))
       System.arraycopy(readbuffer, pos, buffer, byteOffset, c)
 
       count = count - c
