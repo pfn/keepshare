@@ -22,7 +22,7 @@ libraryDependencies ++= Seq(
   "com.github.ozodrukh" % "CircularReveal" % "1.0.6",
   "com.hanhuy.android" %% "scala-conversions" % "1.2",
   "com.hanhuy.android" %% "scala-common" % "1.0",
-  "com.hanhuy.keepassj" % "keepassj" % "2.29.4" exclude("xpp3", "xpp3"),
+  "com.hanhuy.keepassj" % "keepassj" % "2.29.5" exclude("xpp3", "xpp3"),
   "com.google.code.findbugs" % "jsr305" % "2.0.1",
   "com.google.code.gson" % "gson" % "2.2.4",
   "com.android.support" % "design" % "22.2.0",
