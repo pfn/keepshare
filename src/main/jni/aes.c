@@ -848,30 +848,21 @@ JNIEXPORT void JNICALL Java_com_hanhuy_android_keepshare_NdkAESEngine_decrypt
 
 JNIEXPORT jboolean JNICALL Java_com_hanhuy_android_keepshare_NdkAESEngine_decrypt_1cbc
   (JNIEnv * env, jclass cls, jbyteArray in, jint inoff, jbyteArray out, jint outoff, jint len, jintArray keysched, jint keysize, jbyteArray iv) {
-//  BYTE ivdata[16];
   BYTE *ivdata;
-//  BYTE *databuffer = (BYTE *)malloc(len);
   BYTE *databuffer;
   BYTE *outbuffer;
-  //WORD schedule[60];
   WORD *schedule;
 
-//  (*env)->GetByteArrayRegion(env, iv, 0, 16, ivdata);
   ivdata = (*env)->GetByteArrayElements(env, iv, 0);
-//  (*env)->GetByteArrayRegion(env, in, inoff, len, databuffer);
   databuffer = (*env)->GetByteArrayElements(env, in, 0);
   outbuffer = (*env)->GetByteArrayElements(env, out, 0);
-//  (*env)->GetIntArrayRegion(env, keysched, 0, 60, schedule);
   schedule = (*env)->GetIntArrayElements(env, keysched, 0);
-//  jboolean result = aes_decrypt_cbc(databuffer, len, databuffer, schedule, keysize, ivdata);
   jboolean result = aes_decrypt_cbc(databuffer + inoff, len, outbuffer + outoff, schedule, keysize, ivdata);
-//  (*env)->SetByteArrayRegion(env, out, outoff, len, databuffer);
 
   (*env)->ReleaseIntArrayElements(env, keysched, schedule, 0);
   (*env)->ReleaseByteArrayElements(env, iv, ivdata, 0);
   (*env)->ReleaseByteArrayElements(env, in, databuffer, 0);
   (*env)->ReleaseByteArrayElements(env, out, outbuffer, 0);
-//  free(databuffer);
   return result;
 }
 

@@ -84,7 +84,8 @@ libraryDependencies in test1 ++=
     Nil
 
 watchSources in test1 <++= Def.task {
-  ((projectLayout in Android).value.testSources ***) get
+  val layout = (projectLayout in Android).value
+  (layout.testSources ***) get
 }
 /*
 onLoad in Global := {

@@ -64,7 +64,6 @@ class AesInputStream(in: InputStream, key: Array[Byte], iv: Array[Byte]) extends
         if (r != -1) {
           val lastIV = currentIV.clone()
           System.arraycopy(readbuffer, count + r - 16, currentIV, 0, 16)
-          android.util.Log.v("AesEngine", "Reading and processing bytes: " + r)
           if (!NdkAESEngine.decrypt_cbc(readbuffer, count, readbuffer, count, r, keyschedule, key.length * 8, lastIV)) {
             throw new IllegalArgumentException("Bad input buffer size: " + r)
           }

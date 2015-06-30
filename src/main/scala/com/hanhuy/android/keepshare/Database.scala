@@ -2,6 +2,7 @@ package com.hanhuy.android.keepshare
 
 import java.io.{FileInputStream, FileOutputStream}
 import java.nio.ByteBuffer
+import java.security.MessageDigest
 
 import android.annotation.TargetApi
 import android.content.Intent
@@ -26,6 +27,9 @@ object Database {
 
   CipherPool.getGlobalPool.Clear()
   CipherPool.getGlobalPool.AddCipher(new AesEngine)
+  Digests.setInstance(new Digests.DigestProvider() {
+    def sha256(): MessageDigest = new NdkSha256()
+  })
 
   def rootGroup = database map (_.getRootGroup)
   def rootGroupId = rootGroup map (_.getUuid)

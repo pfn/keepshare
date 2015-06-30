@@ -80,14 +80,10 @@ class NdkAesTest {
     Stream.continually(scala.util.Random.nextInt(16384) + 16384) map (in.read(buf, 0, _)) takeWhile (_ != -1) zip Stream.from(0) foreach { case (read, index) =>
       val read2 = plaintext.read(plainbuf, 0, read)
       sha1.update(plainbuf, 0, read)
-      assertEquals("Block index: " + index, read, read2)
       val cipher1 = Array.ofDim[Byte](read)
       val plain1 = Array.ofDim[Byte](read)
       System.arraycopy(buf, 0, cipher1, 0, read)
       System.arraycopy(plainbuf, 0, plain1, 0, read)
-      assertArrayEquals("Block index: " + index, cipher1, plain1)
-      assertArrayEquals("Block index: " + index, buf, plainbuf)
-      android.util.Log.v("AesEngine", s"Block index: $index, read $read")
     }
     val digest = sha1.digest()
 
