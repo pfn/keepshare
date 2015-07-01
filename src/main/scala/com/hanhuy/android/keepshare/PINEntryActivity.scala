@@ -120,7 +120,8 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView {
           validatePin()
         case R.id.pin_ok   =>
           ok.setEnabled(false)
-          verifyPin()
+          if (pin.nonEmpty)
+            verifyPin()
         case R.id.pin_back =>
           pin = pin.dropRight(1)
           validatePin()
