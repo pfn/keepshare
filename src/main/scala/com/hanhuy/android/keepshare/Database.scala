@@ -2,9 +2,6 @@ package com.hanhuy.android.keepshare
 
 import java.io.{FileInputStream, FileOutputStream}
 import java.nio.ByteBuffer
-import java.security.MessageDigest
-import javax.crypto.Cipher
-import javax.crypto.spec.SecretKeySpec
 
 import android.annotation.TargetApi
 import android.content.Intent
@@ -12,16 +9,16 @@ import android.net.Uri
 import android.os.SystemClock
 import android.provider.DocumentsContract
 import com.hanhuy.android.common.{ManagedResource, Futures, ServiceBus}
-import com.hanhuy.keepassj.AesEngines.{KeyTransformer, AesEngineFactory}
+import com.hanhuy.keepassj.AesEngines.KeyTransformer
 import com.hanhuy.keepassj._
 import com.hanhuy.keepassj.spr.{SprEngine, SprContext, SprCompileFlags}
-import org.bouncycastle.crypto.params.KeyParameter
-import org.bouncycastle.crypto.{CipherParameters, BlockCipher}
 
 import scala.concurrent.{Promise, Future}
 
 import Futures._
 import ManagedResource._
+
+import scala.util.Try
 
 /**
  * @author pfnguyen
@@ -30,22 +27,7 @@ object Database {
   lazy val writeSupported =
     Application.instance.getPackageName == "com.hanhuy.android.keepshare"
 
-  CipherPool.getGlobalPool.Clear()
-  CipherPool.getGlobalPool.AddCipher(new AesEngine)
-  Digests.setInstance(new Digests.DigestProvider() {
-    def sha256(): MessageDigest = new NdkSha256()
-  })
-
-  AesEngines.setAesEngineFactory(
-    new AesEngineFactory {
-      override def createAesEngine() = new NdkAESEngine
-  })
-  AesEngines.setKeyTransformer(new KeyTransformer {
-    override def transformKey(key: Array[Byte], seed: Array[Byte], rounds: Long) = {
-      NdkAESEngine.transform_key(key, seed, rounds)
-      true
-    }
-  })
+  NativeKeyTransformer.init()
 
   def rootGroup = database map (_.getRootGroup)
   def rootGroupId = rootGroup map (_.getUuid)
@@ -346,4 +328,13 @@ object Database {
     R.drawable.i67_certificate,
     R.drawable.i68_phone
   )
+}
+
+object NativeKeyTransformer extends KeyTransformer {
+  def init(): Unit = {
+    if (Try(System.loadLibrary("aeskeytrans")).isSuccess)
+      AesEngines.setKeyTransformer(this)
+  }
+  @native
+  def transformKey(key: Array[Byte], seed: Array[Byte], rounds: Long): Boolean
 }
