@@ -30,6 +30,7 @@ public class NdkAESEngine implements BlockCipher {
     }
 
     public static native void scheduleKey(byte[] key, int[] scheduleOut);
+    public static native boolean transform_key(byte[] key, byte[] seed, long rounds);
     private static native void encrypt(byte[] in, int inoff, byte[] out, int outoff, int[] keyschedule, int keysize);
     private static native void decrypt(byte[] in, int inoff, byte[] out, int outoff, int[] keyschedule, int keysize);
 

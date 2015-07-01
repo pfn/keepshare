@@ -12,7 +12,7 @@ import android.net.Uri
 import android.os.SystemClock
 import android.provider.DocumentsContract
 import com.hanhuy.android.common.{ManagedResource, Futures, ServiceBus}
-import com.hanhuy.keepassj.AesEngines.AesEngineFactory
+import com.hanhuy.keepassj.AesEngines.{KeyTransformer, AesEngineFactory}
 import com.hanhuy.keepassj._
 import com.hanhuy.keepassj.spr.{SprEngine, SprContext, SprCompileFlags}
 import org.bouncycastle.crypto.params.KeyParameter
@@ -39,6 +39,12 @@ object Database {
   AesEngines.setAesEngineFactory(
     new AesEngineFactory {
       override def createAesEngine() = new NdkAESEngine
+  })
+  AesEngines.setKeyTransformer(new KeyTransformer {
+    override def transformKey(key: Array[Byte], seed: Array[Byte], rounds: Long) = {
+      NdkAESEngine.transform_key(key, seed, rounds)
+      true
+    }
   })
 
   def rootGroup = database map (_.getRootGroup)

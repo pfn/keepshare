@@ -881,3 +881,24 @@ JNIEXPORT jboolean JNICALL Java_com_hanhuy_android_keepshare_NdkAESEngine_encryp
   free(databuffer);
   return result;
 }
+
+JNIEXPORT jboolean JNICALL Java_com_hanhuy_android_keepshare_NdkAESEngine_transform_1key
+  (JNIEnv *env, jclass cls, jbyteArray key, jbyteArray seed, jlong rounds) {
+  jint len = (*env)->GetArrayLength(env, key);
+  jint seedlen = (*env)->GetArrayLength(env, seed);
+  WORD schedule[60];
+  BYTE seeddata[32];
+  BYTE keydata[32];
+  (*env)->GetByteArrayRegion(env, key, 0, 32, keydata);
+  (*env)->GetByteArrayRegion(env, seed, 0, 32, seeddata);
+  int i = 0;
+
+  aes_key_setup(seeddata, schedule, seedlen * 8);
+  for (i = 0; i < rounds; i++)
+  {
+      aes_encrypt(keydata, keydata, schedule, seedlen * 8);
+      aes_encrypt(keydata + 16, keydata + 16, schedule, seedlen * 8);
+  }
+
+  (*env)->SetByteArrayRegion(env, key, 0, 32, keydata);
+}
