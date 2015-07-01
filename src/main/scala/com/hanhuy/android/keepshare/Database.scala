@@ -38,26 +38,7 @@ object Database {
 
   AesEngines.setAesEngineFactory(
     new AesEngineFactory {
-    override def createAesEngine() = new BlockCipher {
-      val cipher = Cipher.getInstance("AES/ECB/NoPadding")
-      override def init(forEncryption: Boolean, params: CipherParameters) = {
-        params match {
-          case kp: KeyParameter =>
-            val key = new SecretKeySpec(kp.getKey, "AES")
-            cipher.init(if (forEncryption) Cipher.ENCRYPT_MODE else Cipher.DECRYPT_MODE, key)
-        }
-      }
-
-      override def getAlgorithmName = "AES"
-
-      override def getBlockSize = 16
-
-      override def processBlock(in: Array[Byte], inOff: Int, out: Array[Byte], outOff: Int) = {
-        cipher.update(in, inOff, in.length - inOff, out, outOff)
-      }
-
-      override def reset() = ()
-    }
+      override def createAesEngine() = new NdkAESEngine
   })
 
   def rootGroup = database map (_.getRootGroup)
