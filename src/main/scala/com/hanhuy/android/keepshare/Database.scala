@@ -3,6 +3,8 @@ package com.hanhuy.android.keepshare
 import java.io.{FileInputStream, FileOutputStream}
 import java.nio.ByteBuffer
 import java.security.MessageDigest
+import javax.crypto.Cipher
+import javax.crypto.spec.SecretKeySpec
 
 import android.annotation.TargetApi
 import android.content.Intent
@@ -10,8 +12,11 @@ import android.net.Uri
 import android.os.SystemClock
 import android.provider.DocumentsContract
 import com.hanhuy.android.common.{ManagedResource, Futures, ServiceBus}
+import com.hanhuy.keepassj.AesEngines.AesEngineFactory
 import com.hanhuy.keepassj._
 import com.hanhuy.keepassj.spr.{SprEngine, SprContext, SprCompileFlags}
+import org.bouncycastle.crypto.params.KeyParameter
+import org.bouncycastle.crypto.{CipherParameters, BlockCipher}
 
 import scala.concurrent.{Promise, Future}
 
@@ -29,6 +34,30 @@ object Database {
   CipherPool.getGlobalPool.AddCipher(new AesEngine)
   Digests.setInstance(new Digests.DigestProvider() {
     def sha256(): MessageDigest = new NdkSha256()
+  })
+
+  AesEngines.setAesEngineFactory(
+    new AesEngineFactory {
+    override def createAesEngine() = new BlockCipher {
+      val cipher = Cipher.getInstance("AES/ECB/NoPadding")
+      override def init(forEncryption: Boolean, params: CipherParameters) = {
+        params match {
+          case kp: KeyParameter =>
+            val key = new SecretKeySpec(kp.getKey, "AES")
+            cipher.init(if (forEncryption) Cipher.ENCRYPT_MODE else Cipher.DECRYPT_MODE, key)
+        }
+      }
+
+      override def getAlgorithmName = "AES"
+
+      override def getBlockSize = 16
+
+      override def processBlock(in: Array[Byte], inOff: Int, out: Array[Byte], outOff: Int) = {
+        cipher.update(in, inOff, in.length - inOff, out, outOff)
+      }
+
+      override def reset() = ()
+    }
   })
 
   def rootGroup = database map (_.getRootGroup)
