@@ -2,6 +2,13 @@ import android.Keys._
 
 name := "keepshare"
 
+versionName in Android := {
+  import com.typesafe.sbt.SbtGit.GitKeys.gitReader
+  gitReader.value.withGit(_.describedVersion)
+}
+
+versionCode in Android := Some(29)
+
 resolvers ++= Resolver.sonatypeRepo("snapshots") ::
   ("circular reveal" at "https://jitpack.io") :: Nil
 
