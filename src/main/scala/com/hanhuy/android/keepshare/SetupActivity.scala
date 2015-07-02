@@ -49,12 +49,11 @@ object SetupActivity {
     intent
   }
 }
-class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.RefOwner {
+class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.RefOwner with DialogManager {
   val log = Logcat("SetupActivity")
   import KeyManager._
   import RequestCodes._
 
-  private var currentDialog = Option.empty[Dialog]
   lazy val fragment = getFragmentManager.findFragmentById(
     R.id.setup_fragment).asInstanceOf[SetupFragment]
   lazy val flipper = findView(TR.flipper)
@@ -322,8 +321,7 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
   }
 
   override def onDestroy() = {
-    currentDialog foreach (_.dismiss())
-    currentDialog = None
+    dismissAllDialogs()
     super.onDestroy()
   }
 
@@ -332,7 +330,6 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
     if (uri.getScheme == "content") {
       val progress = ProgressDialog.show(this,
         "Downloading", "Please Wait", false, true)
-      currentDialog = Some(progress)
       var canceled = false
       progress.onCancel0 {
         canceled = true
@@ -406,8 +403,7 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
             }
         }
         UiBus.post {
-          currentDialog foreach (_.dismiss())
-          currentDialog = None
+          dismissDialog(progress)
         }
       }
     } else {

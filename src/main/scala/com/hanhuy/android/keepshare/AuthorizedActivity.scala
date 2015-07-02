@@ -19,19 +19,17 @@ import scala.util.Try
 /**
  * @author pfnguyen
  */
-class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner {
+class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner with DialogManager {
   private val log = Logcat("AuthorizedActivity")
   lazy val settings = Settings(this)
   lazy val km = new KeyManager(this, settings)
   private var running = false
 
-  private[this] var currentDialog: Option[Dialog] = Option.empty
   private var dbFuture = Option.empty[Future[PwDatabase]]
   private val readyPromise = Promise[Unit]()
 
   override def onDestroy() = {
-    currentDialog foreach (_.dismiss())
-    currentDialog = None
+    dismissAllDialogs()
     super.onDestroy()
   }
 
@@ -48,7 +46,7 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner {
         startActivityForResult(SetupActivity.intent, RequestCodes.REQUEST_SETUP)
     } else {
       readyPromise.trySuccess()
-      currentDialog = Some(ProgressDialog.show(this, getString(R.string.loading_key),
+      val d = showingDialog(ProgressDialog.show(this, getString(R.string.loading_key),
         getString(R.string.please_wait), true, false))
       km.config flatMap {
         case Left(_) =>
@@ -57,8 +55,7 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner {
           Future.failed(KeyError.LoadFailed("need setup"))
         case Right(_) => database
       } onCompleteMain {_=>
-        currentDialog foreach (_.dismiss())
-        currentDialog = None
+        dismissDialog(d)
       }
     }
   }
@@ -164,11 +161,10 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner {
           }
       }
       if (!f.isCompleted) {
-        currentDialog = Some(ProgressDialog.show(this, getString(R.string.loading_database),
+        val d = showingDialog(ProgressDialog.show(this, getString(R.string.loading_database),
           getString(R.string.please_wait), true, false))
         f onCompleteMain {_ =>
-          currentDialog foreach (_.dismiss())
-          currentDialog = None
+          dismissDialog(d)
         }
       }
       dbFuture = Some(f)

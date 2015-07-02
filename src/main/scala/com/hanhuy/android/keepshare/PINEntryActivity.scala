@@ -20,8 +20,7 @@ object PINEntryActivity {
       RequestCodes.REQUEST_PIN)
   }
 }
-class PINEntryActivity extends AppCompatActivity with TypedFindView {
-  private var currentDialog = Option.empty[Dialog]
+class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogManager {
   private val log = Logcat("PINEntryActivity")
   lazy val prompt = findView(TR.pin_prompt)
   lazy val pinEntry = findView(TR.pin)
@@ -34,8 +33,7 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView {
   private var pin = ""
 
   override def onDestroy() = {
-    currentDialog foreach (_.dismiss())
-    currentDialog = None
+    dismissAllDialogs()
     super.onDestroy()
   }
 
@@ -87,11 +85,10 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView {
       }
 
       if (!cloudKey.isCompleted) {
-        currentDialog = Some(ProgressDialog.show(this, getString(R.string.loading_key),
+        val d = showingDialog(ProgressDialog.show(this, getString(R.string.loading_key),
           getString(R.string.fetching_key), true, false))
         cloudKey onSuccessMain { case _ =>
-          currentDialog foreach (_.dismiss())
-          currentDialog = None
+          dismissDialog(d)
         }
       }
     }

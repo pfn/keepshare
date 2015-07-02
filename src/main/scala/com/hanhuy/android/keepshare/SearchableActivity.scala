@@ -25,7 +25,6 @@ import scala.util.Try
 class SearchableActivity extends AuthorizedActivity {
   val log = Logcat("SearchableActivity")
 
-  private var currentDialog = Option.empty[Dialog]
   lazy val empty = findViewById(android.R.id.empty).asInstanceOf[TextView]
   lazy val list = findViewById(android.R.id.list).asInstanceOf[ListView]
 
@@ -33,8 +32,6 @@ class SearchableActivity extends AuthorizedActivity {
   private var queryInput = Option.empty[String]
 
   override def onDestroy() = {
-    currentDialog foreach (_.dismiss())
-    currentDialog = None
     super.onDestroy()
   }
 
@@ -114,7 +111,7 @@ class SearchableActivity extends AuthorizedActivity {
       return
     }
 
-    currentDialog = Some(ProgressDialog.show(this,
+    val d = showingDialog(ProgressDialog.show(this,
       getString(R.string.searching),
       getString(R.string.running_search), true, false))
     val results = ShareActivity.queryDatabase(this, settings, query :: Nil)
@@ -154,8 +151,7 @@ class SearchableActivity extends AuthorizedActivity {
         overridePendingTransition(R.anim.slide_in_right,
           R.anim.slide_out_left)
       }
-      currentDialog foreach (_.dismiss())
-      currentDialog = None
+      dismissDialog(d)
       if (selected != -1) {
         UiBus.post {
           list.setItemChecked(selected, true)
@@ -164,8 +160,7 @@ class SearchableActivity extends AuthorizedActivity {
       }
     }
     results onFailureMain { case e =>
-      currentDialog foreach (_.dismiss())
-      currentDialog = None
+      dismissDialog(d)
     }
   }
 

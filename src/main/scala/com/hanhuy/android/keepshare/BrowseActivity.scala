@@ -64,14 +64,11 @@ object BrowseActivity {
 class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRefreshLayout.OnRefreshListener {
   lazy val list = findView(TR.list)
   lazy val refresher = findView(TR.refresher)
-  private var currentDialog = Option.empty[Dialog]
   private var searchView = Option.empty[SearchView]
   private var isEditing = false
   private var isCreating = false
 
   override def onDestroy() = {
-    currentDialog foreach (_.dismiss())
-    currentDialog = None
     super.onDestroy()
   }
 
@@ -184,17 +181,17 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
     })
   }
 
+  private[this] var refreshDialog = Option.empty[Dialog]
   override def onRefresh() = {
     // because side-effects OP
     var sub: Subscription = null
     sub = DatabaseSaveService.saving.observeOn(mainThread).subscribe(b => {
       if (b) {
-        currentDialog = Some(ProgressDialog.show(this,
+        refreshDialog = Some(showingDialog(ProgressDialog.show(this,
           getString(R.string.saving_database), getString(R.string.please_wait),
-          true, false))
+          true, false)))
       } else {
-        currentDialog foreach { _.dismiss() }
-        currentDialog = None
+        refreshDialog foreach dismissDialog
         sub.unsubscribe()
         Database.close()
         database onSuccessMain { case db =>
