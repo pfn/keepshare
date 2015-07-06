@@ -330,6 +330,7 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
     if (uri.getScheme == "content") {
       val progress = ProgressDialog.show(this,
         "Downloading", "Please Wait", false, true)
+      showingDialog(progress)
       var canceled = false
       progress.onCancel0 {
         canceled = true
