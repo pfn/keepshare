@@ -7,7 +7,10 @@ versionName in Android := {
   gitReader.value.withGit(_.describedVersion)
 }
 
-versionCode in Android := Some(30)
+versionCode in Android := {
+  val cmd = "git" :: "rev-list" :: "--count" :: "HEAD" :: Nil
+  Option(cmd !!) map (_.trim.toInt)
+}
 
 resolvers ++= Resolver.sonatypeRepo("snapshots") ::
   ("circular reveal" at "https://jitpack.io") :: Nil
