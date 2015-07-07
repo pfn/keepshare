@@ -49,15 +49,11 @@ class GroupEditFragment extends AuthorizedFragment {
     val title = view.findView(TR.edit_title)
     val notes = view.findView(TR.edit_notes)
     val iconObservable: Subject[Int] = Subject()
-    val groupObservable: Observable[PwGroup] = Observable.create { obs =>
-      group.onGroupChange(g => obs.onNext(g))
-      Subscription(group.onGroupChange(null))
-    }
     iconObservable.observeOn(mainThread).subscribe { icon =>
       model = model.copy(icon = icon)
       title.icon = icon
     }
-    groupObservable.observeOn(mainThread).subscribe { g =>
+    group.groupChange.observeOn(mainThread).subscribe { g =>
       model = model.copy(group = g.getUuid)
     }
     WidgetObservable.text(title.textfield).asScala.subscribe(n =>

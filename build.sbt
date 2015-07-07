@@ -33,8 +33,6 @@ libraryDependencies ++= Seq(
   "com.hanhuy.android" %% "scala-conversions" % "1.2",
   "com.hanhuy.android" %% "scala-common" % "1.0",
   "com.hanhuy.keepassj" % "keepassj" % "2.29.6" exclude("xpp3", "xpp3"),
-  "com.google.code.findbugs" % "jsr305" % "2.0.1",
-  "com.google.code.gson" % "gson" % "2.2.4",
   "com.android.support" % "design" % "22.2.0",
   "com.android.support" % "appcompat-v7" % "22.2.0",
   "io.reactivex" %% "rxscala" % "0.24.1",
@@ -45,6 +43,7 @@ libraryDependencies ++= Seq(
 proguardOptions in Android ++=
   "-keepclassmembers class scala.runtime.RichInt { ** until(); }" ::
   "-dontwarn javax.naming.**" ::
+  "-dontwarn com.google.common.**" ::
   "-dontwarn sun.misc.Unsafe" ::
   Nil
 
