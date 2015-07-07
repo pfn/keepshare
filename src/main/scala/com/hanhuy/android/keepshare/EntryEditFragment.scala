@@ -111,15 +111,11 @@ class EntryEditFragment extends AuthorizedFragment {
     val url = view.findView(TR.edit_url)
     val notes = view.findView(TR.edit_notes)
     val iconObservable: Subject[Int] = Subject()
-    val groupObservable: Observable[PwGroup] = Observable.create { obs =>
-      group.onGroupChange(g => obs.onNext(g))
-      Subscription(group.onGroupChange(null))
-    }
     iconObservable.observeOn(mainThread).subscribe { icon =>
       model = model.copy(icon = icon)
       title.icon = icon
     }
-    groupObservable.observeOn(mainThread).subscribe { g =>
+    group.groupChange.observeOn(mainThread).subscribe { g =>
       model = model.copy(group = g.getUuid)
     }
     WidgetObservable.text(title.textfield).asScala.subscribe(n =>
@@ -369,16 +365,14 @@ class GroupEditView(c: Context, attrs: AttributeSet) extends StandardFieldView(c
 
     groupId = None
     text = _group.getName
-    groupChangeListener foreach (_(_group))
+    groupSubject.onNext(_group)
     //  if (PwUuid.Zero == g.getCustomIconUuid) {
     imagefield.setImageResource(Database.Icons(_group.getIconId.ordinal))
     //  }
   }
 
-  private[this] var groupChangeListener = Option.empty[PwGroup => Any]
-  def onGroupChange[A](f: PwGroup => A): Unit = {
-    groupChangeListener = Option(f)
-  }
+  private[this] val groupSubject = Subject[PwGroup]()
+  val groupChange: Observable[PwGroup] = groupSubject
 
   textfield.setTextIsSelectable(false)
 
@@ -431,7 +425,7 @@ class GroupEditView(c: Context, attrs: AttributeSet) extends StandardFieldView(c
         b.findView(TR.name).setText(getItem(i).getName)
         b.onClick0 {
           group = getItem(i)
-          groupChangeListener foreach (_(group))
+          groupSubject.onNext(group)
           popup.dismiss()
         }
         b
