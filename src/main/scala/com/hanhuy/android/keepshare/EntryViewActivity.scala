@@ -11,7 +11,7 @@ import android.text.method.{LinkMovementMethod, PasswordTransformationMethod}
 import android.text.util.Linkify
 import android.util.AttributeSet
 import android.view._
-import android.widget.FrameLayout
+import android.widget.{TextView, FrameLayout}
 import com.hanhuy.android.common.Futures
 import com.hanhuy.keepassj._
 
@@ -442,7 +442,7 @@ class StandardFieldView(c: Context, attrs: AttributeSet) extends FrameLayout(c, 
 
   def hint = textfield.getHint
   def hint_=(s: String) = textfield.setHint(s)
-  def text_=(s: String) = textfield.setText(s)
+  def text_=(s: String) = textfield.setText(s, TextView.BufferType.SPANNABLE)
   def text = textfield.getText.toString
 
   private[this] var _password: Boolean = false

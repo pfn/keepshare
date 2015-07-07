@@ -167,6 +167,9 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
           Toast.makeText(this,
             R.string.must_install_explorer,
             Toast.LENGTH_SHORT).show()
+        case e: Exception =>
+          Toast.makeText(this,
+            "Unable to open file: " + e.getMessage, Toast.LENGTH_LONG).show()
       }
     }
 
