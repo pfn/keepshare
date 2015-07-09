@@ -157,9 +157,13 @@ class ShareActivity extends Activity with TypedFindView {
   def init() {
     setContentView(R.layout.share)
     val extras = getIntent.getExtras
-    val (url, subject) = {
-      val u = extras.getString(Intent.EXTRA_TEXT, "").trim
-      val s = extras.getString(Intent.EXTRA_SUBJECT, "").trim
+    val (url,subject) = (for {
+      intent<- Option(getIntent)
+      extras <- Option(intent.getExtras)
+      u      <- Option(extras.getString(Intent.EXTRA_TEXT, "")) map (_.trim)
+      s      <- Option(extras.getString(Intent.EXTRA_SUBJECT, "")) map (_.trim)
+    } yield (u,s)) map { case (u,s) =>
+      (u,s)
       if (u.charAt(0) == '"') {
         val end = u.lastIndexOf('"')
         if (u.length > end + 2)
@@ -167,7 +171,7 @@ class ShareActivity extends Activity with TypedFindView {
         else
           (u, s)
       } else (u, s)
-    }
+    } getOrElse ("","")
 
     findView(TR.cancel) onClick0 {
       ServiceBus.send(ShareActivityCancel)
