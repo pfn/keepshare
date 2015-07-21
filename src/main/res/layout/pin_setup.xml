@@ -41,7 +41,8 @@
                   android:text="@string/pin_at_least_4"/>
     </FrameLayout>
     <TableLayout android:layout_height="wrap_content"
-                 android:layout_width="match_parent"
+                 android:layout_width="@dimen/pin_grid_width_port"
+                 android:layout_gravity="center"
                  android:stretchColumns="0,1,2">
 
         <TableRow

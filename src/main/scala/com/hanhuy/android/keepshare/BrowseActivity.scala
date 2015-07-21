@@ -2,6 +2,7 @@ package com.hanhuy.android.keepshare
 
 import android.app.FragmentManager.OnBackStackChangedListener
 import android.content.{Context, ComponentName, Intent}
+import android.database.Cursor
 import android.graphics.BitmapFactory
 import android.graphics.drawable.{BitmapDrawable, LayerDrawable}
 import android.os.Bundle
@@ -85,6 +86,14 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
         search.setSearchableInfo(
           this.systemService[SearchManager].getSearchableInfo(
             new ComponentName(this, classOf[SearchableActivity])))
+        search.setOnSuggestionListener(new SearchView.OnSuggestionListener {
+          override def onSuggestionClick(i: Int) = {
+            val c = search.getSuggestionsAdapter.getItem(i).asInstanceOf[Cursor]
+            EntryViewActivity.show(BrowseActivity.this, c.getString(5))
+            true
+          }
+          override def onSuggestionSelect(i: Int) = false
+        })
       }
 
       Option(menu.findItem(R.id.database_sort)) foreach { m =>
@@ -246,7 +255,8 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
         .setPositiveButton(R.string.keep_editing, null)
         .show()
     } else {
-      val shouldBack = searchView exists (_.isIconified)
+      val shouldBack = searchView.exists(_.isIconified) ||
+        getResources.getBoolean(R.bool.is_tablet)
       searchView foreach (_.setIconified(true))
       if (shouldBack) {
         super.onBackPressed()

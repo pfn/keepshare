@@ -2,4 +2,8 @@
 <resources>
     <dimen name="pin_button_height">64dp</dimen>
     <dimen name="field_label_width">100dp</dimen>
+    <dimen name="pin_grid_width_land">0dp</dimen>
+    <!-- match_parent -1px -->
+    <dimen name="pin_grid_width_port">-1px</dimen>
+    <integer name="pin_grid_weight">1</integer>
 </resources>

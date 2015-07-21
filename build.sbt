@@ -30,7 +30,7 @@ libraryDependencies ++= Seq(
   "com.rengwuxian.materialedittext" % "library" % "2.0.3" exclude("com.android.support", "appcompat-v7"),
   "com.melnykov" % "floatingactionbutton" % "1.3.0" exclude("com.android.support", "appcompat-v7"),
   "com.github.ozodrukh" % "CircularReveal" % "1.0.6",
-  "com.hanhuy.android" %% "scala-conversions" % "1.2",
+  "com.hanhuy.android" %% "scala-conversions" % "1.3",
   "com.hanhuy.android" %% "scala-common" % "1.0",
   "com.hanhuy.keepassj" % "keepassj" % "2.29.6" exclude("xpp3", "xpp3"),
   "com.android.support" % "design" % "22.2.0",
@@ -56,7 +56,7 @@ proguardOptions in Android ++=
   "-keep class * extends junit.framework.TestCase { *; }" ::
   "-keep class scala.runtime.BoxesRunTime { *; }" :: Nil // for debugging only
 
-packageName in (lite,Android) := "com.hanhuy.android.keepshare.lite"
+applicationId in (lite,Android) := "com.hanhuy.android.keepshare.lite"
 
 run <<= run in (pro,Android)
 
@@ -70,7 +70,7 @@ debugIncludesTests in (test1,Android) := true
 
 apkbuildExcludes in (test1,Android) += "LICENSE.txt"
 
-packageName in (test1,Android) := "com.hanhuy.android.keepshare.test"
+applicationId in (test1,Android) := "com.hanhuy.android.keepshare.test"
 
 mergeManifests in (test1, Android) := false
 

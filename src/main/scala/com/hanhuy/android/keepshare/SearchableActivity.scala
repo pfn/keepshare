@@ -1,6 +1,7 @@
 package com.hanhuy.android.keepshare
 
 import android.view.inputmethod.InputMethodManager
+import android.widget.SearchView.OnSuggestionListener
 import com.hanhuy.android.common._
 import com.hanhuy.android.extensions._
 import TypedResource._
@@ -91,6 +92,14 @@ class SearchableActivity extends AuthorizedActivity {
       search.setSearchableInfo(
         this.systemService[SearchManager].getSearchableInfo(getComponentName))
       queryInput foreach { search.setQuery(_, false) }
+      search.setOnSuggestionListener(new OnSuggestionListener {
+        override def onSuggestionClick(i: Int) = {
+          val c = search.getSuggestionsAdapter.getItem(i).asInstanceOf[Cursor]
+          EntryViewActivity.show(SearchableActivity.this, c.getString(5))
+          true
+        }
+        override def onSuggestionSelect(i: Int) = false
+      })
     }
     true
   }

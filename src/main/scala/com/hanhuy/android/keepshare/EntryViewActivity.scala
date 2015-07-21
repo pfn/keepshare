@@ -31,6 +31,12 @@ object EntryViewActivity {
   val EXTRA_HISTORY_IDX = "keepshare.extra.HISTORY_IDX"
   val STATE_IS_EDITING = "keepshare.isEditing"
 
+  def show(a: Activity, e: String): Unit = {
+    val intent = new Intent(a, classOf[EntryViewActivity])
+    intent.putExtra(EXTRA_ENTRY_ID, e)
+    a.startActivity(intent)
+    PINHolderService.ping()
+  }
   def show(a: Activity, e: PwEntry): Unit = {
     val intent = new Intent(a, classOf[EntryViewActivity])
     intent.putExtra(EXTRA_ENTRY_ID, e.getUuid.ToHexString)

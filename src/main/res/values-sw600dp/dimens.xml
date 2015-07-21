@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="pin_grid_width_land">384dp</dimen>
+    <dimen name="pin_grid_width_port">384dp</dimen>
+    <integer name="pin_grid_weight">0</integer>
+</resources>
