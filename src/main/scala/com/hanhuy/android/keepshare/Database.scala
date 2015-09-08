@@ -87,10 +87,8 @@ object Database {
   def open(db: String, pw: Option[String], keyfile: Option[String]): Future[PwDatabase] = {
     databasePath = Option(db)
     close()
-    for {
-      p    <- resolvePath(db)
-      keyf <- Futures.traverseO(keyfile)(resolvePath)
-    } yield {
+
+    def checkedOpen(p: String, keyf: Option[String]) = {
       val pwdb = new PwDatabase
       val key = new CompositeKey
 
@@ -98,12 +96,21 @@ object Database {
       keyf find (_.nonEmpty) foreach { f => key.AddUserKey(new KcpKeyFile(f)) }
 
       val start = SystemClock.uptimeMillis
-      pwdb.Open(IOConnectionInfo.FromPath(p), key, null)
-      val end = SystemClock.uptimeMillis
-      android.util.Log.v("Database", s"open time: ${end - start}ms")
-      database = Some(pwdb)
-      pwdb
+      try {
+        pwdb.Open(IOConnectionInfo.FromPath(p), key, null)
+        val end = SystemClock.uptimeMillis
+        android.util.Log.v("Database", s"open time: ${end - start}ms")
+        database = Some(pwdb)
+        Future.successful(pwdb)
+      } catch {
+        case e: OutOfMemoryError => Future.failed(e)
+      }
     }
+    for {
+      p    <- resolvePath(db)
+      keyf <- Futures.traverseO(keyfile)(resolvePath)
+      db <- checkedOpen(p, keyf)
+    } yield db
   }
 
   def close(): Unit = {
@@ -332,8 +339,12 @@ object Database {
 
 object NativeKeyTransformer extends KeyTransformer {
   def init(): Unit = {
-    if (Try(System.loadLibrary("aeskeytrans")).isSuccess)
+    try {
+      System.loadLibrary("aeskeytrans")
       AesEngines.setKeyTransformer(this)
+    } catch {
+      case t: Throwable => // ignore
+    }
   }
   @native
   def transformKey(key: Array[Byte], seed: Array[Byte], rounds: Long): Boolean

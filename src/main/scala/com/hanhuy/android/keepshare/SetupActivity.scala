@@ -330,7 +330,9 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
 
   def setDataPath(data: Intent, setProperty: String => Unit): Unit = {
     val uri = data.getData
-    if (uri.getScheme == "content") {
+    if (uri == null) {
+      Toast.makeText(this, "File explorer returned no result", Toast.LENGTH_LONG).show()
+    } else if (uri.getScheme == "content") {
       val progress = ProgressDialog.show(this,
         "Downloading", "Please Wait", false, true)
       showingDialog(progress)

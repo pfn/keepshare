@@ -2,6 +2,8 @@ import android.Keys._
 
 name := "keepshare"
 
+allDevices in Android := true
+
 versionName in Android := {
   import com.typesafe.sbt.SbtGit.GitKeys.gitReader
   gitReader.value.withGit(_.describedVersion)
@@ -26,7 +28,7 @@ retrolambdaEnable in Android := false
 debugIncludesTests in Android := false
 
 libraryDependencies ++= Seq(
-  "ch.acra" % "acra" % "4.6.1",
+  "ch.acra" % "acra" % "4.6.2",
   "com.rengwuxian.materialedittext" % "library" % "2.0.3" exclude("com.android.support", "appcompat-v7"),
   "com.melnykov" % "floatingactionbutton" % "1.3.0" exclude("com.android.support", "appcompat-v7"),
   "com.github.ozodrukh" % "CircularReveal" % "1.0.6",
