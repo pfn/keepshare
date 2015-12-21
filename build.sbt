@@ -1,108 +1,88 @@
-import android.Keys._
+val keepshare = project.in(file(".")).settings(androidBuild)
 
 name := "keepshare"
 
-allDevices in Android := true
-
-versionName in Android := {
+versionName := {
   import com.typesafe.sbt.SbtGit.GitKeys.gitReader
   gitReader.value.withGit(_.describedVersion)
 }
 
-versionCode in Android := {
+versionCode := {
   val cmd = "git" :: "rev-list" :: "--count" :: "HEAD" :: Nil
   Option(cmd !!) map (_.trim.toInt)
 }
 
-resolvers ++= Resolver.sonatypeRepo("snapshots") ::
-  ("circular reveal" at "https://jitpack.io") :: Nil
+resolvers += "circular reveal" at "https://jitpack.io"
 
-javacOptions in Global ++= "-target" :: "1.7" :: "-source" :: "1.7" :: Nil
+android.dsl.javacFlags(Compile)("-target", "1.7", "-source", "1.7")
 
-scalacOptions in Global += "-feature"
+scalacOptions in Compile += "-feature"
 
-scalaVersion in Global := "2.11.6"
+scalaVersion := "2.11.6"
 
-retrolambdaEnable in Android := false
-
-debugIncludesTests in Android := false
+debugIncludesTests := false
 
 libraryDependencies ++= Seq(
   "ch.acra" % "acra" % "4.6.2",
   "com.rengwuxian.materialedittext" % "library" % "2.0.3" exclude("com.android.support", "appcompat-v7"),
   "com.melnykov" % "floatingactionbutton" % "1.3.0" exclude("com.android.support", "appcompat-v7"),
+  "com.hanhuy.android" %% "iota" % "0.7",
   "com.github.ozodrukh" % "CircularReveal" % "1.0.6",
   "com.hanhuy.android" %% "scala-conversions" % "1.3",
   "com.hanhuy.android" %% "scala-common" % "1.0",
-  "com.hanhuy.keepassj" % "keepassj" % "2.29.6" exclude("xpp3", "xpp3"),
-  "com.android.support" % "design" % "22.2.0",
-  "com.android.support" % "appcompat-v7" % "22.2.0",
+  "com.hanhuy.keepassj" % "keepassj" % "2.30.0" exclude("xpp3", "xpp3"),
+  "com.android.support" % "design" % "23.1.1",
+  "com.android.support" % "appcompat-v7" % "23.1.1",
   "io.reactivex" %% "rxscala" % "0.24.1",
   "io.reactivex" % "rxandroid" % "0.24.0",
   "com.google.android.gms" % "play-services-drive" % "7.0.0"
 )
 
-proguardOptions in Android ++=
+proguardOptions ++=
   "-keepclassmembers class scala.runtime.RichInt { ** until(); }" ::
   "-dontwarn javax.naming.**" ::
   "-dontwarn com.google.common.**" ::
   "-dontwarn sun.misc.Unsafe" ::
   Nil
 
-proguardCache in Android ++= "com.google.common" :: "org.bouncycastle" :: Nil
+proguardCache ++= "com.google.common" :: "org.bouncycastle" :: Nil
 
-shrinkResources in Android := true
+shrinkResources := true
 
-//ndkBuild in Android := Nil
-proguardOptions in Android ++=
-  "-keep class * extends junit.framework.TestCase { *; }" ::
-  "-keep class scala.runtime.BoxesRunTime { *; }" :: Nil // for debugging only
+proguardOptions += "-keep class scala.runtime.BoxesRunTime { *; }"
 
-applicationId in (lite,Android) := "com.hanhuy.android.keepshare.lite"
+android.dsl.flavor("lite")(
+  name := "keepshare-lite",
+  applicationId := "com.hanhuy.android.keepshare.lite"
+)
 
-run <<= run in (pro,Android)
+android.dsl.flavor("test")(
+  name := "keepshare-test",
+  extraResDirectories += baseDirectory.value / "src" / "androidTest" / "res",
+  debugIncludesTests := true,
+  applicationId := "com.hanhuy.android.keepshare.test",
+  mergeManifests := false,
+  proguardOptions ++= "-dontwarn **" ::
+    "-keep class android.support.test.** { *; }" ::
+    "-keepclasseswithmembers class * { @org.junit.Test <methods>; }" ::
+    "-keepclassmembers class scala.reflect.ScalaSignature { java.lang.String bytes(); }" ::
+    Nil,
 
-run in lite <<= run in (lite,Android)
+  instrumentTestRunner :=
+    "android.support.test.runner.AndroidJUnitRunner",
 
-extraResDirectories in (lite,Android) += baseDirectory.value / "src" / "lite" / "res"
+  proguardCache += "android.support",
+  libraryDependencies ++=
+    "com.android.support.test" % "runner" % "0.3" ::
+      "com.android.support.test.espresso" % "espresso-core" % "2.2" ::
+      Nil
+)
 
-extraResDirectories in (test1,Android) += baseDirectory.value / "src" / "androidTest" / "res"
+android.dsl.buildType("protify")(protifySettings:_*)
+android.dsl.extendBuildType("protify")(useProguardInDebug := false)
 
-debugIncludesTests in (test1,Android) := true
+run <<= run in Android
 
-apkbuildExcludes in (test1,Android) += "LICENSE.txt"
+android.dsl.apkExclude("LICENSE.txt")
 
-applicationId in (test1,Android) := "com.hanhuy.android.keepshare.test"
-
-mergeManifests in (test1, Android) := false
-
-proguardOptions in (test1,Android) ++= "-dontwarn **" ::
-  "-keep class android.support.test.** { *; }" ::
-  "-keepclasseswithmembers class * { @org.junit.Test <methods>; }" ::
-  "-keepclassmembers class scala.reflect.ScalaSignature { java.lang.String bytes(); }" ::
-  Nil
-
-instrumentTestRunner in (test1,Android) :=
-  "android.support.test.runner.AndroidJUnitRunner"
-
-proguardCache in (test1,Android) += "android.support"
-
-libraryDependencies in test1 ++=
-  "com.android.support.test" % "runner" % "0.3" ::
-    "com.android.support.test.espresso" % "espresso-core" % "2.2" ::
-    Nil
-
-watchSources in test1 <++= Def.task {
-  val layout = (projectLayout in Android).value
-  (layout.testSources ***) get
-}
-/*
-onLoad in Global := {
-  { (state: State) =>
-    val nav = new ProjectNavigation(state)
-    if ("pro" != Project.extract(state).currentRef.project)
-      nav.selectProject(nav.rootRef.build, "pro")
-    else state
-  } compose (onLoad in Global).value
-}
-*/
+android.Plugin.withVariant(keepshare, Some("protify"), None)
