@@ -1,24 +1,30 @@
 package com.hanhuy.android.keepshare
 
 import android.annotation.TargetApi
+import android.content.res.ColorStateList
 import android.preference.{ListPreference, CheckBoxPreference, Preference}
-import android.preference.Preference.OnPreferenceClickListener
+import android.support.design.widget.TextInputLayout
 import android.support.v7.app.AppCompatActivity
+import android.support.v7.widget.AppCompatEditText
 import android.text.method.PasswordTransformationMethod
 import android.util.AttributeSet
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
+import rx.lang.scala.Observable
+import rx.android.widget.WidgetObservable
+import Rx._
+import rx.lang.scala.Subject
 
 import collection.JavaConversions._
 
-import android.app.{Dialog, AlertDialog, ProgressDialog, Activity}
+import android.app.{AlertDialog, ProgressDialog, Activity}
 import android.os.Bundle
 import android.content._
-import android.view.{ViewGroup, View, MenuItem, Menu}
+import android.view._
 import android.widget._
 import java.io.{IOException, FileOutputStream, File}
-import android.text.{InputType, Editable, TextWatcher}
+import android.text.InputType
 import android.view.inputmethod.InputMethodManager
 import android.provider.{DocumentsContract, OpenableColumns}
 
@@ -38,8 +44,13 @@ object RequestCodes {
   val REQUEST_SIGN_IN        = 7
   val REQUEST_SETUP_PIN      = 8
   val REQUEST_PIN_ENTRY      = 9
+  val SETUP_DATABASE         = 10
 
   val EXTRA_FOR_RESULT = "com.hanhuy.android.keepshare.extra.FOR_RESULT"
+
+  val EXTRA_DATABASE = "com.hanhuy.android.keepshare.extra.DATABASE"
+  val EXTRA_KEYFILE  = "com.hanhuy.android.keepshare.extra.KEY_FILE"
+  val EXTRA_PASSWORD = "com.hanhuy.android.keepshare.extra.PASSWORD"
 }
 object SetupActivity {
   lazy val intent = {
@@ -54,6 +65,7 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
   import KeyManager._
   import RequestCodes._
 
+  private[this] var dbCredentials = DatabaseSetupModel.empty
   lazy val fragment = getFragmentManager.findFragmentById(
     R.id.setup_fragment).asInstanceOf[SetupFragment]
   lazy val flipper = findView(TR.flipper)
@@ -113,6 +125,7 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
     view.setVisibility(View.VISIBLE)
     view.setText(error)
     findView(TR.save).setEnabled(false)
+    findView(TR.save).setVisibility(View.GONE)
   }
   def error(err: Int): Unit = error(getString(err))
   def success(msg: String) {
@@ -142,6 +155,7 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
         supportInvalidateOptionsMenu()
         flipper.setDisplayedChild(0)
         findView(TR.save).setEnabled(true)
+        findView(TR.save).setVisibility(View.VISIBLE)
         findView(TR.progress2).setVisibility(View.GONE)
       }
     }
@@ -151,105 +165,49 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
       // go to next step!
     }
 
-    def browseHandler(id: Int, mimeType: String) = { () =>
-      val intent = new Intent(if (kitkatAndNewer)
-        Intent.ACTION_OPEN_DOCUMENT else Intent.ACTION_GET_CONTENT)
-      intent.addCategory(Intent.CATEGORY_OPENABLE)
-      intent.setType(mimeType)
-
-      try {
-        startActivityForResult(intent, id match {
-          case 1 => BROWSE_DATABASE
-          case 2 => BROWSE_KEYFILE
-        })
-      } catch {
-        case e: ActivityNotFoundException =>
-          Toast.makeText(this,
-            R.string.must_install_explorer,
-            Toast.LENGTH_SHORT).show()
-        case e: Exception =>
-          Toast.makeText(this,
-            "Unable to open file: " + e.getMessage, Toast.LENGTH_LONG).show()
-      }
+    fragment databaseOnClick { () =>
+      val intent = new Intent(this, classOf[DatabaseSetupActivity])
+      intent.putExtra(EXTRA_DATABASE, dbCredentials.db.getOrElse(""))
+      intent.putExtra(EXTRA_PASSWORD, dbCredentials.password.getOrElse(""))
+      intent.putExtra(EXTRA_KEYFILE, dbCredentials.password.getOrElse(""))
+      startActivityForResult(intent, SETUP_DATABASE)
     }
-
-    fragment datafileOnClick browseHandler(1, if (kitkatAndNewer) "application/*" else "file/*")
-    fragment keyfileOnClick browseHandler(2, "*/*")
 
     val watcher = (p: Preference, a: Any) => {
       findView(TR.save).setEnabled(true)
+      findView(TR.save).setVisibility(View.VISIBLE)
       findView(TR.error_text).setVisibility(View.GONE)
       findView(TR.success_text).setVisibility(View.GONE)
       true
     }
-    import SetupFragment._
     fragment.onPreferenceChange(watcher)
     findView(TR.save) onClick { view: View =>
       findView(TR.error_text).setVisibility(View.GONE)
       findView(TR.success_text).setVisibility(View.GONE)
       view.setEnabled(false)
-      val database = fragment.datafile
+      view.setVisibility(View.GONE)
+      keymanager.localKey onSuccessMain {
+        case Left(error) =>
+          Toast.makeText(
+            this, error.toString, Toast.LENGTH_SHORT).show()
+          finish()
+        case Right(k) =>
+          val encdb = KeyManager.encrypt(k, dbCredentials.db.getOrElse(""))
+          val encpw = KeyManager.encrypt(k, dbCredentials.password.getOrElse(""))
+          val enckeyf = KeyManager.encrypt(k, dbCredentials.keyfile.getOrElse(""))
+          val verifier = KeyManager.encrypt(k, KeyManager.VERIFIER)
 
-      val keyfile = fragment.keyfile
-      if (database.trim != "") {
-
-        val keyf = new File(keyfile.trim).getAbsoluteFile
-        val password = fragment.password
-        if (keyfile.trim != "" && !keyfile.trim.startsWith("content:") && !keyf.isFile) {
-          error(R.string.keyfile_no_exist)
-        } else  if (password.trim == "" && keyfile.trim == "") {
-          error(R.string.password_no_blank)
-        } else {
-
-          val db = new File(database.trim).getAbsoluteFile
-          if (!database.trim.startsWith("content:") && !db.isFile) {
-            error(R.string.database_no_exist)
-          } else {
-            findView(TR.progress2).setVisibility(View.VISIBLE)
-            val f = Database.open(database.trim, Option(password.trim),
-                Option(keyfile.trim) filterNot (_.isEmpty)) flatMap {
-              _ => keymanager.localKey  }
-
-            f onSuccessMain {
-                case Left(error) =>
-                  UiBus.post {
-                    Toast.makeText(
-                      this, error.toString, Toast.LENGTH_SHORT).show()
-                    finish()
-                  }
-                case Right(k) =>
-                  val encdb = KeyManager.encrypt(k, database.trim)
-                  val encpw = KeyManager.encrypt(k, password.trim)
-                  val enckeyf = KeyManager.encrypt(k, keyfile.trim)
-                  val verifier = KeyManager.encrypt(k, KeyManager.VERIFIER)
-
-                  settings.set(Settings.VERIFY_DATA, verifier)
-                  settings.set(Settings.PASSWORD, encpw)
-                  settings.set(Settings.KEYFILE_PATH, enckeyf)
-                  settings.set(Settings.DATABASE_FILE, encdb)
-                  settings.set(Settings.KEYBOARD_TIMEOUT, fragment.kbtimeo)
-                  settings.set(Settings.PIN_TIMEOUT, fragment.pintimeo)
-                  settings.set(Settings.PASSWORD_OVERRIDE, fragment.kboverride)
-                  UiBus.post {
-                    success(R.string.settings_saved)
-                    setResult(Activity.RESULT_OK)
-                    if (getIntent.hasExtra(EXTRA_FOR_RESULT))
-                      finish()
-                  }
-            }
-
-            f onFailureMain { case e =>
-              UiBus.post { error("Unable to open database: " + e.getMessage) }
-              log.e("failed to load database", e)
-            }
-
-            f onCompleteMain { _ =>
-              findView(TR.progress2).setVisibility(View.GONE)
-            }
-          }
-        }
-      } else {
-        error(R.string.database_no_blank)
+          settings.set(Settings.VERIFY_DATA, verifier)
+          settings.set(Settings.PASSWORD, encpw)
+          settings.set(Settings.KEYFILE_PATH, enckeyf)
+          settings.set(Settings.DATABASE_FILE, encdb)
+          settings.set(Settings.KEYBOARD_TIMEOUT, fragment.kbtimeo)
+          settings.set(Settings.PIN_TIMEOUT, fragment.pintimeo)
+          settings.set(Settings.PASSWORD_OVERRIDE, fragment.kboverride)
+          success(R.string.settings_saved)
+          setResult(Activity.RESULT_OK)
+          if (getIntent.hasExtra(EXTRA_FOR_RESULT))
+            finish()
       }
     }
 
@@ -261,19 +219,15 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
         case (Some(encdb), Some(encpw), Some(enckeyf), Some(encverifier)) =>
           keymanager.config onSuccessMain {
             case Left(error) =>
-              UiBus.post {
-                Toast.makeText(this,
-                  R.string.decrypt_saved_failed, Toast.LENGTH_SHORT).show()
-                finish()
-              }
+              Toast.makeText(this,
+                R.string.decrypt_saved_failed, Toast.LENGTH_SHORT).show()
+              finish()
             case Right((db,pw,keyf)) =>
-              UiBus.post {
-                fragment.datafile = db
-                fragment.password = pw
-                fragment.keyfile = keyf
-                success(R.string.ready_to_use)
-                findView(TR.save).setEnabled(false)
-              }
+              dbCredentials = DatabaseSetupModel(db, pw, keyf)
+              fragment.databaseReady(true)
+              success(R.string.ready_to_use)
+              findView(TR.save).setEnabled(false)
+              findView(TR.save).setVisibility(View.GONE)
           }
         case _ =>
       }
@@ -307,12 +261,6 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
         else {
           keymanager.makeApiClient()
         }
-      case BROWSE_DATABASE =>
-        if (result == Activity.RESULT_OK)
-          setDataPath(data, fragment.datafile_=)
-      case BROWSE_KEYFILE =>
-        if (result == Activity.RESULT_OK)
-          setDataPath(data, fragment.keyfile_=)
       case REQUEST_PIN => // for change pin
         if (result == Activity.RESULT_OK)
           startActivityForResult(new Intent(this, classOf[PINSetupActivity]), RequestCodes.REQUEST_SETUP_PIN)
@@ -320,6 +268,15 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
         if (result != Activity.RESULT_OK)
           finish()
       case REQUEST_SETUP_PIN => finish()
+      case SETUP_DATABASE =>
+        val intent = Option(data)
+        def extra(k: String): String = intent.map(_.getStringExtra(k)).orNull
+        if (result == Activity.RESULT_OK)
+          dbCredentials = DatabaseSetupModel(
+            extra(EXTRA_DATABASE), extra(EXTRA_PASSWORD), extra(EXTRA_KEYFILE))
+          fragment.databaseReady(dbCredentials.ready)
+        findView(TR.save).setEnabled(dbCredentials.ready)
+        findView(TR.save).setVisibility(if (dbCredentials.ready) View.VISIBLE else View.GONE)
     }
   }
 
@@ -328,6 +285,320 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
     super.onDestroy()
   }
 
+  ServiceBus += {
+    case PINServiceExit  => finish()
+  }
+}
+
+class SetupFragment extends android.preference.PreferenceFragment {
+  lazy val settings = Settings(getActivity)
+  lazy val dbs = findPreference("database_info")//.asInstanceOf[DatabasePreference]
+  lazy val kt = findPreference("keyboard_enable").asInstanceOf[CheckBoxPreference]
+  lazy val ae = findPreference("accessibility_enable").asInstanceOf[CheckBoxPreference]
+  lazy val ktimeout = findPreference("keyboard_timeout").asInstanceOf[ListPreference]
+  lazy val ptimeout = findPreference("pin_timeout").asInstanceOf[ListPreference]
+  lazy val pwoverride = findPreference("keyboard_override").asInstanceOf[CheckBoxPreference]
+  private var _onPrefChange = Option.empty[(Preference, Any) => Any]
+
+  def databaseReady(ready: Boolean): Unit = {
+    if (ready)
+      dbs.setSummary(R.string.has_been_configured)
+    else
+      dbs.setSummary(R.string.has_not_configured)
+  }
+  def onPrefChange(p: Preference, value: Any) = {
+    _onPrefChange foreach(_(p,value))
+    true
+  }
+  def prefChanged(p: Preference, value: Any) = _onPrefChange foreach (_(p, value))
+
+  def onPreferenceChange[A](fn: (Preference, Any) => A) = _onPrefChange = Option(fn)
+  def kboverride = pwoverride.isChecked
+  def kboverride_=(b: Boolean) = pwoverride.setChecked(b)
+  def pintimeo = ptimeout.getValue.toInt
+  def pintimeo_=(i: Int) = {
+    ptimeout.setSummary(i.toString)
+    ptimeout.setValue(i.toString)
+  }
+  def kbtimeo = ktimeout.getValue.toInt
+  def kbtimeo_=(i: Int) = {
+    ktimeout.setSummary(i.toString)
+    ktimeout.setValue(i.toString)
+  }
+
+  def databaseOnClick[A](f: () => A) = dbs.onPreferenceClick0 {
+    f()
+    true
+  }
+
+  override def onCreate(savedInstanceState: Bundle) = {
+    super.onCreate(savedInstanceState)
+    addPreferencesFromResource(R.xml.setup)
+  }
+
+  override def onStart() = {
+    super.onStart()
+    ae.setIntent(new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+    kt.setIntent(Intent.makeMainActivity(
+      new ComponentName("com.android.settings",
+        "com.android.settings.LanguageSettings")))
+    import android.provider.Settings.Secure
+    val services = Option(Secure.getString(getActivity.getContentResolver, Secure.ENABLED_ACCESSIBILITY_SERVICES))
+    ae.setChecked((services exists (_ contains (getActivity.getPackageName + "/"))) && AccessibilityService.running)
+
+    val imm = getActivity.systemService[InputMethodManager]
+    val list = imm.getEnabledInputMethodList
+    val enabled = list exists (_.getPackageName == getActivity.getPackageName)
+    kt.setChecked(enabled)
+    pwoverride.setChecked(
+      settings.get(Settings.PASSWORD_OVERRIDE))
+
+    pwoverride.onPreferenceChange { (pref, b) =>
+      prefChanged(pref, b)
+      true
+    }
+
+    ktimeout.setValue(settings.get(Settings.KEYBOARD_TIMEOUT).toString)
+    ktimeout.setSummary(settings.get(Settings.KEYBOARD_TIMEOUT).toString)
+    ptimeout.setValue(settings.get(Settings.PIN_TIMEOUT).toString)
+    ptimeout.setSummary(settings.get(Settings.PIN_TIMEOUT).toString)
+
+    ptimeout.onPreferenceChange { (pref, v) =>
+      prefChanged(pref, v)
+      ptimeout.setSummary(v.toString)
+      true
+    }
+    ktimeout.onPreferenceChange { (pref, v) =>
+      prefChanged(pref, v)
+      ktimeout.setSummary(v.toString)
+      true
+    }
+  }
+
+  override def onViewCreated(view: View, savedInstanceState: Bundle) = {
+    super.onViewCreated(view, savedInstanceState)
+    // TextPreference has a divider between them??
+    val list = view.findViewById(android.R.id.list).asInstanceOf[ListView]
+    list.setDividerHeight(0)
+  }
+}
+
+class DatabasePreference(ctx: Context, attrs: AttributeSet, res: Int)
+  extends android.preference.Preference(ctx, attrs, res) {
+  def this(ctx: Context, attrs: AttributeSet) = this(ctx, attrs, 0)
+  def this(ctx: Context) = this(ctx, null, 0)
+}
+
+object DatabaseSetupModel {
+  def empty = DatabaseSetupModel(None, None, None)
+  def filterEmpty(s: String) = Option(s) map (_.trim) filterNot (_.isEmpty)
+  def apply(db: String, pw: String, kf: String): DatabaseSetupModel = DatabaseSetupModel(
+    filterEmpty(db), filterEmpty(pw), filterEmpty(kf))
+}
+case class DatabaseSetupModel(db: Option[String], password: Option[String], keyfile: Option[String]) {
+  def ready = db.nonEmpty && (password.nonEmpty || keyfile.nonEmpty)
+}
+
+class DatabaseSetupActivity extends AppCompatActivity with DialogManager {
+  val log = Logcat("DatabaseSetupActivity")
+  private[this] var model = DatabaseSetupModel.empty
+  private[this] val modelSubject = Subject[DatabaseSetupModel]()
+  val modelChange: Observable[DatabaseSetupModel] = modelSubject
+  import iota._
+  import RequestCodes._
+  import RelativeLayout._
+  import ViewGroup.LayoutParams._
+  type LP = RelativeLayout.LayoutParams
+  val keepassSetupInfo =
+    """
+      |KeePass Database Setup. Enter your database unlock information below
+    """.stripMargin
+
+  @TargetApi(21)
+  def tint[A <: View] = condK[A](v(21) ? kestrel { v =>
+    val tint = new ColorStateList(Array(Array(0)), Array(resolveAttr(R.attr.colorPrimary, _.data)))
+    v.setBackgroundTintList(tint)
+  })
+  lazy val setupLayout = l[RelativeLayout](
+    l[ScrollView](
+    l[RelativeLayout](
+      w[TextView] >>= text(keepassSetupInfo) >>= id(Id.text) >>= lpK(MATCH_PARENT, WRAP_CONTENT)(margins(all = 8.dp)),
+      l[TextInputLayout](
+        w[AppCompatEditText] >>= id(Id.database_file) >>= hint("Database File") >>= lp(MATCH_PARENT, WRAP_CONTENT) >>= kestrel(_.setSingleLine(true)) >>= tint
+      ) >>= id(Id.database_file_layout) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { (p: LP) =>
+        p.addRule(BELOW, Id.text)
+        p.addRule(LEFT_OF, Id.database_file_browse)
+        margins(left = 8.dp, right = 8.dp)(p)
+      },
+      w[Button] >>= id(Id.database_file_browse) >>= text(R.string.browse) >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
+        p.addRule(ALIGN_PARENT_RIGHT, 1)
+        p.addRule(ALIGN_TOP, Id.database_file_layout)
+      } >>= hook0.onClick(IO(browseHandler(BROWSE_DATABASE, if (v(19)) "application/*" else "file/*"))),
+      l[TextInputLayout](
+        w[AppCompatEditText] >>= id(Id.password) >>= hint("Password") >>= tint >>= lp(MATCH_PARENT, WRAP_CONTENT)
+          >>= inputType(InputType.TYPE_TEXT_VARIATION_PASSWORD) >>= kestrel { e =>
+          e.setSingleLine(true)
+          e.setTransformationMethod(PasswordTransformationMethod.getInstance)
+        }
+      ) >>= id(Id.password_layout) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { (p: LP) =>
+        p.addRule(BELOW, Id.database_file_layout)
+        margins(left = 8.dp, right = 8.dp)(p)
+      },
+      l[TextInputLayout](
+        w[AppCompatEditText] >>= id(Id.database_key) >>= hint("Key File") >>= lp(MATCH_PARENT, WRAP_CONTENT) >>= kestrel(_.setSingleLine(true)) >>= tint
+      ) >>= id(Id.database_key_layout) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { (p: LP) =>
+        p.addRule(BELOW, Id.password_layout)
+        p.addRule(LEFT_OF, Id.database_key_browse)
+        margins(left = 8.dp, right = 8.dp)(p)
+      },
+      w[Button] >>= id(Id.database_key_browse) >>= text(R.string.browse) >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
+        p.addRule(BELOW, Id.database_key_layout)
+        p.addRule(ALIGN_PARENT_RIGHT, 1)
+        p.addRule(ALIGN_TOP, Id.database_key_layout)
+      } >>= hook0.click(IO(browseHandler(BROWSE_KEYFILE, "*/*")))
+    ) >>= padding(all = 16.dp)) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { (p: LP) =>
+      p.addRule(ALIGN_PARENT_TOP, 1)
+      p.addRule(ABOVE, Id.save)
+      p.alignWithParent = true
+    },
+    w[TextView] >>= id(Id.error_text) >>= textGravity(Gravity.CENTER) >>=
+      kestrel(_.setTextColor(0xffff0000)) >>= lpK(MATCH_PARENT, WRAP_CONTENT){ (p: LP) =>
+      p.addRule(ABOVE, Id.save)
+      p.alignWithParent = true
+      margins(all = 8.dp)(p)
+    },
+    IO(new ProgressBar(this, null, android.R.attr.progressBarStyleSmall)) >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
+      p.addRule(CENTER_HORIZONTAL, 1)
+      p.addRule(ABOVE, Id.save)
+      margins(all = 8.dp)(p)
+    } >>= gone >>= id(Id.progress),
+    w[Button] >>= id(Id.save) >>= text(R.string.save) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { (p: LP) =>
+      p.addRule(ALIGN_PARENT_BOTTOM, 1)
+      margins(all = 8.dp)(p)
+    } >>= hook0.click(save())
+  ) >>= backgroundResource(android.R.drawable.picture_frame)
+
+  lazy val dk: TextView = findView(Id.database_key)
+  lazy val df: TextView = findView(Id.database_file)
+  lazy val dp: TextView = findView(Id.password)
+  lazy val saveButton = findView(Id.save)
+
+  override def onCreate(savedInstanceState: Bundle) = {
+    super.onCreate(savedInstanceState)
+    getSupportActionBar.setDisplayHomeAsUpEnabled(true)
+    setContentView(setupLayout.perform())
+    WidgetObservable.text(dp).asScala.subscribe { n =>
+      model = model.copy(password = Option(n.text) map (_.toString.trim) filterNot (_.isEmpty))
+      modelSubject.onNext(model)
+    }
+    WidgetObservable.text(df).asScala.subscribe { n =>
+      model = model.copy(db = Option(n.text) map (_.toString.trim) filterNot (_.isEmpty))
+      modelSubject.onNext(model)
+    }
+    WidgetObservable.text(dk).asScala.subscribe { n =>
+      model = model.copy(keyfile = Option(n.text) map (_.toString.trim) filterNot (_.isEmpty))
+      modelSubject.onNext(model)
+    }
+    modelChange.subscribe { m =>
+      saveButton.setVisibility(if (m.ready) View.VISIBLE else View.GONE)
+      saveButton.setEnabled(m.ready)
+      if (m.ready)
+        findView(Id.error_text).setVisibility(View.GONE)
+    }
+    val intent = Option(getIntent)
+    intent.flatMap(i => Option(i.getStringExtra(EXTRA_DATABASE))).foreach(df.setText)
+    intent.flatMap(i => Option(i.getStringExtra(EXTRA_PASSWORD))).foreach(dp.setText)
+    intent.flatMap(i => Option(i.getStringExtra(EXTRA_KEYFILE))).foreach(dk.setText)
+    setResult(Activity.RESULT_CANCELED)
+  }
+
+  def save(): IO[Unit] = IO {
+//    findView(TR.error_text).setVisibility(View.GONE)
+    hideIME()
+    saveButton.setEnabled(false)
+    val database = model.db.getOrElse("")
+    val keyfile = model.keyfile.getOrElse("")
+
+    val settings = Settings(this)
+    val keymanager = new KeyManager(this, settings)
+
+    val keyf = new File(keyfile).getAbsoluteFile
+    val password = model.password.getOrElse("")
+    if (keyfile != "" && !keyfile.startsWith("content:") && !keyf.isFile) {
+      error(R.string.keyfile_no_exist)
+    } else  if (password == "" && keyfile == "") {
+      error(R.string.password_no_blank)
+    } else {
+
+      val db = new File(database).getAbsoluteFile
+      if (!database.startsWith("content:") && !db.isFile) {
+        error(R.string.database_no_exist)
+      } else {
+        findView(Id.progress).setVisibility(View.VISIBLE)
+        val f = Database.open(database, Option(password),
+          Option(keyfile) filterNot (_.isEmpty)) flatMap {
+          _ => keymanager.localKey  }
+
+        f onSuccessMain {
+          case Left(error) =>
+            Toast.makeText(
+              this, error.toString, Toast.LENGTH_SHORT).show()
+            finish()
+          case Right(k) =>
+            val intent = Option(getIntent) getOrElse new Intent
+            intent.putExtra(EXTRA_DATABASE, model.db.orNull)
+            intent.putExtra(EXTRA_PASSWORD, model.password.orNull)
+            intent.putExtra(EXTRA_KEYFILE, model.keyfile.orNull)
+            setResult(Activity.RESULT_OK, intent)
+            finish()
+        }
+
+        f onFailureMain { case e =>
+          error("Unable to open database: " + e.getMessage)
+          saveButton.setEnabled(true)
+          log.e("failed to load database", e)
+        }
+
+        f onCompleteMain { _ =>
+          saveButton.setEnabled(true)
+          findView(Id.progress).setVisibility(View.GONE)
+        }
+      }
+    }
+
+    ()
+  }
+
+  def browseHandler(id: Int, mimeType: String) = {
+    val intent = new Intent(if (kitkatAndNewer)
+      Intent.ACTION_OPEN_DOCUMENT else Intent.ACTION_GET_CONTENT)
+    intent.addCategory(Intent.CATEGORY_OPENABLE)
+    intent.setType(mimeType)
+
+    try {
+      startActivityForResult(intent, id)
+    } catch {
+      case e: ActivityNotFoundException =>
+        Toast.makeText(this,
+          R.string.must_install_explorer,
+          Toast.LENGTH_SHORT).show()
+      case e: Exception =>
+        Toast.makeText(this,
+          "Unable to open file: " + e.getMessage, Toast.LENGTH_LONG).show()
+    }
+  }
+
+  override def onActivityResult(requestCode: Int, resultCode: Int, data: Intent) = {
+    super.onActivityResult(requestCode, resultCode, data)
+    requestCode match {
+      case BROWSE_DATABASE =>
+        if (resultCode == Activity.RESULT_OK)
+          setDataPath(data, df.setText)
+      case BROWSE_KEYFILE =>
+        if (resultCode == Activity.RESULT_OK)
+          setDataPath(data, dk.setText)
+    }
+  }
   def setDataPath(data: Intent, setProperty: String => Unit): Unit = {
     val uri = data.getData
     if (uri == null) {
@@ -382,6 +653,7 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
               Intent.FLAG_GRANT_WRITE_URI_PERMISSION |
                 Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
+        takePermissions()
 
         UiBus.post { setProperty(if (kitkatAndNewer) uri.toString else dest.getAbsolutePath) }
         try {
@@ -416,200 +688,20 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
       setProperty(uri.getPath)
     }
   }
-  ServiceBus += {
-    case PINServiceExit  => finish()
+
+  override def onDestroy() = {
+    super.onDestroy()
+    dismissAllDialogs()
   }
-}
-
-object SetupFragment {
-  implicit class OnPreferenceClick(val pref: Preference) extends AnyVal {
-    def onPreferenceClick(f: Preference => Boolean) = pref.setOnPreferenceClickListener(new OnPreferenceClickListener {
-      override def onPreferenceClick(preference: Preference) = f(preference)
-    })
+  def error(error: String) {
+    val view = findView(Id.error_text)
+    view.setVisibility(View.VISIBLE)
+    view.setText(error)
+    saveButton.setEnabled(false)
+    saveButton.setVisibility(View.GONE)
   }
+  def error(err: Int): Unit = error(getString(err))
 
-  implicit class OnTextChange(val text: TextView) extends AnyVal {
-    def onTextChanged[A](f: CharSequence => A) = text.addTextChangedListener(new TextWatcher {
-      override def beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) = ()
-      override def onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) = f(s)
-      override def afterTextChanged(s: Editable) = ()
-    })
-  }
-}
-class SetupFragment extends android.preference.PreferenceFragment {
-  import SetupFragment._
-  lazy val settings = Settings(getActivity)
-  lazy val df = findPreference("database_file").asInstanceOf[BrowsableTextPreference]
-  lazy val kf = findPreference("database_key").asInstanceOf[BrowsableTextPreference]
-  lazy val p = findPreference("database_pass").asInstanceOf[TextPreference]
-  lazy val kt = findPreference("keyboard_enable").asInstanceOf[CheckBoxPreference]
-  lazy val ae = findPreference("accessibility_enable").asInstanceOf[CheckBoxPreference]
-  lazy val ktimeout = findPreference("keyboard_timeout").asInstanceOf[ListPreference]
-  lazy val ptimeout = findPreference("pin_timeout").asInstanceOf[ListPreference]
-  lazy val pwoverride = findPreference("keyboard_override").asInstanceOf[CheckBoxPreference]
-  private var _onPrefChange = Option.empty[(Preference, Any) => Any]
-
-  def onPrefChange(p: Preference, value: Any) = {
-    _onPrefChange foreach(_(p,value))
-    true
-  }
-  def prefChanged(p: Preference, value: Any) = _onPrefChange foreach (_(p, value))
-
-  def onPreferenceChange[A](fn: (Preference, Any) => A) = _onPrefChange = Option(fn)
-  def kboverride = pwoverride.isChecked
-  def kboverride_=(b: Boolean) = pwoverride.setChecked(b)
-  def password = p.text
-  def password_=(s: String) = p.text = s
-  def keyfile = kf.text
-  def keyfile_=(s: String) = kf.text = s
-  def datafile = df.text
-  def datafile_=(s: String) = df.text = s
-  def pintimeo = ptimeout.getValue.toInt
-  def pintimeo_=(i: Int) = {
-    ptimeout.setSummary(i.toString)
-    ptimeout.setValue(i.toString)
-  }
-  def kbtimeo = ktimeout.getValue.toInt
-  def kbtimeo_=(i: Int) = {
-    ktimeout.setSummary(i.toString)
-    ktimeout.setValue(i.toString)
-  }
-
-  def datafileOnClick[A](f: () => A) = df.onClick(f)
-  def keyfileOnClick[A](f: () => A) = kf.onClick(f)
-
-  override def onCreate(savedInstanceState: Bundle) = {
-    super.onCreate(savedInstanceState)
-    addPreferencesFromResource(R.xml.setup)
-    p.password = true
-  }
-
-  override def onStart() = {
-    super.onStart()
-    ae.setIntent(new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
-    df.onPreferenceChange(onPrefChange _)
-    kf.onPreferenceChange(onPrefChange _)
-    p.onPreferenceChange(onPrefChange _)
-    kt.setIntent(Intent.makeMainActivity(
-      new ComponentName("com.android.settings",
-        "com.android.settings.LanguageSettings")))
-    import android.provider.Settings.Secure
-    val services = Option(Secure.getString(getActivity.getContentResolver, Secure.ENABLED_ACCESSIBILITY_SERVICES))
-    ae.setChecked((services exists (_ contains (getActivity.getPackageName + "/"))) && AccessibilityService.running)
-
-    val imm = getActivity.systemService[InputMethodManager]
-    val list = imm.getEnabledInputMethodList
-    val enabled = list exists (_.getPackageName == getActivity.getPackageName)
-    kt.setChecked(enabled)
-    pwoverride.setChecked(
-      settings.get(Settings.PASSWORD_OVERRIDE))
-
-    pwoverride.onPreferenceChange { (pref, b) =>
-      prefChanged(pref, b)
-      p.text = ""
-      true
-    }
-
-    ktimeout.setValue(settings.get(Settings.KEYBOARD_TIMEOUT).toString)
-    ktimeout.setSummary(settings.get(Settings.KEYBOARD_TIMEOUT).toString)
-    ptimeout.setValue(settings.get(Settings.PIN_TIMEOUT).toString)
-    ptimeout.setSummary(settings.get(Settings.PIN_TIMEOUT).toString)
-
-    ptimeout.onPreferenceChange { (pref, v) =>
-      prefChanged(pref, v)
-      ptimeout.setSummary(v.toString)
-      p.text = ""
-      true
-    }
-    ktimeout.onPreferenceChange { (pref, v) =>
-      prefChanged(pref, v)
-      ktimeout.setSummary(v.toString)
-      p.text = ""
-      true
-    }
-  }
-
-  override def onViewCreated(view: View, savedInstanceState: Bundle) = {
-    super.onViewCreated(view, savedInstanceState)
-    // TextPreference has a divider between them??
-    val list = view.findViewById(android.R.id.list).asInstanceOf[ListView]
-    list.setDividerHeight(0)
-  }
-}
-
-class TextPreference(ctx: Context, attrs: AttributeSet, res: Int)
-  extends android.preference.Preference(ctx, attrs, res) {
-  import SetupFragment._
-  import com.rengwuxian.materialedittext.MaterialEditText
-  def this(ctx: Context, attrs: AttributeSet) = this(ctx, attrs, 0)
-  def this(ctx: Context) = this(ctx, null, 0)
-  private var view = Option.empty[EditText]
-  private var _text: String = ""
-  private var ispassword = false
-  private var wasfocused = false
-  def password_=(b: Boolean) = ispassword = b
-  def password = ispassword
-  def text = view map (_.getText.toString) getOrElse _text
-  def text_=(s: String) = {
-    _text = s
-    view foreach { e =>
-      e.setText(s)
-      e.setSelection(s.length)
-    }
-  }
-
-  setLayoutResource(R.layout.edittext)
-  setSelectable(true)
-
-  override def onCreateView(parent: ViewGroup) = {
-    super.onCreateView(parent)
-  }
-
-  override def getView(convertView: View, parent: ViewGroup) = {
-    super.getView(null, parent)
-  }
-
-  override def onBindView(view: View) = {
-    super.onBindView(view)
-    val edit = view.asInstanceOf[ViewGroup]
-      .getChildAt(0).asInstanceOf[MaterialEditText]
-    this.view = Option(edit)
-    edit.setInputType(InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS |
-      InputType.TYPE_TEXT_VARIATION_URI)
-    edit.setTransformationMethod(if (ispassword)
-      PasswordTransformationMethod.getInstance else null)
-    edit.setFloatingLabelText(getTitle)
-    if (wasfocused) {
-      edit.requestFocus()
-    }
-    edit.setHint(getTitle)
-    edit.setText(_text)
-    edit.setSelection(_text.length)
-    edit.onTextChanged { s =>
-      if (callChangeListener(s))
-        _text = edit.getText.toString
-    }
-    edit.onFocusChange { (v: View,f: Boolean) =>
-      if (f) wasfocused = true
-      edit.setSelection(edit.getText.length)
-    }
-    wasfocused = false
-  }
-}
-class BrowsableTextPreference(ctx: Context, attrs: AttributeSet, res: Int)
-  extends TextPreference(ctx, attrs, res) {
-  def this(ctx: Context, attrs: AttributeSet) = this(ctx, attrs, 0)
-  def this(ctx: Context) = this(ctx, null, 0)
-  setLayoutResource(R.layout.browsable_edittext)
-  private var _onClick = Option.empty[() => Any]
-
-  def onClick[A](f: () => A) = _onClick = Option(f)
-
-  override def onCreateView(parent: ViewGroup) = {
-    val v = super.onCreateView(parent)
-    v.asInstanceOf[ViewGroup].getChildAt(1).onClick0({
-      _onClick foreach (_())
-    })
-    v
-  }
+  def hideIME(): Unit =
+    Option(getCurrentFocus).foreach(f => systemService[InputMethodManager].hideSoftInputFromWindow(f.getWindowToken, 0))
 }

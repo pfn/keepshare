@@ -23,6 +23,11 @@
                   android:theme="@style/AppTheme"
                   android:label="@string/appname">
         </activity>
+        <activity android:name=".DatabaseSetupActivity"
+                  android:windowSoftInputMode="adjustResize"
+                  android:theme="@style/AppTheme"
+                  android:label="@string/appname">
+        </activity>
         <activity android:name=".PINSetupActivity"
                   android:windowSoftInputMode="adjustResize"
                   android:theme="@style/AppTheme"

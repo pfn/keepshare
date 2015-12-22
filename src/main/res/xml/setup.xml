@@ -19,23 +19,12 @@
     <PreferenceCategory
             android:title="KeePass Information">
 
-        <com.hanhuy.android.keepshare.BrowsableTextPreference
-                android:key="database_file"
+        <Preference
+                android:key="database_info"
                 android:persistent="false"
-                android:title="Database File"
-                />
-        <com.hanhuy.android.keepshare.TextPreference
-                android:key="database_pass"
-                android:persistent="false"
-                android:title="Password"
-                />
-        <com.hanhuy.android.keepshare.BrowsableTextPreference
-                android:key="database_key"
-                android:persistent="false"
-                android:title="Key File"
-                />
-
-
+                android:summary="@string/has_not_configured"
+                android:title="@string/database"
+        />
     </PreferenceCategory>
 
     <PreferenceCategory

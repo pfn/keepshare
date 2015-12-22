@@ -26,7 +26,7 @@ libraryDependencies ++= Seq(
   "ch.acra" % "acra" % "4.6.2",
   "com.rengwuxian.materialedittext" % "library" % "2.0.3" exclude("com.android.support", "appcompat-v7"),
   "com.melnykov" % "floatingactionbutton" % "1.3.0" exclude("com.android.support", "appcompat-v7"),
-  "com.hanhuy.android" %% "iota" % "0.7",
+  "com.hanhuy.android" %% "iota" % "0.8-SNAPSHOT",
   "com.github.ozodrukh" % "CircularReveal" % "1.0.6",
   "com.hanhuy.android" %% "scala-conversions" % "1.3",
   "com.hanhuy.android" %% "scala-common" % "1.0",

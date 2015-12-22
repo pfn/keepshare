@@ -121,6 +121,8 @@
     <string name="try_again">Try again</string>
     <string name="no_more_tries">Goodbye</string>
     <string name="pin_unlock_required">: PIN unlock required</string>
+    <string name="has_not_configured">Has not been configured</string>
+    <string name="has_been_configured">Is configured and ready</string>
     <string name="confirm_clear_data">
         Are you sure you want to clear your configuration?</string>
     <string name="setup_required_for_pin">
