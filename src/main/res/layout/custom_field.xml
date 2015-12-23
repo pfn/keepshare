@@ -26,24 +26,26 @@
                android:layout_marginLeft="16dp"
                android:layout_marginBottom="12dp"
             />
-    <com.rengwuxian.materialedittext.MaterialEditText
-            android:id="@+id/custom_field"
-            app:met_floatingLabel="normal"
-            app:met_hideUnderline="true"
+    <android.support.design.widget.TextInputLayout
+            android:id="@+id/input_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:layout_marginRight="36dp"
             android:layout_marginBottom="12dp"
             android:layout_marginTop="12dp"
             android:layout_marginLeft="72dp"
-            android:layout_gravity="left|center"
-            android:ellipsize="none"
-            android:singleLine="true"
-            android:textIsSelectable="true"
-            android:textAppearance="?android:textAppearanceMedium"
-            android:gravity="center|left"
-            tools:text="Username goes here"
-            android:hint="Username"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_gravity="left|center">
+        <EditText android:layout_width="match_parent"
+                  android:layout_height="match_parent"
+                  android:singleLine="true"
+                  android:gravity="center|left"
+                  android:background="@null"
+                  android:inputType="none"
+                  android:textIsSelectable="true"
+                  android:ellipsize="none"
+                  android:textAppearance="?android:textAppearanceMedium"
+                  android:id="@+id/custom_field"/>
+    </android.support.design.widget.TextInputLayout>
     <CheckBox android:id="@+id/field_visibility"
               android:visibility="gone"
               android:layout_marginBottom="12dp"

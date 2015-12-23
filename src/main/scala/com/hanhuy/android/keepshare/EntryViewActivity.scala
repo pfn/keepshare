@@ -7,6 +7,7 @@ import android.graphics.drawable.{LayerDrawable, BitmapDrawable}
 import android.os.Bundle
 import android.support.v7.app.ActionBar
 import android.support.v7.widget.Toolbar
+import android.text.InputType
 import android.text.method.{LinkMovementMethod, PasswordTransformationMethod}
 import android.text.util.Linkify
 import android.util.AttributeSet
@@ -348,11 +349,13 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
     mtime.iconfield.setContentDescription("Access Times")
     mtime.hint = "Last Modified"
     mtime.text = fmt.format(entry.getLastModificationTime) + " " + fmt2.format(entry.getLastModificationTime)
-    mtime.textfield.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].bottomMargin = (getResources.getDisplayMetrics.density * 2).toInt
+    mtime.inputlayout.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].bottomMargin = (getResources.getDisplayMetrics.density * 2).toInt
+    mtime.textfield.setTextIsSelectable(false)
     ctime.first = true
     ctime.iconfield.setVisibility(View.INVISIBLE)
     ctime.hint = "Created On"
-    ctime.textfield.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].topMargin = (getResources.getDisplayMetrics.density * 2).toInt
+    ctime.textfield.setTextIsSelectable(false)
+    ctime.inputlayout.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].topMargin = (getResources.getDisplayMetrics.density * 2).toInt
     ctime.text = fmt.format(entry.getCreationTime) + " " + fmt2.format(entry.getCreationTime)
     entry.getCreationTime
     fieldlist.addView(mtime)
@@ -364,8 +367,8 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
         val field = new CustomField(this)
         field.hint = fmt.format(h.getLastModificationTime) + " " + fmt2.format(h.getLastModificationTime)
         field.text = Database.getField(h, PwDefs.TitleField) getOrElse "<no title>"
-        field.textfield.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].topMargin = (getResources.getDisplayMetrics.density * 1).toInt
-        field.textfield.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].bottomMargin = (getResources.getDisplayMetrics.density * 1).toInt
+        field.inputlayout.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].topMargin = (getResources.getDisplayMetrics.density * 1).toInt
+        field.inputlayout.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].bottomMargin = (getResources.getDisplayMetrics.density * 1).toInt
         field.textfield.setTextIsSelectable(false)
         field.setBackgroundResource(R.drawable.list_selector_background)
         field.onClick0(EntryViewActivity.show(this, h, i))
@@ -377,7 +380,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
 
       (history.take(1).map { f =>
         f.first = false
-        f.textfield.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].topMargin = (getResources.getDisplayMetrics.density * 12).toInt
+        f.inputlayout.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].topMargin = (getResources.getDisplayMetrics.density * 12).toInt
         f.iconfield.setVisibility(View.VISIBLE)
         f.iconfield.setContentDescription("History")
         f
@@ -419,13 +422,21 @@ class StandardFieldView(c: Context, attrs: AttributeSet) extends FrameLayout(c, 
       textfield.setSingleLine(false)
       textfield.setMinLines(8)
       textfield.setGravity(Gravity.TOP | Gravity.LEFT)
-      textfield.getLayoutParams.asInstanceOf[FrameLayout.LayoutParams].gravity = Gravity.TOP | Gravity.LEFT
+      (textfield.getLayoutParams match {
+        case f: FrameLayout.LayoutParams => f
+        case _ =>
+          textfield.getParent.asInstanceOf[ViewGroup].getLayoutParams.asInstanceOf[FrameLayout.LayoutParams]
+      }).gravity = Gravity.TOP | Gravity.LEFT
       iconfield.getLayoutParams.asInstanceOf[FrameLayout.LayoutParams].gravity = Gravity.TOP | Gravity.LEFT
     } else {
       textfield.setSingleLine(true)
       textfield.setMinLines(1)
       textfield.setGravity(Gravity.CENTER | Gravity.LEFT)
-      textfield.getLayoutParams.asInstanceOf[FrameLayout.LayoutParams].gravity = Gravity.CENTER | Gravity.LEFT
+      (textfield.getLayoutParams match {
+        case f: FrameLayout.LayoutParams => f
+        case _ =>
+          textfield.getParent.asInstanceOf[ViewGroup].getLayoutParams.asInstanceOf[FrameLayout.LayoutParams]
+      }).gravity = Gravity.CENTER | Gravity.LEFT
       iconfield.getLayoutParams.asInstanceOf[FrameLayout.LayoutParams].gravity = Gravity.CENTER | Gravity.LEFT
     }
 
@@ -487,8 +498,9 @@ class GroupFieldView(a: AuthorizedActivity, g: PwGroup) extends StandardFieldVie
 class CustomField(a: AuthorizedActivity) extends StandardFieldView(a, null) {
   override def inflate() = a.getLayoutInflater.inflate(R.layout.custom_field, this, true)
   override lazy val textfield = findView(TR.custom_field)
+  lazy val inputlayout = findView(TR.input_layout)
   override def hint_=(s: String) = {
-    textfield.setFloatingLabelText(s)
+    inputlayout.setHint(s)
     textfield.setHint(s)
   }
 }

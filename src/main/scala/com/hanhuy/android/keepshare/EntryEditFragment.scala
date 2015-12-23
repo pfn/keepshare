@@ -286,6 +286,7 @@ object StandardEditView {
 class StandardEditView(c: Context, attrs: AttributeSet) extends StandardFieldView(c, attrs) {
   override def inflate() = LayoutInflater.from(c).inflate(R.layout.edit_field, this, true)
   override lazy val textfield = findView(TR.custom_field)
+  lazy val inputlayout = findView(TR.input_layout)
   def this(c: Context) = this(c, null)
 
   val a = c.obtainStyledAttributes(attrs, R.styleable.StandardEditView)
@@ -324,7 +325,7 @@ class StandardEditView(c: Context, attrs: AttributeSet) extends StandardFieldVie
     dispatchFreezeSelfOnly(container)
 
   override def hint_=(s: String) = {
-    textfield.setFloatingLabelText(s)
+    inputlayout.setHint(s)
     textfield.setHint(s)
   }
 }
