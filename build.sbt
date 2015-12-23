@@ -39,6 +39,8 @@ libraryDependencies ++= Seq(
 
 proguardOptions ++=
   "-keepclassmembers class scala.runtime.RichInt { ** until(); }" ::
+  "-dontwarn android.app.Notification" ::
+  "-dontwarn iota.**" ::
   "-dontwarn javax.naming.**" ::
   "-dontwarn com.google.common.**" ::
   "-dontwarn sun.misc.Unsafe" ::

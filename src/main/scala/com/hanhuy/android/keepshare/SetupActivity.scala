@@ -339,9 +339,7 @@ class SetupFragment extends android.preference.PreferenceFragment {
   override def onStart() = {
     super.onStart()
     ae.setIntent(new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
-    kt.setIntent(Intent.makeMainActivity(
-      new ComponentName("com.android.settings",
-        "com.android.settings.LanguageSettings")))
+    kt.setIntent(new Intent(android.provider.Settings.ACTION_INPUT_METHOD_SETTINGS))
     import android.provider.Settings.Secure
     val services = Option(Secure.getString(getActivity.getContentResolver, Secure.ENABLED_ACCESSIBILITY_SERVICES))
     ae.setChecked((services exists (_ contains (getActivity.getPackageName + "/"))) && AccessibilityService.running)
