@@ -60,7 +60,7 @@ object SetupActivity {
     intent
   }
 }
-class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.RefOwner with DialogManager {
+class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.RefOwner with PermissionManager with DialogManager {
   val log = Logcat("SetupActivity")
   import KeyManager._
   import RequestCodes._
@@ -238,6 +238,8 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
       startActivityForResult(new Intent(this, classOf[PINEntryActivity]),
         RequestCodes.REQUEST_PIN_ENTRY)
     }
+    requestPermission(android.Manifest.permission.GET_ACCOUNTS,
+      R.string.require_get_accounts, flipper) onFailureMain { case _ => finish() }
   }
 
 
@@ -396,7 +398,7 @@ case class DatabaseSetupModel(db: Option[String], password: Option[String], keyf
   def ready = db.nonEmpty && (password.nonEmpty || keyfile.nonEmpty)
 }
 
-class DatabaseSetupActivity extends AppCompatActivity with DialogManager {
+class DatabaseSetupActivity extends AppCompatActivity with DialogManager with PermissionManager {
   val log = Logcat("DatabaseSetupActivity")
   private[this] var model = DatabaseSetupModel.empty
   private[this] val modelSubject = Subject[DatabaseSetupModel]()
@@ -416,6 +418,7 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager {
     val tint = new ColorStateList(Array(Array(0)), Array(resolveAttr(R.attr.colorPrimary, _.data)))
     v.setBackgroundTintList(tint)
   })
+
   lazy val setupLayout = l[RelativeLayout](
     l[ScrollView](
     l[RelativeLayout](
@@ -507,6 +510,8 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager {
     intent.flatMap(i => Option(i.getStringExtra(EXTRA_PASSWORD))).foreach(dp.setText)
     intent.flatMap(i => Option(i.getStringExtra(EXTRA_KEYFILE))).foreach(dk.setText)
     setResult(Activity.RESULT_CANCELED)
+    requestPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
+      R.string.require_external_storage, saveButton) onFailureMain { case _ => finish() }
   }
 
   def save(): IO[Unit] = IO {

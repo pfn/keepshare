@@ -11,15 +11,15 @@
         android:layout_height="match_parent">
 
     <LinearLayout
-        android:orientation="vertical"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
 
         <fragment android:name="com.hanhuy.android.keepshare.SetupFragment"
-                android:id="@+id/setup_fragment"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:layout_width="match_parent"/>
+                  android:id="@+id/setup_fragment"
+                  android:layout_height="0dp"
+                  android:layout_weight="1"
+                  android:layout_width="match_parent"/>
         <TextView
                 android:visibility="gone"
                 android:id="@+id/error_text"
@@ -44,7 +44,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:visibility="gone"
-                />
+        />
         <Button
                 android:id="@+id/save"
                 android:layout_gravity="center_horizontal"
@@ -56,19 +56,19 @@
                 android:layout_height="wrap_content"/>
     </LinearLayout>
     <RelativeLayout
-        android:visibility="gone"
-        android:orientation="vertical"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-        <ScrollView
+            android:visibility="gone"
+            android:orientation="vertical"
             android:layout_width="match_parent"
-            android:layout_alignParentTop="true"
-            android:layout_above="@+id/connect"
-            android:layout_height="0dp">
-            <LinearLayout
-                android:orientation="vertical"
+            android:layout_height="match_parent">
+        <ScrollView
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_alignParentTop="true"
+                android:layout_above="@+id/connect"
+                android:layout_height="0dp">
+            <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
 
                 <TextView
                         android:layout_width="match_parent"
@@ -76,21 +76,21 @@
                         android:layout_marginBottom="18dp"
                         android:textAppearance="?android:attr/textAppearanceMedium"
                         android:text="@string/overview"
-                        />
+                />
                 <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="18dp"
                         android:textAppearance="?android:attr/textAppearanceMedium"
                         android:text="@string/setup_instructions"
-                        />
+                />
                 <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="18dp"
                         android:textAppearance="?android:attr/textAppearanceMedium"
                         android:text="@string/connect_instructions"
-                        />
+                />
             </LinearLayout>
         </ScrollView>
         <ProgressBar
@@ -101,7 +101,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_above="@+id/connect"
-                />
+        />
         <Button
                 android:id="@+id/connect"
                 android:text="@string/connect"

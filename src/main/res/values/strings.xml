@@ -33,6 +33,10 @@
         select usernames and passwords and allow exporting them to the
         clipboard.
     </string>
+    <string name="request_again">Ask Again</string>
+    <string name="add_permission">Add Permission</string>
+    <string name="require_external_storage">Storage access is required to work with your KeePass database</string>
+    <string name="require_get_accounts">Contacts access is required to discover your Google ID for database protection</string>
     <string name="form_fill_notif_text">Tap to find passwords for: %s</string>
     <string name="form_fill_notif_title">%s: search for passwords to fill</string>
     <string name="pin_holder_notif_text">Tap to lock database</string>
