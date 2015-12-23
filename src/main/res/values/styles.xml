@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <style name="ActionBarTheme" parent="ThemeOverlay.AppCompat.Light">
+        <item name="colorControlNormal">@android:color/white</item>
+    </style>
     <style name="Base.AppTheme" parent="Theme.AppCompat.Light">
         <item name="colorAccent">@color/colorAccent</item>
         <item name="colorPrimary">@color/colorPrimary</item>
@@ -8,6 +11,7 @@
         <item name="colorControlNormal">@android:color/white</item>
         <item name="android:actionModeBackground">@android:color/darker_gray</item>
         <item name="actionBarPopupTheme">@style/Base.ActionBar.PopupMenu</item>
+        <item name="actionBarTheme">@style/ActionBarTheme</item>
     </style>
     <style name="Base.AppTheme.Dialog" parent="android:Theme.DeviceDefault.Light.Dialog">
         <item name="colorAccent">@color/colorAccent</item>
