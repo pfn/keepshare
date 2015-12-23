@@ -141,7 +141,6 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
     setTitle(getTitle + getString(R.string.setup_subtitle))
     setContentView(R.layout.setup)
 
-
     val connect = findView(TR.connect)
     if (settings.get(Settings.FIRST_RUN)) {
       settings.clear()
@@ -169,7 +168,7 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
       val intent = new Intent(this, classOf[DatabaseSetupActivity])
       intent.putExtra(EXTRA_DATABASE, dbCredentials.db.getOrElse(""))
       intent.putExtra(EXTRA_PASSWORD, dbCredentials.password.getOrElse(""))
-      intent.putExtra(EXTRA_KEYFILE, dbCredentials.password.getOrElse(""))
+      intent.putExtra(EXTRA_KEYFILE, dbCredentials.keyfile.getOrElse(""))
       startActivityForResult(intent, SETUP_DATABASE)
     }
 
