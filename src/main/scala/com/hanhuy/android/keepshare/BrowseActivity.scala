@@ -231,7 +231,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
     case R.id.database_sort =>
       settings.set(Settings.BROWSE_SORT_ALPHA, !item.isChecked)
       item.setChecked(!item.isChecked)
-      list.getAdapter.asInstanceOf[GroupAdapter].notifyDataSetChanged()
+      Option(list.getAdapter.asInstanceOf[GroupAdapter]).foreach(_.notifyDataSetChanged())
       true
 
     case _ => super.onOptionsItemSelected(item)
