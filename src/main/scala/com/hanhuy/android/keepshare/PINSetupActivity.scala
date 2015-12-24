@@ -41,6 +41,8 @@ class PINSetupActivity extends AppCompatActivity with TypedFindView {
           pinKey, localKey.getEncoded))
         settings.set(Settings.LOCAL_KEY, newkey)
         settings.set(Settings.NEEDS_PIN, true)
+        settings.set(Settings.PIN_TIMESTAMP, System.currentTimeMillis)
+        FingerprintManager(this, settings).registerPin(thePin)
         settings.set(Settings.PIN_VERIFIER,
           KeyManager.encrypt(key, KeyManager.encrypt(pinKey,
             PINHolderService.PIN_VERIFIER)))

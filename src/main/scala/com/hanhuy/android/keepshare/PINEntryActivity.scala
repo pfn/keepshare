@@ -11,6 +11,9 @@ import android.view.{MenuItem, Menu, View}
 import android.content.{DialogInterface, Intent}
 
 import Futures._
+import rx.android.schedulers.AndroidSchedulers
+import Rx._
+import rx.lang.scala.Subscription
 
 import scala.util.Try
 
@@ -29,32 +32,27 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
   lazy val settings = Settings(this)
   lazy val km = new KeyManager(this, settings)
   lazy val vibrator = this.systemService[Vibrator]
+  lazy val fpm = FingerprintManager(this, settings)
+  lazy val fpmObs = fpm.authenticate()
+  private[this] var subscription = Option.empty[Subscription]
 
-  private var pin = ""
+  private[this] var pin = ""
 
   override def onDestroy() = {
     dismissAllDialogs()
     super.onDestroy()
   }
 
-  override def onCreate(savedInstanceState: Bundle) {
-    super.onCreate(savedInstanceState)
-    setTitle(getTitle + getString(R.string.enter_pin_subtitle))
-    setContentView(R.layout.pin_setup)
-    prompt.setText(R.string.verify_pin)
-    setResult(Activity.RESULT_CANCELED)
-    val cloudKey = km.fetchCloudKey()
 
+  override def onStart() = {
+    super.onStart()
     def validatePin() {
       pinEntry.setText(pin)
       vibrator.vibrate(20)
       ok.setEnabled(pin.length > 0)
     }
 
-    val clearError: Runnable = () => {
-      error.setText("")
-    }
-
+    val cloudKey = km.fetchCloudKey()
     var verifyCount = 0
     def verifyPin() {
       verifyCount += 1
@@ -63,11 +61,12 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
 
       cloudKey onSuccessMain { case key =>
         val decrypted = Try(KeyManager.decryptToString(pinKey,
-            KeyManager.decryptToString(key, verifier))).toOption
+          KeyManager.decryptToString(key, verifier))).toOption
 
         if (decrypted contains PINHolderService.PIN_VERIFIER) {
           PINHolderService.start(pin)
           setResult(Activity.RESULT_OK)
+          fpm.registerPin(pin)
           finish()
         } else {
           error.setVisibility(View.VISIBLE)
@@ -131,6 +130,37 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
       R.id.pin_0, R.id.pin_ok, R.id.pin_back) foreach {
       findViewById(_).onClick(onClick)
     }
+    if (fpm.hasFingerprints) {
+      // show fingerprint visibility
+      subscription = Some(fpmObs.observeOn(AndroidSchedulers.mainThread).subscribe({
+        case Right(fpin) =>
+          pin = fpin
+          verifyPin()
+        case Left(errorString) =>
+          error.setVisibility(View.VISIBLE)
+          error.setText(errorString)
+          UiBus.handler.removeCallbacks(clearError)
+          UiBus.handler.postDelayed(clearError, 1000)
+      }, error => {
+      }))
+    }
+  }
+  override def onStop() = {
+    super.onStop()
+    subscription.foreach(_.unsubscribe())
+  }
+
+  val clearError: Runnable = () => {
+    error.setText("")
+  }
+
+  override def onCreate(savedInstanceState: Bundle) {
+    super.onCreate(savedInstanceState)
+    setTitle(getTitle + getString(R.string.enter_pin_subtitle))
+    setContentView(R.layout.pin_setup)
+    prompt.setText(R.string.verify_pin)
+    setResult(Activity.RESULT_CANCELED)
+
   }
 
   override def onCreateOptionsMenu(menu: Menu) = {

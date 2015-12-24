@@ -31,6 +31,9 @@ object Settings {
   val PASSWORD_OVERRIDE = Setting[Boolean]("password_override", false)
   val NEEDS_PIN = Setting[Boolean]("needs_pin", false)
   val PIN_VERIFIER = Setting[String]("pin_verifier", "")
+  val PIN_TIMESTAMP = Setting[Long]("pin_timestamp", System.currentTimeMillis)
+  val FINGERPRINT_TIMESTAMP = Setting[Long]("fingerprint_timestamp", 0l)
+  val FINGERPRINT_PIN = Setting[String]("fingerprint_pin", null)
 
   val BROWSE_SORT_ALPHA = Setting[Boolean]("browse_sort_order", true)
 
@@ -70,6 +73,8 @@ class Settings(val context: Context) {
         editor.putString(setting.key, value.asInstanceOf[String])
     } else if (classOf[Int] == m.runtimeClass) {
       editor.putInt(setting.key, value.asInstanceOf[Int])
+    } else if (classOf[Long] == m.runtimeClass) {
+      editor.putLong(setting.key, value.asInstanceOf[Long])
     } else {
       throw new IllegalArgumentException("Unknown type: " + m.runtimeClass)
     }
