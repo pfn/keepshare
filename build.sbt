@@ -23,7 +23,7 @@ scalaVersion := "2.11.6"
 debugIncludesTests := false
 
 libraryDependencies ++= Seq(
-  "ch.acra" % "acra" % "4.6.2",
+  "ch.acra" % "acra" % "4.7.0",
   "com.melnykov" % "floatingactionbutton" % "1.3.0" exclude("com.android.support", "appcompat-v7"),
   "com.hanhuy.android" %% "iota" % "0.8",
   "com.github.ozodrukh" % "CircularReveal" % "1.0.6",
