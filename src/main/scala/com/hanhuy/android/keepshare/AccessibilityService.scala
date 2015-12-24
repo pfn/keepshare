@@ -155,7 +155,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
           val urlbar = tree.findNodeById("com.android.browser:id/url")
           val d = urlbar map { u =>
             val url = u.getText.toString
-            Some(new URI(if (url.indexOf(":/") < 0) "http://" + url else url))
+            Try(new URI(if (url.indexOf(":/") < 0) "http://" + url else url)).toOption
           } getOrElse None
           d
         } else {
