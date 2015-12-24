@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:orientation="horizontal"
-              android:background="@drawable/pwitem_selector"
-              android:minHeight="48dp"
-              android:layout_width="match_parent"
-              android:layout_height="wrap_content">
+                android:orientation="horizontal"
+                android:background="@drawable/pwitem_selector"
+                android:minHeight="48dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
     <ImageView
             android:id="@+id/entry_image"
             android:visibility="visible"
@@ -18,29 +22,22 @@
             android:scaleType="center"
             />
     <TextView android:id="@+id/name"
-              android:paddingLeft="12dp"
-              android:layout_width="0dp"
+              android:paddingLeft="16dp"
+              android:layout_width="wrap_content"
               android:singleLine="true"
-              android:layout_centerVertical="true"
               android:layout_height="wrap_content"
               android:textAppearance="?android:textAppearanceMedium"
-              android:layout_toLeftOf="@+id/centerline"
               android:layout_toRightOf="@+id/entry_image"
+              android:layout_alignParentRight="true"
               />
-    <View android:layout_width="1dp"
-          android:layout_marginLeft="12dp"
-          android:layout_marginRight="12dp"
-          android:layout_height="match_parent"
-          android:layout_centerInParent="true"
-          android:id="@+id/centerline"
-          android:background="#ff777777"/>
     <TextView android:id="@+id/username"
-              android:layout_width="0dp"
+              android:paddingLeft="16dp"
+              android:layout_width="wrap_content"
               android:singleLine="true"
               android:textAppearance="?android:textAppearanceMedium"
-              android:layout_centerVertical="true"
               android:layout_height="wrap_content"
-              android:layout_toRightOf="@+id/centerline"
+              android:layout_below="@+id/name"
+              android:layout_toRightOf="@+id/entry_image"
               android:layout_alignParentRight="true"
             />
 </RelativeLayout>

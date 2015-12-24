@@ -35,6 +35,7 @@
     </string>
     <string name="request_again">Ask Again</string>
     <string name="fingerprint_unrecognized">Fingerprint is unrecognized</string>
+    <string name="fingerprint_accepted">Fingerprint accepted</string>
     <string name="add_permission">Add Permission</string>
     <string name="require_external_storage">Storage access is required to work with your KeePass database</string>
     <string name="require_get_accounts">Contacts access is required to discover your Google ID for database protection</string>
@@ -134,6 +135,7 @@
         You must complete your configuration before setting a PIN</string>
     <string name="verify_pin">Verify your PIN</string>
     <string name="fetching_key">Retrieving key from Google Drive</string>
+    <string name="key_changed_clear_data">Key data in Google Drive has changed, clear data and try again</string>
     <string name="ime_search_title">: No password entries loaded</string>
     <string name="ime_search_prompt">Would you like to search for \'%s\'?</string>
     <string name="keyboard_not_enabled_title">

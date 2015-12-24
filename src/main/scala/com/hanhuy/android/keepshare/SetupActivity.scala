@@ -112,8 +112,9 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
         }
         true
       case R.id.menu_change_pin =>
-        startActivityForResult(new Intent(this, classOf[PINEntryActivity]),
-          RequestCodes.REQUEST_PIN)
+        val intent = new Intent(this, classOf[PINEntryActivity])
+        intent.putExtra(PINEntryActivity.EXTRA_NO_FINGERPRINT, true)
+        startActivityForResult(intent, RequestCodes.REQUEST_PIN)
         true
       case _ => super.onOptionsItemSelected(item)
     }
@@ -203,6 +204,7 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
           settings.set(Settings.KEYBOARD_TIMEOUT, fragment.kbtimeo)
           settings.set(Settings.PIN_TIMEOUT, fragment.pintimeo)
           settings.set(Settings.PASSWORD_OVERRIDE, fragment.kboverride)
+          settings.set(Settings.FINGERPRINT_ENABLE, fragment.fpenabled)
           success(R.string.settings_saved)
           setResult(Activity.RESULT_OK)
           if (getIntent.hasExtra(EXTRA_FOR_RESULT))
@@ -299,6 +301,7 @@ class SetupFragment extends android.preference.PreferenceFragment {
   lazy val ktimeout = findPreference("keyboard_timeout").asInstanceOf[ListPreference]
   lazy val ptimeout = findPreference("pin_timeout").asInstanceOf[ListPreference]
   lazy val pwoverride = findPreference("keyboard_override").asInstanceOf[CheckBoxPreference]
+  lazy val fp = findPreference("fingerprint_enabled").asInstanceOf[CheckBoxPreference]
   private var _onPrefChange = Option.empty[(Preference, Any) => Any]
 
   def databaseReady(ready: Boolean): Unit = {
@@ -321,6 +324,7 @@ class SetupFragment extends android.preference.PreferenceFragment {
     ptimeout.setSummary(i.toString)
     ptimeout.setValue(i.toString)
   }
+  def fpenabled = fp.isChecked
   def kbtimeo = ktimeout.getValue.toInt
   def kbtimeo_=(i: Int) = {
     ktimeout.setSummary(i.toString)
@@ -349,8 +353,12 @@ class SetupFragment extends android.preference.PreferenceFragment {
     val list = imm.getEnabledInputMethodList
     val enabled = list exists (_.getPackageName == getActivity.getPackageName)
     kt.setChecked(enabled)
-    pwoverride.setChecked(
-      settings.get(Settings.PASSWORD_OVERRIDE))
+    fp.setChecked(settings.get(Settings.FINGERPRINT_ENABLE))
+    fp.onPreferenceChange { (pref, b) =>
+      prefChanged(pref, b)
+      true
+    }
+    pwoverride.setChecked(settings.get(Settings.PASSWORD_OVERRIDE))
 
     pwoverride.onPreferenceChange { (pref, b) =>
       prefChanged(pref, b)

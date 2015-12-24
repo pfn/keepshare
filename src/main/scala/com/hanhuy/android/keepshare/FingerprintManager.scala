@@ -15,14 +15,13 @@ import com.hanhuy.android.common.Logcat
 import iota.v
 import rx.lang.scala.{Subscription, Observable}
 
-import scala.concurrent.Future
-
 /**
   * @author pfnguyen
   */
 object FingerprintManager {
   val KEY_NAME = "keepshare-fingerprint-key"
-  val CIPHER_ALG = "RSA/ECB/OAEPWithSHA-256AndMGF1Padding"
+  // see https://code.google.com/p/android/issues/detail?id=197719
+  val CIPHER_ALG = "RSA/ECB/PKCS1Padding"
   val AKS = "AndroidKeyStore"
 }
 case class FingerprintManager(context: Context, settings: Settings) {
@@ -39,7 +38,7 @@ case class FingerprintManager(context: Context, settings: Settings) {
   @TargetApi(23)
   def registerPin(pin: String): Unit = {
     fpm.foreach { m =>
-      if (settings.get(Settings.FINGERPRINT_TIMESTAMP) > settings.get(Settings.PIN_TIMESTAMP)) {
+      if (settings.get(Settings.FINGERPRINT_TIMESTAMP) < settings.get(Settings.PIN_TIMESTAMP)) {
         // for backward compat, always reset pin's timestamp if fingerprint older
         settings.set(Settings.PIN_TIMESTAMP, System.currentTimeMillis)
 
@@ -50,16 +49,16 @@ case class FingerprintManager(context: Context, settings: Settings) {
         kg.initialize(
           new KeyGenParameterSpec.Builder(KEY_NAME, PURPOSE_DECRYPT)
             .setUserAuthenticationRequired(true)
-            .setDigests(DIGEST_SHA256, DIGEST_SHA512)
-            .setEncryptionPaddings(ENCRYPTION_PADDING_RSA_OAEP)
+            .setEncryptionPaddings(ENCRYPTION_PADDING_RSA_PKCS1)
             .build()
         )
-        val kp = kg.generateKeyPair() // side-effects ftw, this places it in the keystore automatically
+        // side-effects yolo..., this generates in the keystore
+        val kp = kg.generateKeyPair()
         // rewrap public key, otherwise api23 bug
-        val pk = KeyFactory.getInstance(kp.getPublic.getAlgorithm).generatePublic(
-          new X509EncodedKeySpec(kp.getPublic.getEncoded))
+        val pub = kp.getPublic
+        val pk = KeyFactory.getInstance(pub.getAlgorithm).generatePublic(
+          new X509EncodedKeySpec(pub.getEncoded))
         val cipher = Cipher.getInstance(CIPHER_ALG)
-
         cipher.init(Cipher.ENCRYPT_MODE, pk)
         val fkey = KeyManager.hex(cipher.doFinal(pin.getBytes("utf-8")))
         settings.set(Settings.FINGERPRINT_PIN, fkey)
@@ -70,7 +69,8 @@ case class FingerprintManager(context: Context, settings: Settings) {
 
   def hasFingerprints = fpm.isDefined &&
     settings.get(Settings.FINGERPRINT_PIN) != null &&
-    settings.get(Settings.FINGERPRINT_TIMESTAMP) > settings.get(Settings.PIN_TIMESTAMP)
+    settings.get(Settings.FINGERPRINT_TIMESTAMP) > settings.get(Settings.PIN_TIMESTAMP) &&
+    settings.get(Settings.FINGERPRINT_ENABLE)
 
   @TargetApi(23)
   def authenticate(): Observable[Either[CharSequence,String]] = {
@@ -82,33 +82,35 @@ case class FingerprintManager(context: Context, settings: Settings) {
           ks.load(null)
           val pk = ks.getKey(KEY_NAME, null)
           val cipher = Cipher.getInstance(CIPHER_ALG)
-          cipher.init(Cipher.DECRYPT_MODE, pk)
-          val co = new CryptoObject(cipher)
-          m.authenticate(co, cancelToken, 0, new AuthenticationCallback {
-            override def onAuthenticationSucceeded(result: AuthenticationResult) = {
-              val cipher = co.getCipher
-              val fpin = settings.get(Settings.FINGERPRINT_PIN)
-              val bytes = KeyManager.bytes(fpin)
-              val pin = new String(cipher.doFinal(bytes), "utf-8")
-              obs.onNext(Right(pin))
-              log.v("Successful authentication: " + pin)
-              obs.onCompleted()
-              cancelToken.cancel()
-            }
+          try {
+            cipher.init(Cipher.DECRYPT_MODE, pk)
+            val co = new CryptoObject(cipher)
+            m.authenticate(co, cancelToken, 0, new AuthenticationCallback {
+              override def onAuthenticationSucceeded(result: AuthenticationResult) = {
+                val cipher = co.getCipher
+                val fpin = settings.get(Settings.FINGERPRINT_PIN)
+                val bytes = KeyManager.bytes(fpin)
+                val pin = new String(cipher.doFinal(bytes), "utf-8")
+                obs.onNext(Right(pin))
+                obs.onCompleted()
+                cancelToken.cancel()
+              }
 
-            override def onAuthenticationError(errorCode: Int, errString: CharSequence) = {
-              log.v("Authentication error: " + errString)
-              obs.onError(FingerprintAuthenticationError(errorCode, errString))
-              cancelToken.cancel()
-            }
+              override def onAuthenticationError(errorCode: Int, errString: CharSequence) = {
+                obs.onError(FingerprintAuthenticationError(errorCode, errString))
+                cancelToken.cancel()
+              }
 
-            override def onAuthenticationFailed() = {
-              log.v("Authentication failed")
-              obs.onNext(Left(context.getString(R.string.fingerprint_unrecognized)))
-            }
+              override def onAuthenticationFailed() = {
+                obs.onNext(Left(context.getString(R.string.fingerprint_unrecognized)))
+              }
 
-            override def onAuthenticationHelp(helpCode: Int, helpString: CharSequence) = obs.onNext(Left(helpString))
-          }, null)
+              override def onAuthenticationHelp(helpCode: Int, helpString: CharSequence) = obs.onNext(Left(helpString))
+            }, null)
+          } catch {
+            case e: Exception =>
+              obs.onError(e)
+          }
         case _ =>
           obs.onError(FingerprintUnavailable)
           cancelToken.cancel()

@@ -4,4 +4,5 @@
     <bool name="is_tablet">false</bool>
     <integer name="share_screenshot_visibility">2</integer>
     <bool name="v18plus">false</bool>
+    <bool name="v23plus">false</bool>
 </resources>

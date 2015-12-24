@@ -10,6 +10,14 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
+        <ImageView android:id="@+id/fingerprint_icon"
+                   android:layout_width="wrap_content"
+                   android:layout_height="wrap_content"
+                   android:layout_gravity="center|bottom"
+                   android:layout_marginBottom="64dp"
+                   android:visibility="gone"
+                   android:contentDescription="fingerprint reader on"
+                   android:src="@drawable/ic_fingerprint_black_24dp"/>
         <TextView android:id="@+id/pin_prompt"
                   android:layout_width="wrap_content"
                   android:layout_gravity="center"

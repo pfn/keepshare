@@ -5,10 +5,10 @@ import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
 
-import android.app.{Dialog, ProgressDialog, AlertDialog, Activity}
+import android.app.{ProgressDialog, AlertDialog, Activity}
 import android.os.{Vibrator, Bundle}
 import android.view.{MenuItem, Menu, View}
-import android.content.{DialogInterface, Intent}
+import android.content.Intent
 
 import Futures._
 import rx.android.schedulers.AndroidSchedulers
@@ -18,6 +18,7 @@ import rx.lang.scala.Subscription
 import scala.util.Try
 
 object PINEntryActivity {
+  val EXTRA_NO_FINGERPRINT = "com.hanhuy.android.keepshare.extra.NO_FINGERPRINT"
   def requestPIN(a: Activity): Unit = {
     a.startActivityForResult(new Intent(a, classOf[PINEntryActivity]),
       RequestCodes.REQUEST_PIN)
@@ -42,7 +43,6 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
     dismissAllDialogs()
     super.onDestroy()
   }
-
 
   override def onStart() = {
     super.onStart()
@@ -81,6 +81,10 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
             finish()
           }
         }
+      }
+      cloudKey.onFailureMain { case _ =>
+        error.setVisibility(View.VISIBLE)
+        error.setText(R.string.key_changed_clear_data)
       }
 
       if (!cloudKey.isCompleted) {
@@ -130,10 +134,13 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
       R.id.pin_0, R.id.pin_ok, R.id.pin_back) foreach {
       findViewById(_).onClick(onClick)
     }
-    if (fpm.hasFingerprints) {
-      // show fingerprint visibility
+    if (fpm.hasFingerprints && allowFingerprint) {
+      findView(TR.fingerprint_icon).setVisibility(View.VISIBLE)
       subscription = Some(fpmObs.observeOn(AndroidSchedulers.mainThread).subscribe({
         case Right(fpin) =>
+          pinEntry.setText("xxxxxx")
+          error.setVisibility(View.VISIBLE)
+          error.setText(R.string.fingerprint_accepted)
           pin = fpin
           verifyPin()
         case Left(errorString) =>
@@ -141,10 +148,16 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
           error.setText(errorString)
           UiBus.handler.removeCallbacks(clearError)
           UiBus.handler.postDelayed(clearError, 1000)
-      }, error => {
+      }, ex => {
+        error.setVisibility(View.VISIBLE)
+        error.setText(ex.getMessage)
+        UiBus.handler.removeCallbacks(clearError)
+        UiBus.handler.postDelayed(clearError, 1000)
       }))
     }
   }
+
+  def allowFingerprint = !Option(getIntent).exists(_.getBooleanExtra(PINEntryActivity.EXTRA_NO_FINGERPRINT, false))
   override def onStop() = {
     super.onStop()
     subscription.foreach(_.unsubscribe())

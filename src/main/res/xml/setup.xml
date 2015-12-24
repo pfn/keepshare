@@ -31,6 +31,13 @@
             android:title="Security Options">
 
         <CheckBoxPreference
+            android:key="fingerprint_enabled"
+            android:title="Fingerprint"
+            android:summary="Enable fingerprint unlock when PIN is setup"
+            android:persistent="false"
+            android:enabled="@bool/v23plus"
+            android:defaultValue="true"/>
+        <CheckBoxPreference
                 android:key="keyboard_override"
                 android:title="Input override"
                 android:dependency="keyboard_enable"
