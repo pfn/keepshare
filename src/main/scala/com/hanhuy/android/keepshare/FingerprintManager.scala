@@ -112,6 +112,7 @@ case class FingerprintManager(context: Context, settings: Settings) {
               obs.onError(e)
           }
         case _ =>
+          settings.set(Settings.FINGERPRINT_TIMESTAMP, 0l)
           obs.onError(FingerprintUnavailable)
           cancelToken.cancel()
       }
