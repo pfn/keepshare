@@ -31,7 +31,9 @@ object Settings {
   val PASSWORD_OVERRIDE = Setting[Boolean]("password_override", false)
   val NEEDS_PIN = Setting[Boolean]("needs_pin", false)
   val PIN_VERIFIER = Setting[String]("pin_verifier", "")
-  val PIN_TIMESTAMP = Setting[Long]("pin_timestamp", System.currentTimeMillis)
+  // PIN_TIMESTAMP must default to a value larger than FINGERPRINT_TIMESTAMP
+  // or registration will fail
+  val PIN_TIMESTAMP = Setting[Long]("pin_timestamp", 1l)
   val FINGERPRINT_TIMESTAMP = Setting[Long]("fingerprint_timestamp", 0l)
   val FINGERPRINT_PIN = Setting[String]("fingerprint_pin", null)
   val FINGERPRINT_ENABLE = Setting[Boolean]("fingerprint_enable", true)

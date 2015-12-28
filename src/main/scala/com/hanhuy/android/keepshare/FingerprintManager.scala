@@ -39,8 +39,6 @@ case class FingerprintManager(context: Context, settings: Settings) {
   def registerPin(pin: String): Unit = {
     fpm.foreach { m =>
       if (settings.get(Settings.FINGERPRINT_TIMESTAMP) < settings.get(Settings.PIN_TIMESTAMP)) {
-        // for backward compat, always reset pin's timestamp if fingerprint older
-        settings.set(Settings.PIN_TIMESTAMP, System.currentTimeMillis)
 
         val ks = KeyStore.getInstance(AKS)
         ks.load(null)
@@ -109,7 +107,9 @@ case class FingerprintManager(context: Context, settings: Settings) {
             }, null)
           } catch {
             case e: Exception =>
+              settings.set(Settings.FINGERPRINT_TIMESTAMP, 0l)
               obs.onError(e)
+              cancelToken.cancel()
           }
         case _ =>
           settings.set(Settings.FINGERPRINT_TIMESTAMP, 0l)

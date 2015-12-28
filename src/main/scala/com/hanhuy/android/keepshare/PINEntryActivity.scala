@@ -147,12 +147,13 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
           error.setVisibility(View.VISIBLE)
           error.setText(errorString)
           UiBus.handler.removeCallbacks(clearError)
-          UiBus.handler.postDelayed(clearError, 1000)
+          UiBus.handler.postDelayed(clearError, 3000)
       }, ex => {
+        findView(TR.fingerprint_icon).setVisibility(View.GONE)
         error.setVisibility(View.VISIBLE)
-        error.setText(ex.getMessage)
+        error.setText("Fingerprint:  " + ex.getMessage)
         UiBus.handler.removeCallbacks(clearError)
-        UiBus.handler.postDelayed(clearError, 1000)
+        UiBus.handler.postDelayed(clearError, 5000)
       }))
     }
   }
