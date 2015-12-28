@@ -27,22 +27,26 @@
         />
     </PreferenceCategory>
 
-    <PreferenceCategory
-            android:title="Security Options">
+    <PreferenceCategory android:title="Security Options"
+                        android:key="security_options">
 
+        <Preference
+                android:key="database_pin"
+                android:persistent="false"
+                android:summary="@string/setup_pin_summary"
+                android:title="@string/setup_pin"
+        />
         <CheckBoxPreference
-            android:key="fingerprint_enabled"
+            android:key="fingerprint_enable"
             android:title="Fingerprint"
             android:summary="Enable fingerprint unlock when PIN is setup"
-            android:persistent="false"
             android:enabled="@bool/v23plus"
             android:defaultValue="true"/>
         <CheckBoxPreference
-                android:key="keyboard_override"
+                android:key="password_override"
                 android:title="Input override"
                 android:dependency="keyboard_enable"
                 android:summary="Enable long-press override for non-password fields"
-                android:persistent="false"
                 />
 
         <ListPreference

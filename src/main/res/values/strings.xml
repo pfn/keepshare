@@ -62,7 +62,7 @@
     <string name="decrypt_saved_failed">Failed to decrypt saved data :-(</string>
     <string name="must_install_explorer">
         You must install a file explorer in order to browse</string>
-    <string name="setup_subtitle">: Setup</string>
+    <string name="setup_subtitle">: Settings</string>
     <string name="setup_pin_subtitle">: Setup PIN</string>
     <string name="enter_pin_subtitle">: Enter PIN</string>
     <string name="ready_to_use">Ready to use!</string>
@@ -118,8 +118,9 @@
     <string name="searching">Searching...</string>
     <string name="running_search">Running your search</string>
     <string name="no_search_query">No search query</string>
-    <string name="setup">Setup</string>
+    <string name="setup">Settings</string>
     <string name="setup_pin">Setup PIN</string>
+    <string name="setup_pin_summary">Unlock KeepShare using a PIN for added security</string>
     <string name="change_pin">Change PIN</string>
     <string name="pin_at_least_4">PIN must be at least 4 digits</string>
     <string name="select_pin">Select a PIN</string>
@@ -127,8 +128,8 @@
     <string name="try_again">Try again</string>
     <string name="no_more_tries">Goodbye</string>
     <string name="pin_unlock_required">: PIN unlock required</string>
-    <string name="has_not_configured">Has not been configured</string>
-    <string name="has_been_configured">Is configured and ready</string>
+    <string name="has_not_configured">Is not ready to use, tap to setup</string>
+    <string name="has_been_configured">Is configured and ready to use</string>
     <string name="confirm_clear_data">
         Are you sure you want to clear your configuration?</string>
     <string name="setup_required_for_pin">

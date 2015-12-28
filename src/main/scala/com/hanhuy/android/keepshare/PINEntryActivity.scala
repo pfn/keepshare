@@ -1,6 +1,9 @@
 package com.hanhuy.android.keepshare
 
+import android.animation.{AnimatorListenerAdapter, Animator}
 import android.support.v7.app.AppCompatActivity
+import android.view.animation.Animation
+import android.view.animation.Animation.AnimationListener
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
@@ -135,21 +138,28 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
       findViewById(_).onClick(onClick)
     }
     if (fpm.hasFingerprints && allowFingerprint) {
-      findView(TR.fingerprint_icon).setVisibility(View.VISIBLE)
+      val fpicon = findView(TR.fingerprint_icon)
+      fpicon.setVisibility(View.VISIBLE)
       subscription = Some(fpmObs.observeOn(AndroidSchedulers.mainThread).subscribe({
         case Right(fpin) =>
+          error.setVisibility(View.GONE)
           pinEntry.setText("xxxxxx")
-          error.setVisibility(View.VISIBLE)
-          error.setText(R.string.fingerprint_accepted)
           pin = fpin
-          verifyPin()
+          fpicon.animate().rotation(360.0f).setDuration(250).setListener(new AnimatorListenerAdapter {
+            override def onAnimationEnd(animation: Animator) = verifyPin()
+          }).start()
         case Left(errorString) =>
           error.setVisibility(View.VISIBLE)
           error.setText(errorString)
           UiBus.handler.removeCallbacks(clearError)
           UiBus.handler.postDelayed(clearError, 3000)
       }, ex => {
-        findView(TR.fingerprint_icon).setVisibility(View.GONE)
+        fpicon.animate().alpha(0.0f).setListener(
+          new AnimatorListenerAdapter {
+            override def onAnimationEnd(animation: Animator) =
+              fpicon.setVisibility(View.GONE)
+
+        }).start()
         error.setVisibility(View.VISIBLE)
         error.setText("Fingerprint:  " + ex.getMessage)
         UiBus.handler.removeCallbacks(clearError)

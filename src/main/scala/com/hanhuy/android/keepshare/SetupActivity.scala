@@ -2,7 +2,7 @@ package com.hanhuy.android.keepshare
 
 import android.annotation.TargetApi
 import android.content.res.ColorStateList
-import android.preference.{ListPreference, CheckBoxPreference, Preference}
+import android.preference.{PreferenceGroup, ListPreference, CheckBoxPreference, Preference}
 import android.support.design.widget.TextInputLayout
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.AppCompatEditText
@@ -74,17 +74,7 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
 
   override def onCreateOptionsMenu(menu: Menu) = {
     super.onCreateOptionsMenu(menu)
-    getMenuInflater.inflate(R.menu.setup, menu)
     getMenuInflater.inflate(R.menu.main, menu)
-    if (settings.get(Settings.NEEDS_PIN)) {
-      menu.findItem(R.id.menu_setup_pin).setVisible(false)
-    } else {
-      menu.findItem(R.id.menu_change_pin).setVisible(false)
-    }
-    if (settings.get(Settings.FIRST_RUN)) {
-      menu.findItem(R.id.menu_change_pin).setVisible(false)
-      menu.findItem(R.id.menu_setup_pin).setVisible(false)
-    }
     true
   }
 
@@ -102,40 +92,9 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
           .setNegativeButton(android.R.string.no, null)
           .show()
         true
-      case R.id.menu_setup_pin =>
-        if (keymanager.ready) {
-          startActivityForResult(new Intent(this, classOf[PINSetupActivity]),
-            RequestCodes.REQUEST_SETUP_PIN)
-        } else {
-          Toast.makeText(this,
-            R.string.setup_required_for_pin, Toast.LENGTH_SHORT).show()
-        }
-        true
-      case R.id.menu_change_pin =>
-        val intent = new Intent(this, classOf[PINEntryActivity])
-        intent.putExtra(PINEntryActivity.EXTRA_NO_FINGERPRINT, true)
-        startActivityForResult(intent, RequestCodes.REQUEST_PIN)
-        true
       case _ => super.onOptionsItemSelected(item)
     }
   }
-
-  def error(error: String) {
-    val view = findView(TR.error_text)
-    findView(TR.success_text).setVisibility(View.GONE)
-    view.setVisibility(View.VISIBLE)
-    view.setText(error)
-    findView(TR.save).setEnabled(false)
-    findView(TR.save).setVisibility(View.GONE)
-  }
-  def error(err: Int): Unit = error(getString(err))
-  def success(msg: String) {
-    findView(TR.error_text).setVisibility(View.GONE)
-    val view = findView(TR.success_text)
-    view.setVisibility(View.VISIBLE)
-    view.setText(msg)
-  }
-  def success(msg: Int): Unit = success(getString(msg))
 
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
@@ -154,8 +113,6 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
         settings.set(Settings.FIRST_RUN, false)
         supportInvalidateOptionsMenu()
         flipper.setDisplayedChild(0)
-        findView(TR.save).setEnabled(true)
-        findView(TR.save).setVisibility(View.VISIBLE)
         findView(TR.progress2).setVisibility(View.GONE)
       }
     }
@@ -166,51 +123,38 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
     }
 
     fragment databaseOnClick { () =>
+      setupDatabase()
+    }
+
+    def setupDatabase(): Unit = {
       val intent = new Intent(this, classOf[DatabaseSetupActivity])
       intent.putExtra(EXTRA_DATABASE, dbCredentials.db.getOrElse(""))
       intent.putExtra(EXTRA_PASSWORD, dbCredentials.password.getOrElse(""))
       intent.putExtra(EXTRA_KEYFILE, dbCredentials.keyfile.getOrElse(""))
       startActivityForResult(intent, SETUP_DATABASE)
     }
+    fragment pinSetupOnClick { () =>
+      if (!settings.get(Settings.NEEDS_PIN)) {
+        if (keymanager.ready) {
+          startActivityForResult(new Intent(this, classOf[PINSetupActivity]),
+            RequestCodes.REQUEST_SETUP_PIN)
+        } else {
+          Toast.makeText(this,
+            R.string.setup_required_for_pin, Toast.LENGTH_SHORT).show()
+        }
+      } else {
+        val intent = new Intent(this, classOf[PINEntryActivity])
+        intent.putExtra(PINEntryActivity.EXTRA_NO_FINGERPRINT, true)
+        startActivityForResult(intent, RequestCodes.REQUEST_PIN)
+      }
+    }
 
     val watcher = (p: Preference, a: Any) => {
-      findView(TR.save).setEnabled(true)
-      findView(TR.save).setVisibility(View.VISIBLE)
       findView(TR.error_text).setVisibility(View.GONE)
       findView(TR.success_text).setVisibility(View.GONE)
       true
     }
     fragment.onPreferenceChange(watcher)
-    findView(TR.save) onClick { view: View =>
-      findView(TR.error_text).setVisibility(View.GONE)
-      findView(TR.success_text).setVisibility(View.GONE)
-      view.setEnabled(false)
-      view.setVisibility(View.GONE)
-      keymanager.localKey onSuccessMain {
-        case Left(error) =>
-          Toast.makeText(
-            this, error.toString, Toast.LENGTH_SHORT).show()
-          finish()
-        case Right(k) =>
-          val encdb = KeyManager.encrypt(k, dbCredentials.db.getOrElse(""))
-          val encpw = KeyManager.encrypt(k, dbCredentials.password.getOrElse(""))
-          val enckeyf = KeyManager.encrypt(k, dbCredentials.keyfile.getOrElse(""))
-          val verifier = KeyManager.encrypt(k, KeyManager.VERIFIER)
-
-          settings.set(Settings.VERIFY_DATA, verifier)
-          settings.set(Settings.PASSWORD, encpw)
-          settings.set(Settings.KEYFILE_PATH, enckeyf)
-          settings.set(Settings.DATABASE_FILE, encdb)
-          settings.set(Settings.KEYBOARD_TIMEOUT, fragment.kbtimeo)
-          settings.set(Settings.PIN_TIMEOUT, fragment.pintimeo)
-          settings.set(Settings.PASSWORD_OVERRIDE, fragment.kboverride)
-          settings.set(Settings.FINGERPRINT_ENABLE, fragment.fpenabled)
-          success(R.string.settings_saved)
-          setResult(Activity.RESULT_OK)
-          if (getIntent.hasExtra(EXTRA_FOR_RESULT))
-            finish()
-      }
-    }
 
     if (!settings.get(Settings.FIRST_RUN)) {
       (Option(settings.get(Settings.DATABASE_FILE))
@@ -226,9 +170,6 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
             case Right((db,pw,keyf)) =>
               dbCredentials = DatabaseSetupModel(db, pw, keyf)
               fragment.databaseReady(true)
-              success(R.string.ready_to_use)
-              findView(TR.save).setEnabled(false)
-              findView(TR.save).setVisibility(View.GONE)
           }
         case _ =>
       }
@@ -242,6 +183,9 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
     }
     requestPermission(android.Manifest.permission.GET_ACCOUNTS,
       R.string.require_get_accounts, flipper) onFailureMain { case _ => finish() }
+
+    if (Option(getIntent).exists(_.getBooleanExtra(EXTRA_FOR_RESULT, false)))
+      setupDatabase()
   }
 
 
@@ -270,16 +214,35 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
       case REQUEST_PIN_ENTRY =>
         if (result != Activity.RESULT_OK)
           finish()
-      case REQUEST_SETUP_PIN => finish()
+      case REQUEST_SETUP_PIN => // do nothing
       case SETUP_DATABASE =>
         val intent = Option(data)
         def extra(k: String): String = intent.map(_.getStringExtra(k)).orNull
-        if (result == Activity.RESULT_OK)
+        if (result == Activity.RESULT_OK) {
           dbCredentials = DatabaseSetupModel(
             extra(EXTRA_DATABASE), extra(EXTRA_PASSWORD), extra(EXTRA_KEYFILE))
           fragment.databaseReady(dbCredentials.ready)
-        findView(TR.save).setEnabled(dbCredentials.ready)
-        findView(TR.save).setVisibility(if (dbCredentials.ready) View.VISIBLE else View.GONE)
+
+          if (dbCredentials.ready) {
+            keymanager.localKey onSuccessMain {
+              case Left(error) =>
+                Toast.makeText(
+                  this, error.toString, Toast.LENGTH_SHORT).show()
+                finish()
+              case Right(k) =>
+                val encdb = KeyManager.encrypt(k, dbCredentials.db.getOrElse(""))
+                val encpw = KeyManager.encrypt(k, dbCredentials.password.getOrElse(""))
+                val enckeyf = KeyManager.encrypt(k, dbCredentials.keyfile.getOrElse(""))
+                val verifier = KeyManager.encrypt(k, KeyManager.VERIFIER)
+
+                settings.set(Settings.VERIFY_DATA, verifier)
+                settings.set(Settings.PASSWORD, encpw)
+                settings.set(Settings.KEYFILE_PATH, enckeyf)
+                settings.set(Settings.DATABASE_FILE, encdb)
+                setResult(Activity.RESULT_OK)
+            }
+          }
+        }
     }
   }
 
@@ -300,8 +263,11 @@ class SetupFragment extends android.preference.PreferenceFragment {
   lazy val ae = findPreference("accessibility_enable").asInstanceOf[CheckBoxPreference]
   lazy val ktimeout = findPreference("keyboard_timeout").asInstanceOf[ListPreference]
   lazy val ptimeout = findPreference("pin_timeout").asInstanceOf[ListPreference]
-  lazy val pwoverride = findPreference("keyboard_override").asInstanceOf[CheckBoxPreference]
-  lazy val fp = findPreference("fingerprint_enabled").asInstanceOf[CheckBoxPreference]
+  lazy val pwoverride = findPreference("password_override").asInstanceOf[CheckBoxPreference]
+  lazy val fp = findPreference("fingerprint_enable").asInstanceOf[CheckBoxPreference]
+  lazy val fpm = FingerprintManager(getActivity, settings)
+  lazy val pin = findPreference("database_pin")
+  lazy val secopts = findPreference("security_options").asInstanceOf[PreferenceGroup]
   private var _onPrefChange = Option.empty[(Preference, Any) => Any]
 
   def databaseReady(ready: Boolean): Unit = {
@@ -335,10 +301,16 @@ class SetupFragment extends android.preference.PreferenceFragment {
     f()
     true
   }
+  def pinSetupOnClick[A](f: () => A) = pin.onPreferenceClick0 {
+    f()
+    true
+  }
 
   override def onCreate(savedInstanceState: Bundle) = {
     super.onCreate(savedInstanceState)
     addPreferencesFromResource(R.xml.setup)
+    if (fpm.fpm.isEmpty)
+      secopts.removePreference(fp)
   }
 
   override def onStart() = {
@@ -373,12 +345,28 @@ class SetupFragment extends android.preference.PreferenceFragment {
     ptimeout.onPreferenceChange { (pref, v) =>
       prefChanged(pref, v)
       ptimeout.setSummary(v.toString)
+      settings.set(Settings.PIN_TIMEOUT, v.toString.toInt)
       true
     }
     ktimeout.onPreferenceChange { (pref, v) =>
       prefChanged(pref, v)
       ktimeout.setSummary(v.toString)
+      settings.set(Settings.KEYBOARD_TIMEOUT, v.toString.toInt)
       true
+    }
+  }
+
+
+  override def onResume() = {
+    super.onResume()
+    if (settings.get(Settings.NEEDS_PIN)) {
+      pin.setTitle(R.string.change_pin)
+      pin.setSummary(null)
+      fp.setEnabled(true)
+    } else {
+      fp.setEnabled(false)
+      pin.setTitle(R.string.setup_pin)
+      pin.setSummary(R.string.setup_pin_summary)
     }
   }
 

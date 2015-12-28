@@ -10,10 +10,12 @@ import android.hardware.fingerprint.FingerprintManager.{CryptoObject, Authentica
 import android.hardware.fingerprint.{FingerprintManager => FPM}
 import android.os.CancellationSignal
 import android.security.keystore.{KeyGenParameterSpec, KeyProperties}
-import com.hanhuy.android.common.Logcat
+import com.hanhuy.android.common.{Futures, Logcat}
 
 import iota.v
 import rx.lang.scala.{Subscription, Observable}
+
+import scala.concurrent.Future
 
 /**
   * @author pfnguyen
@@ -38,7 +40,8 @@ case class FingerprintManager(context: Context, settings: Settings) {
   @TargetApi(23)
   def registerPin(pin: String): Unit = {
     fpm.foreach { m =>
-      if (settings.get(Settings.FINGERPRINT_TIMESTAMP) < settings.get(Settings.PIN_TIMESTAMP)) {
+      import Futures._
+      if (settings.get(Settings.FINGERPRINT_TIMESTAMP) < settings.get(Settings.PIN_TIMESTAMP)) Future {
 
         val ks = KeyStore.getInstance(AKS)
         ks.load(null)

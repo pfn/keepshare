@@ -6,6 +6,7 @@ import android.database.Cursor
 import android.graphics.BitmapFactory
 import android.graphics.drawable.{BitmapDrawable, LayerDrawable}
 import android.os.Bundle
+import android.support.design.widget.Snackbar
 import android.support.v4.widget.SwipeRefreshLayout
 import android.support.v7.app.ActionBar
 import android.support.v7.widget.Toolbar
@@ -60,6 +61,22 @@ object BrowseActivity {
   implicit val entrySort = new Ordering[PwEntry] {
     override def compare(x: PwEntry, y: PwEntry) =
       x.getStrings.ReadSafe(PwDefs.TitleField).compareToIgnoreCase(y.getStrings.ReadSafe(PwDefs.TitleField))
+  }
+
+  object SnackbarSender {
+    private[this] var queue = Option.empty[(CharSequence, String, () => Any)]
+    def show(view: View): Unit = {
+      queue foreach { case (msg, action, fn) =>
+        val sb = Snackbar.make(view, msg, 10000)
+        sb.setAction(action, fn)
+        sb.show()
+      }
+      queue = None
+    }
+
+    def enqueue[A](msg: CharSequence, action: String, fn: () => A): Unit = {
+      queue = Some((msg, action, fn))
+    }
   }
 }
 class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRefreshLayout.OnRefreshListener {
