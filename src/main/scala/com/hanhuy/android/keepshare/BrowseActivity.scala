@@ -599,15 +599,14 @@ class HideFabBehavior(context: Context, attrs: AttributeSet) extends Coordinator
 
   override def layoutDependsOn(parent: CoordinatorLayout, child: ViewGroup, dependency: View) = {
     dependency match {
-      case f: FloatingActionButton =>
-        fab = Some(f)
-        true
-      case _ => false
+      case f: FloatingActionButton => fab = Some(f)
+      case _ =>
     }
+    false
   }
 
   override def onNestedScroll(coordinatorLayout: CoordinatorLayout, child: ViewGroup, target: View, dxConsumed: Int, dyConsumed: Int, dxUnconsumed: Int, dyUnconsumed: Int) = {
-    if (dyConsumed < 0) {
+    if (dyConsumed <= 0) {
       fab.foreach(_.show())
     } else {
       fab.foreach(_.hide())
