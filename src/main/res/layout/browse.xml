@@ -1,27 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-             xmlns:app="http://schemas.android.com/apk/res-auto"
-             android:id="@+id/content"
-             android:layout_width="match_parent"
-             android:layout_height="wrap_content">
+<android.support.design.widget.CoordinatorLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
     <android.support.v4.widget.SwipeRefreshLayout
             android:id="@+id/refresher"
+            app:layout_behavior="com.hanhuy.android.keepshare.HideFabBehavior"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-        <ListView android:id="@+id/list"
+        <android.support.v7.widget.RecyclerView android:id="@+id/recycler"
                   android:layout_width="match_parent"
                   android:layout_height="match_parent"/>
     </android.support.v4.widget.SwipeRefreshLayout>
+    <com.hanhuy.android.keepshare.ObservableFab
+            android:id="@+id/fab2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|right"
+            android:layout_margin="16dp"
+            app:fabSize="normal"
+            app:elevation="4dp"
+            android:clickable="true"
+            android:src="@drawable/ic_add_white_24dp"
+    />
     <com.hanhuy.android.keepshare.FabToolbar
             android:id="@+id/fab_toolbar"
             android:layout_gravity="bottom"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
-        <com.hanhuy.android.keepshare.ObservableFab
-                style="@style/FloatingActionButton"
-                android:id="@+id/observable_fab"
-                android:src="@drawable/ic_add_white_24dp"/>
         <LinearLayout
                 android:id="@+id/container"
                 android:clickable="true"
@@ -79,4 +88,4 @@
                     android:src="@drawable/ic_clear_white_24dp"/>
         </LinearLayout>
     </com.hanhuy.android.keepshare.FabToolbar>
-</FrameLayout>
+</android.support.design.widget.CoordinatorLayout>

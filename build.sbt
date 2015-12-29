@@ -1,5 +1,7 @@
 val keepshare = project.in(file(".")).settings(androidBuild)
 
+val supportSdkVersion = "23.1.1"
+
 name := "keepshare"
 
 versionName := {
@@ -26,13 +28,13 @@ libraryDependencies ++= Seq(
   "ch.acra" % "acra" % "4.7.0",
   "com.melnykov" % "floatingactionbutton" % "1.3.0" exclude("com.android.support", "appcompat-v7"),
   "com.hanhuy.android" %% "iota" % "0.8",
-  "com.github.ozodrukh" % "CircularReveal" % "1.0.6",
   "com.hanhuy.android" %% "scala-conversions" % "1.6",
   "com.hanhuy.android" %% "scala-conversions-design" % "1.6",
   "com.hanhuy.android" %% "scala-common" % "1.0",
   "com.hanhuy.keepassj" % "keepassj" % "2.30.0" exclude("xpp3", "xpp3"),
-  "com.android.support" % "design" % "23.1.1",
-  "com.android.support" % "appcompat-v7" % "23.1.1",
+  "com.android.support" % "recyclerview-v7" % supportSdkVersion,
+  "com.android.support" % "design" % supportSdkVersion,
+  "com.android.support" % "appcompat-v7" % supportSdkVersion,
   "io.reactivex" %% "rxscala" % "0.24.1",
   "io.reactivex" % "rxandroid" % "0.24.0",
   "com.google.android.gms" % "play-services-drive" % "7.0.0"

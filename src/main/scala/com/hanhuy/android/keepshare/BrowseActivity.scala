@@ -1,15 +1,17 @@
 package com.hanhuy.android.keepshare
 
+import android.animation.{AnimatorListenerAdapter, Animator}
+import android.annotation.TargetApi
 import android.app.FragmentManager.OnBackStackChangedListener
 import android.content.{Context, ComponentName, Intent}
 import android.database.Cursor
 import android.graphics.BitmapFactory
 import android.graphics.drawable.{BitmapDrawable, LayerDrawable}
 import android.os.Bundle
-import android.support.design.widget.Snackbar
+import android.support.design.widget.{CoordinatorLayout, FloatingActionButton, Snackbar}
 import android.support.v4.widget.SwipeRefreshLayout
 import android.support.v7.app.ActionBar
-import android.support.v7.widget.Toolbar
+import android.support.v7.widget.{LinearLayoutManager, RecyclerView, Toolbar}
 import android.util.AttributeSet
 import android.view.animation.AccelerateDecelerateInterpolator
 import com.hanhuy.android.conversions._
@@ -20,11 +22,6 @@ import android.app._
 import android.view._
 import android.widget._
 import com.hanhuy.keepassj._
-import com.melnykov.fab.FloatingActionButton
-import io.codetail.animation.SupportAnimator.AnimatorListener
-import io.codetail.animation.ViewAnimationUtils
-import io.codetail.animation.SupportAnimator
-import io.codetail.widget.RevealFrameLayout
 import rx.android.schedulers.AndroidSchedulers.mainThread
 import rx.lang.scala.JavaConversions._
 import rx.lang.scala.{Subscription, Observable, Subject}
@@ -34,7 +31,6 @@ import Futures._
 import BrowseActivity._
 
 import scala.concurrent.Future
-import scala.util.{Success, Failure}
 
 import TypedResource._
 
@@ -80,7 +76,7 @@ object BrowseActivity {
   }
 }
 class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRefreshLayout.OnRefreshListener {
-  lazy val list = findView(TR.list)
+  lazy val list = findView(TR.recycler)
   lazy val refresher = findView(TR.refresher)
   private var searchView = Option.empty[SearchView]
   private var isEditing = false
@@ -132,9 +128,9 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
     super.onCreate(savedInstanceState)
     setContentView(R.layout.browse)
 
-    val fab = findView(TR.observable_fab)
+    val fab2 = findView(TR.fab2)
     findView(TR.fab_close) onClick0 findView(TR.fab_toolbar).hide()
-    findView(TR.fab_toolbar).button = fab
+    findView(TR.fab_toolbar).button = fab2
     findView(TR.fab_toolbar).container = findView(TR.container)
 
     findView(TR.create_entry) onClick0 {
@@ -151,9 +147,8 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
     getSupportActionBar.setCustomView(editBar, new ActionBar.LayoutParams(
       ViewGroup.LayoutParams.MATCH_PARENT,
       ViewGroup.LayoutParams.MATCH_PARENT))
-    fab.attachToListView(list)
     if (!Database.writeSupported)
-      fab.setVisibility(View.GONE)
+      fab2.setVisibility(View.GONE)
     refresher.setOnRefreshListener(this)
 
     editBar.findView(TR.cancel).onClick0 {
@@ -243,13 +238,13 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
       true
     case R.id.empty_recycle_bin =>
       Database.emptyRecycleBin()
-      list.getAdapter.asInstanceOf[GroupAdapter].notifyDataSetChanged()
+      list.getAdapter.notifyDataSetChanged()
       DatabaseSaveService.save()
       true
     case R.id.database_sort =>
       settings.set(Settings.BROWSE_SORT_ALPHA, !item.isChecked)
       item.setChecked(!item.isChecked)
-      Option(list.getAdapter.asInstanceOf[GroupAdapter]).foreach(_.notifyDataSetChanged())
+      Option(list.getAdapter).foreach(_.notifyDataSetChanged())
       true
 
     case _ => super.onOptionsItemSelected(item)
@@ -327,20 +322,9 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
 
       val adapter = new GroupAdapter(db,
         Option(group.getParentGroup), groups, entries)
-      list.setDividerHeight(0)
       list.setAdapter(adapter)
-      list.onItemClick { (_,_,row,_) =>
-        val item = adapter.getItem(row)
-        item.left foreach { grp =>
-          browse(this, grp)
-          overridePendingTransition(0, 0)
-        }
-        item.right foreach { entry =>
-          EntryViewActivity.show(this, entry)
-          overridePendingTransition(R.anim.slide_in_right,
-            R.anim.slide_out_left)
-        }
-      }
+      list.setNestedScrollingEnabled(true)
+      list.setLayoutManager(new LinearLayoutManager(this))
     }
     if (ready) database onFailureMain { case e =>
       Toast.makeText(this, "Failed to load database: " + e.getMessage,
@@ -415,7 +399,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
         case t: Toolbar => t.setContentInsetsAbsolute(0, 0)
         case _ =>
       }
-      findView(TR.observable_fab).hide()
+      findView(TR.fab2).hide()
       if (getFragmentManager.findFragmentByTag("editor") == null)
         getFragmentManager.beginTransaction()
           .add(R.id.content, f, "editor")
@@ -424,7 +408,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
           .commit()
     } else {
       isCreating = false
-      findView(TR.observable_fab).show()
+      findView(TR.fab2).show()
       getFragmentManager.popBackStack()
     }
     isEditing = b
@@ -444,50 +428,62 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
 //    }
   }
 
-  class GroupAdapter(db: PwDatabase, parent: Option[PwGroup], groups: Seq[PwGroup], entries: Seq[PwEntry]) extends BaseAdapter {
+  case class GroupHolder(view: ViewGroup, parent: Option[PwGroup], db: PwDatabase) extends RecyclerView.ViewHolder(view) {
+    lazy val name = view.findView(TR.name)
+    lazy val folder_image = view.findView(TR.folder_image)
+    lazy val entry_image = view.findView(TR.entry_image)
+
+    def bind(item: Either[PwGroup,PwEntry]): Unit = {
+      name.setText(item.fold(_.getName, _.getStrings.ReadSafe(PwDefs.TitleField)))
+
+      item.left foreach { group =>
+        folder_image.setImageResource(if (db.getRecycleBinUuid.Equals(group.getUuid))
+          R.drawable.ic_delete_black_24dp else R.drawable.ic_folder_open_black_24dp)
+        if (parent exists (_.getUuid.equals(group.getUuid))) {
+          folder_image.setImageResource(R.drawable.ic_expand_less_black_24dp)
+        }
+        folder_image.setVisibility(View.VISIBLE)
+        //        if (PwUuid.Zero == group.getCustomIconUuid)
+        entry_image.setImageResource(Database.Icons(group.getIconId.ordinal))
+      }
+      item.right foreach { entry =>
+        folder_image.setVisibility(View.INVISIBLE)
+        //        if (PwUuid.Zero == entry.getCustomIconUuid)
+        entry_image.setImageResource(Database.Icons(entry.getIconId.ordinal))
+      }
+      view.onClick0 {
+        view.setActivated(true)
+        item.left foreach { grp =>
+          browse(BrowseActivity.this, grp)
+          overridePendingTransition(0, 0)
+        }
+        item.right foreach { entry =>
+          EntryViewActivity.show(BrowseActivity.this, entry)
+          overridePendingTransition(R.anim.slide_in_right,
+            R.anim.slide_out_left)
+        }
+      }
+    }
+  }
+  class GroupAdapter(db: PwDatabase, parent: Option[PwGroup], groups: Seq[PwGroup], entries: Seq[PwEntry]) extends RecyclerView.Adapter[GroupHolder] {
     import TypedResource._
     var data = sortedData
 
-    override def hasStableIds = true
+    override def getItemCount = data.size
+
+
+    override def onCreateViewHolder(viewGroup: ViewGroup, i: Int) = {
+      GroupHolder(getLayoutInflater.inflate(TR.layout.browse_pwgroup_item, viewGroup, false), parent, db)
+    }
+
     override def getItemId(position: Int) =
       data(position).fold(Database.getId, Database.getId)
-    override def getCount = data.size
-    override def getView(position: Int, convertView: View, parent: ViewGroup) = {
-      val view = if (convertView == null) {
-        getLayoutInflater.inflate(TR.layout.browse_pwgroup_item, parent, false)
-      } else {
-        convertView
-      }
-      val item = getItem(position)
 
-      view.findView(TR.name).setText(item.fold(
-        _.getName, _.getStrings.ReadSafe(PwDefs.TitleField)))
-      val folder = view.findView(TR.folder_image)
-      val icon = view.findView(TR.entry_image)
+    override def onBindViewHolder(vh: GroupHolder, i: Int) = vh.bind(data(i))
 
-      item.left foreach { group =>
-        folder.setImageResource(if (db.getRecycleBinUuid.Equals(group.getUuid))
-          R.drawable.ic_delete_black_24dp else R.drawable.ic_folder_open_black_24dp)
-        if (this.parent exists (_.getUuid.equals(group.getUuid))) {
-          folder.setImageResource(R.drawable.ic_expand_less_black_24dp)
-        }
-        folder.setVisibility(View.VISIBLE)
-//        if (PwUuid.Zero == group.getCustomIconUuid)
-          icon.setImageResource(Database.Icons(group.getIconId.ordinal))
-      }
-      item.right foreach { entry =>
-        folder.setVisibility(View.INVISIBLE)
-//        if (PwUuid.Zero == entry.getCustomIconUuid)
-          icon.setImageResource(Database.Icons(entry.getIconId.ordinal))
-      }
-
-      view
-    }
-    override def getItem(position: Int) = data(position)
-    override def notifyDataSetChanged() {
-      data = sortedData
-      super.notifyDataSetChanged()
-    }
+    registerAdapterDataObserver(new RecyclerView.AdapterDataObserver {
+      override def onChanged() = data = sortedData
+    })
 
     def sortedData: Vector[Either[PwGroup,PwEntry]] = {
       (parent map Left.apply).toVector ++ (if (settings.get(Settings.BROWSE_SORT_ALPHA)) {
@@ -496,12 +492,11 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
         (groups map (Left(_))) ++ (entries map (Right(_)))
       })
     }
-    //    override def getItemViewType(position: Int) = if (data(position).isLeft) 0 else 1
-    //    override def getViewTypeCount = 2
   }
 }
 
-class FabToolbar(c: Context, attrs: AttributeSet) extends RevealFrameLayout(c, attrs) {
+class FabToolbar(val context: Context, attrs: AttributeSet) extends FrameLayout(context, attrs) with iota.HasContext {
+  import iota.std.Contexts._
   lazy val screenWidth = getResources.getDisplayMetrics.widthPixels
 
   private[this] var showing = false
@@ -510,7 +505,7 @@ class FabToolbar(c: Context, attrs: AttributeSet) extends RevealFrameLayout(c, a
   def button_=(b: ObservableFab) = {
     _button = b
     if (container != null)
-      container.setBackgroundColor(b.getColorNormal)
+      container.setBackgroundColor(iota.resolveAttr(R.attr.colorAccent, _.data))
     b onClick0 show()
     b.visibility.observeOn(mainThread).subscribe(b => if (b && showing) hide())
   }
@@ -520,25 +515,31 @@ class FabToolbar(c: Context, attrs: AttributeSet) extends RevealFrameLayout(c, a
   def container_=(b: ViewGroup) = {
     _container = b
     if (button != null)
-      container.setBackgroundColor(button.getColorNormal)
+      container.setBackgroundColor(iota.resolveAttr(R.attr.colorAccent, _.data))
   }
 
   def show(): Unit = {
     container.setVisibility(View.VISIBLE)
     showing = true
-    button.hide(false)
-    animate(0, screenWidth, null)
+    button.hide()
+    if (iota.v(21))
+      animate(0, screenWidth, null)
   }
 
   def hide(): Unit = {
     showing = false
-    animate(screenWidth, 0, closeListener)
+    if (iota.v(21))
+      animate(screenWidth, 0, closeListener)
+    else container.setVisibility(View.GONE)
   }
 
-  def animate(sr: Float, er: Float, listener: SupportAnimator.AnimatorListener) {
-    val start = math.max(0, math.abs(button.getTop - button.getBottom)) / 2
-    val cx = (button.getLeft + button.getRight) / 2
-    val cy = (button.getTop + button.getBottom) / 2
+  @TargetApi(21)
+  def animate(sr: Float, er: Float, listener: Animator.AnimatorListener) {
+    val start = math.max(sr, math.abs(button.getTop - button.getBottom)) / 2
+    val onscreen = Array.ofDim[Int](2)
+    container.getLocationOnScreen(onscreen)
+    val cx = (button.getLeft + button.getRight) / 2 - onscreen(0)
+    val cy = (button.getTop + button.getBottom) / 2 - onscreen(1)
 
     val animator = ViewAnimationUtils.createCircularReveal(container, cx, cy, start, er)
     animator.setInterpolator(new AccelerateDecelerateInterpolator)
@@ -549,15 +550,11 @@ class FabToolbar(c: Context, attrs: AttributeSet) extends RevealFrameLayout(c, a
     animator.start()
   }
 
-  val closeListener = new AnimatorListener {
-    override def onAnimationEnd() = {
+  val closeListener = new AnimatorListenerAdapter {
+    override def onAnimationEnd(animation: Animator) = {
       container.setVisibility(View.GONE)
-      button.show(false)
+      button.show()
     }
-
-    override def onAnimationRepeat() = ()
-    override def onAnimationStart() = ()
-    override def onAnimationCancel() = ()
   }
 
 }
@@ -566,13 +563,36 @@ class ObservableFab(c: Context, attrs: AttributeSet) extends FloatingActionButto
   private[this] val _vis: Subject[Boolean] = Subject()
   def visibility: Observable[Boolean] = _vis
 
-  override def show(animate: Boolean) = {
-    super.show(animate)
+  override def show() = {
+    super.show()
     _vis.onNext(true)
   }
 
-  override def hide(animate: Boolean) = {
-    super.hide(animate)
+  override def hide() = {
+    super.hide()
     _vis.onNext(false)
   }
+}
+
+class HideFabBehavior(context: Context, attrs: AttributeSet) extends CoordinatorLayout.Behavior[ViewGroup](context, attrs) {
+  private[this] var fab = Option.empty[FloatingActionButton]
+
+  override def layoutDependsOn(parent: CoordinatorLayout, child: ViewGroup, dependency: View) = {
+    dependency match {
+      case f: FloatingActionButton =>
+        fab = Some(f)
+        true
+      case _ => false
+    }
+  }
+
+  override def onNestedScroll(coordinatorLayout: CoordinatorLayout, child: ViewGroup, target: View, dxConsumed: Int, dyConsumed: Int, dxUnconsumed: Int, dyUnconsumed: Int) = {
+    if (dyConsumed < 0) {
+      fab.foreach(_.show())
+    } else {
+      fab.foreach(_.hide())
+    }
+  }
+
+  override def onStartNestedScroll(coordinatorLayout: CoordinatorLayout, child: ViewGroup, directTargetChild: View, target: View, nestedScrollAxes: Int) = true
 }

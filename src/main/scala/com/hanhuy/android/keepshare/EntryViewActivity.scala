@@ -370,7 +370,9 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
         field.inputlayout.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].topMargin = (getResources.getDisplayMetrics.density * 1).toInt
         field.inputlayout.getLayoutParams.asInstanceOf[ViewGroup.MarginLayoutParams].bottomMargin = (getResources.getDisplayMetrics.density * 1).toInt
         field.textfield.setTextIsSelectable(false)
-        field.setBackgroundResource(R.drawable.list_selector_background)
+        import iota.std.Contexts._
+        val bg = iota.resolveAttr(android.R.attr.selectableItemBackground, _.resourceId)
+        field.setBackgroundResource(bg)
         field.onClick0(EntryViewActivity.show(this, h, i))
         field.iconfield.setVisibility(View.GONE)
         field.icon = R.drawable.ic_history_black_36dp
