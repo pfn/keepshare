@@ -27,7 +27,7 @@
             <com.hanhuy.android.keepshare.StandardEditView
                     android:id="@+id/edit_title"
                     android:hint="Title"
-                    android:icon="@drawable/i00_password"
+                    android:icon="@mipmap/i00_password"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"/>
             <com.hanhuy.android.keepshare.StandardEditView

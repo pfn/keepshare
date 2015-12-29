@@ -41,9 +41,8 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_gravity">bottom|right</item>
         <item name="android:layout_margin">16dp</item>
-        <item name="fab_colorNormal">@color/colorPrimary</item>
-        <item name="fab_colorPressed">@color/colorPrimaryDark</item>
-        <item name="fab_colorRipple">@color/colorAccent</item>
+        <item name="fabSize">normal</item>
+        <item name="elevation">6dp</item>
     </style>
     <style name="AppTheme" parent="Base.AppTheme"/>
     <style name="AppTheme.Dialog" parent="Base.AppTheme.Dialog"/>

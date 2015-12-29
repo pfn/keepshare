@@ -16,14 +16,8 @@
                   android:layout_height="match_parent"/>
     </android.support.v4.widget.SwipeRefreshLayout>
     <com.hanhuy.android.keepshare.ObservableFab
+            style="@style/FloatingActionButton"
             android:id="@+id/fab2"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom|right"
-            android:layout_margin="16dp"
-            app:fabSize="normal"
-            app:elevation="4dp"
-            android:clickable="true"
             android:src="@drawable/ic_add_white_24dp"
     />
     <com.hanhuy.android.keepshare.FabToolbar

@@ -454,7 +454,7 @@ class GroupEditView(c: Context, attrs: AttributeSet) extends StandardFieldView(c
 }
 
 object EntryEditModel {
-  def blank = EntryEditModel(R.drawable.i00_password,
+  def blank = EntryEditModel(R.mipmap.i00_password,
     None, None, None, None, None, PwUuid.Zero, Map.empty)
 }
 case class EntryEditModel(icon: Int, title: Option[String],

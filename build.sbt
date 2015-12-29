@@ -26,7 +26,6 @@ debugIncludesTests := false
 
 libraryDependencies ++= Seq(
   "ch.acra" % "acra" % "4.7.0",
-  "com.melnykov" % "floatingactionbutton" % "1.3.0" exclude("com.android.support", "appcompat-v7"),
   "com.hanhuy.android" %% "iota" % "0.8",
   "com.hanhuy.android" %% "scala-conversions" % "1.6",
   "com.hanhuy.android" %% "scala-conversions-design" % "1.6",
@@ -37,7 +36,7 @@ libraryDependencies ++= Seq(
   "com.android.support" % "appcompat-v7" % supportSdkVersion,
   "io.reactivex" %% "rxscala" % "0.24.1",
   "io.reactivex" % "rxandroid" % "0.24.0",
-  "com.google.android.gms" % "play-services-drive" % "7.0.0"
+  "com.google.android.gms" % "play-services-drive" % "8.3.0"
 )
 
 proguardOptions ++=

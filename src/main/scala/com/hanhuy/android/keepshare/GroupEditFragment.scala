@@ -129,7 +129,7 @@ class GroupEditFragment extends AuthorizedFragment {
 }
 
 object GroupEditModel {
-  def blank = GroupEditModel(R.drawable.i00_password,
+  def blank = GroupEditModel(R.mipmap.i00_password,
     None, None, PwUuid.Zero)
 }
 case class GroupEditModel(icon: Int, title: Option[String],

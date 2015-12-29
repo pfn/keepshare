@@ -100,7 +100,6 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.entry_view)
 
-    findView(TR.fab).attachToScrollView(findView(TR.scroll_view))
     findView(TR.fab).onClick0 {
       editing(true)
     }

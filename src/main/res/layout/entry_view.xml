@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout
+<android.support.design.widget.CoordinatorLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:fab="http://schemas.android.com/apk/res-auto"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
         android:id="@+id/content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
     >
 
-    <com.melnykov.fab.ObservableScrollView
+    <android.support.v4.widget.NestedScrollView
             android:id="@+id/scroll_view"
+            app:layout_behavior="com.hanhuy.android.keepshare.HideFabBehavior"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
@@ -19,9 +20,9 @@
                       android:layout_marginBottom="8dp"
                       android:layout_height="wrap_content"
                       android:orientation="vertical" />
-    </com.melnykov.fab.ObservableScrollView>
-    <com.melnykov.fab.FloatingActionButton
+    </android.support.v4.widget.NestedScrollView>
+    <android.support.design.widget.FloatingActionButton
             style="@style/FloatingActionButton"
             android:id="@+id/fab"
             android:src="@drawable/ic_edit_white_24dp"/>
-</FrameLayout>
+</android.support.design.widget.CoordinatorLayout>
