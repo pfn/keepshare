@@ -10,7 +10,7 @@ import com.hanhuy.android.keepshare.TypedResource._
 import com.hanhuy.keepassj._
 import rx.android.schedulers.AndroidSchedulers.mainThread
 import rx.android.widget.WidgetObservable
-import rx.lang.scala.{Observable, Subject, Subscription}
+import rx.lang.scala.Subject
 
 import Rx._
 
@@ -87,20 +87,32 @@ class GroupEditFragment extends AuthorizedFragment {
             notes.text = grp.getNotes
 
             view.findView(TR.delete).onClick0 {
-              val t = getString(R.string.delete_name, grp.getName)
-              val msg = if (EntryEditFragment.inRecycleBin(grp.getParentGroup))
-                R.string.delete_permanently else R.string.move_to_recycle
-
-              new AlertDialog.Builder(activity)
-                .setTitle(t)
-                .setMessage(msg)
-                .setPositiveButton(android.R.string.ok, () => {
-                  Database.delete(grp)
+              if (EntryEditFragment.inRecycleBin(grp.getParentGroup)) {
+                val t = getString(R.string.delete_name, grp.getName)
+                new AlertDialog.Builder(activity)
+                  .setTitle(t)
+                  .setMessage(R.string.delete_permanently)
+                  .setPositiveButton(android.R.string.ok, () => {
+                    Database.delete(grp)
+                    DatabaseSaveService.save()
+                    activity.getFragmentManager.popBackStack()
+                  })
+                  .setNegativeButton(android.R.string.cancel, null)
+                  .show()
+              } else {
+                val group = grp.getParentGroup
+                Database.delete(grp)
+                DatabaseSaveService.save()
+                BrowseActivity.SnackbarSender.enqueue(getString(R.string.delete_entry, grp.getName), getString(R.string.undo)) { a =>
+                  Database.recycleBin.foreach(_.getGroups.Remove(grp))
+                  group.getGroups.Add(grp)
+                  grp.setParentGroup(group)
+                  grp.Touch(true, false)
                   DatabaseSaveService.save()
-                  activity.getFragmentManager.popBackStack()
-                })
-                .setNegativeButton(android.R.string.cancel, null)
-                .show()
+                  a.navigateTo(Option(group.getUuid))
+                }
+                activity.getFragmentManager.popBackStack()
+              }
             }
 
             baseModel = Some(model)

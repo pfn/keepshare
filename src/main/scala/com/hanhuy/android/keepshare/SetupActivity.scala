@@ -149,13 +149,6 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
       }
     }
 
-    val watcher = (p: Preference, a: Any) => {
-      findView(TR.error_text).setVisibility(View.GONE)
-      findView(TR.success_text).setVisibility(View.GONE)
-      true
-    }
-    fragment.onPreferenceChange(watcher)
-
     if (!settings.get(Settings.FIRST_RUN)) {
       (Option(settings.get(Settings.DATABASE_FILE))
         , Option(settings.get(Settings.PASSWORD))

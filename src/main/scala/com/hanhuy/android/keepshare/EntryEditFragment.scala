@@ -168,20 +168,32 @@ class EntryEditFragment extends AuthorizedFragment {
           } filterNot (f => PwDefs.IsStandardField(f._1)) toMap)
 
           view.findView(TR.delete).onClick0 {
-            val t = getString(R.string.delete_name, s.ReadSafe(PwDefs.TitleField))
-            val msg = if (EntryEditFragment.inRecycleBin(e.getParentGroup))
-              R.string.delete_permanently else R.string.move_to_recycle
-
-            new AlertDialog.Builder(activity)
-              .setTitle(t)
-              .setMessage(msg)
-              .setPositiveButton(android.R.string.ok, () => {
-                Database.delete(e)
+            if (EntryEditFragment.inRecycleBin(e.getParentGroup)) {
+              val t = getString(R.string.delete_name, s.ReadSafe(PwDefs.TitleField))
+              new AlertDialog.Builder(activity)
+                .setTitle(t)
+                .setMessage(R.string.delete_permanently)
+                .setPositiveButton(android.R.string.ok, () => {
+                  Database.delete(e)
+                  DatabaseSaveService.save()
+                  activity.finish()
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+            } else {
+              val group = e.getParentGroup
+              Database.delete(e)
+              DatabaseSaveService.save()
+              BrowseActivity.SnackbarSender.enqueue(getString(R.string.delete_entry, s.ReadSafe(PwDefs.TitleField)), getString(R.string.undo)) { a =>
+                Database.recycleBin.foreach(_.getEntries.Remove(e))
+                group.getEntries.Add(e)
+                e.setParentGroup(group)
+                e.Touch(true, false)
                 DatabaseSaveService.save()
-                activity.finish()
-              })
-              .setNegativeButton(android.R.string.cancel, null)
-              .show()
+                a.navigateTo(Option(group.getUuid))
+              }
+              activity.finish()
+            }
           }
 
           baseModel = Some(model)

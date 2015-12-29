@@ -64,17 +64,17 @@ object BrowseActivity {
   }
 
   object SnackbarSender {
-    private[this] var queue = Option.empty[(CharSequence, String, () => Any)]
-    def show(view: View): Unit = {
+    private[this] var queue = Option.empty[(CharSequence, String, BrowseActivity => Any)]
+    def show(activity: BrowseActivity, view: View): Unit = {
       queue foreach { case (msg, action, fn) =>
         val sb = Snackbar.make(view, msg, 10000)
-        sb.setAction(action, fn)
+        sb.setAction(action, () => fn(activity))
         sb.show()
       }
       queue = None
     }
 
-    def enqueue[A](msg: CharSequence, action: String, fn: () => A): Unit = {
+    def enqueue[A](msg: CharSequence, action: String)(fn: BrowseActivity => A): Unit = {
       queue = Some((msg, action, fn))
     }
   }
@@ -202,6 +202,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
           editing(false)
           if (!isCreating)
             navigateTo(groupId)
+          SnackbarSender.show(BrowseActivity.this, list)
         }
       }
     })
@@ -301,7 +302,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
 //    }
   }
 
-  private def navigateTo(groupId: Option[PwUuid]): Unit = {
+  def navigateTo(groupId: Option[PwUuid]): Unit = {
     database flatMap { db =>
       if (db.IsOpen) Future.successful(db) else {
         Future.failed(KeyError.NeedLoad)
@@ -375,8 +376,10 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
 
   override def onResume() = {
     super.onResume()
-    if (!isEditing)
+    if (!isEditing) {
       handleIntent()
+      SnackbarSender.show(this, list)
+    }
   }
 
   def creating(): Unit = {
