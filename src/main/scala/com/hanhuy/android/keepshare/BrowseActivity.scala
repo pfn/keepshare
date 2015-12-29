@@ -524,13 +524,33 @@ class FabToolbar(val context: Context, attrs: AttributeSet) extends FrameLayout(
     button.hide()
     if (iota.v(21))
       animate(0, screenWidth, null)
+    else {
+      val h = container.getHeight
+      val anim = if (h == 0) {
+        container.setAlpha(0.0f)
+        container.animate().alpha(1.0f)
+      } else {
+        container.animate().yBy(-container.getHeight)
+      }
+      anim.setListener(null).start()
+    }
   }
 
   def hide(): Unit = {
     showing = false
     if (iota.v(21))
       animate(screenWidth, 0, closeListener)
-    else container.setVisibility(View.GONE)
+    else {
+      container.getHeight
+      val xy = Array.ofDim[Int](2)
+      container.getLocationOnScreen(xy)
+      container.animate().yBy(container.getHeight).setListener(new AnimatorListenerAdapter {
+        override def onAnimationEnd(animation: Animator) = {
+          container.setVisibility(View.GONE)
+          button.show()
+        }
+      }).start()
+    }
   }
 
   @TargetApi(21)

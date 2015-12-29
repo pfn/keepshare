@@ -20,7 +20,7 @@ android.dsl.javacFlags(Compile)("-target", "1.7", "-source", "1.7")
 
 scalacOptions in Compile += "-feature"
 
-scalaVersion := "2.11.6"
+scalaVersion := "2.11.7"
 
 debugIncludesTests := false
 
@@ -59,7 +59,7 @@ android.dsl.flavor("lite")(
   applicationId := "com.hanhuy.android.keepshare.lite"
 )
 
-android.dsl.flavor("test")(
+android.dsl.buildType("test")(
   name := "keepshare-test",
   extraResDirectories += baseDirectory.value / "src" / "androidTest" / "res",
   debugIncludesTests := true,
