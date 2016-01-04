@@ -9,6 +9,7 @@
     <TextView
             android:id="@+id/subject"
             android:iconifiedByDefault="false"
+            android:maxLines="4"
             android:layout_alignParentLeft="true"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
