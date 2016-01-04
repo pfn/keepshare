@@ -1,8 +1,9 @@
 package com.hanhuy.android.keepshare
 
-import java.security.spec.X509EncodedKeySpec
+import java.security.spec.{MGF1ParameterSpec, X509EncodedKeySpec}
 import java.security.{KeyFactory, KeyPairGenerator, KeyStore}
 import javax.crypto.Cipher
+import javax.crypto.spec.{OAEPParameterSpec, PSource}
 
 import android.annotation.TargetApi
 import android.content.Context
@@ -22,8 +23,7 @@ import scala.concurrent.Future
   */
 object FingerprintManager {
   val KEY_NAME = "keepshare-fingerprint-key"
-  // see https://code.google.com/p/android/issues/detail?id=197719
-  val CIPHER_ALG = "RSA/ECB/PKCS1Padding"
+  val CIPHER_ALG = "RSA/ECB/OAEPWithSHA-256AndMGF1Padding"
   val AKS = "AndroidKeyStore"
 }
 case class FingerprintManager(context: Context, settings: Settings) {
@@ -50,7 +50,8 @@ case class FingerprintManager(context: Context, settings: Settings) {
         kg.initialize(
           new KeyGenParameterSpec.Builder(KEY_NAME, PURPOSE_DECRYPT)
             .setUserAuthenticationRequired(true)
-            .setEncryptionPaddings(ENCRYPTION_PADDING_RSA_PKCS1)
+            .setDigests(DIGEST_SHA256, DIGEST_SHA512)
+            .setEncryptionPaddings(ENCRYPTION_PADDING_RSA_OAEP)
             .build()
         )
         // side-effects yolo..., this generates in the keystore
@@ -60,7 +61,9 @@ case class FingerprintManager(context: Context, settings: Settings) {
         val pk = KeyFactory.getInstance(pub.getAlgorithm).generatePublic(
           new X509EncodedKeySpec(pub.getEncoded))
         val cipher = Cipher.getInstance(CIPHER_ALG)
-        cipher.init(Cipher.ENCRYPT_MODE, pk)
+        // see https://code.google.com/p/android/issues/detail?id=197719
+        cipher.init(Cipher.ENCRYPT_MODE, pk, new OAEPParameterSpec(
+          "SHA-256", "MGF1", MGF1ParameterSpec.SHA1, PSource.PSpecified.DEFAULT))
         val fkey = KeyManager.hex(cipher.doFinal(pin.getBytes("utf-8")))
         settings.set(Settings.FINGERPRINT_PIN, fkey)
         settings.set(Settings.FINGERPRINT_TIMESTAMP, System.currentTimeMillis)
