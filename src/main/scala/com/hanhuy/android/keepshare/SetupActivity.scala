@@ -588,6 +588,9 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
       case BROWSE_KEYFILE =>
         if (resultCode == Activity.RESULT_OK)
           setDataPath(data, dk.setText)
+      case _ =>
+        if (resultCode != Activity.RESULT_OK)
+          finish()
     }
   }
   def setDataPath(data: Intent, setProperty: String => Unit): Unit = {
