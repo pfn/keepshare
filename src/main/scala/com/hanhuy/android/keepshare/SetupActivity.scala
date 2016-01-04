@@ -570,8 +570,8 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
       startActivityForResult(intent, id)
     } catch {
       case e: ActivityNotFoundException =>
-        Toast.makeText(this,
-          R.string.must_install_explorer,
+        Toast.makeText(this, if (iota.v(19))
+          R.string.android_saf_required else R.string.must_install_explorer,
           Toast.LENGTH_SHORT).show()
       case e: Exception =>
         Toast.makeText(this,

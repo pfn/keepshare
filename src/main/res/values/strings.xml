@@ -60,6 +60,8 @@
     <string name="database_no_exist">Database file does not exist!</string>
     <string name="database_no_blank">Database cannot be blank</string>
     <string name="decrypt_saved_failed">Failed to decrypt saved data :-(</string>
+    <string name="android_saf_required">
+        Android Storage Access Framework Documents application is required</string>
     <string name="must_install_explorer">
         You must install a file explorer in order to browse</string>
     <string name="setup_subtitle">: Settings</string>
