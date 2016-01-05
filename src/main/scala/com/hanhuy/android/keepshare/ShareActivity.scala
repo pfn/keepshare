@@ -156,14 +156,18 @@ class ShareActivity extends Activity with TypedFindView {
 
   def init() {
     setContentView(R.layout.share)
-    val extras = getIntent.getExtras
     val (url,subject) = (for {
       intent<- Option(getIntent)
       extras <- Option(intent.getExtras)
       u      <- Option(extras.getString(Intent.EXTRA_TEXT, "")) map (_.trim)
       s      <- Option(extras.getString(Intent.EXTRA_SUBJECT, "")) map (_.trim)
-    } yield (u,s)) map { case (u,s) =>
-      (u,s)
+    } yield (u,s,extras)) map { case (u,s,extras) =>
+      if (extras.containsKey(EXTRA_SCREENSHOT)) {
+        val bitmap: Bitmap = extras.getParcelable("share_screenshot")
+        findView(TR.share_screenshot).setImageDrawable(
+          new BitmapDrawable(getResources, bitmap))
+      } else findView(TR.share_screenshot).setVisibility(View.GONE)
+
       if (u.charAt(0) == '"') {
         val end = u.lastIndexOf('"')
         if (u.length > end + 2)
@@ -186,11 +190,6 @@ class ShareActivity extends Activity with TypedFindView {
 
     findView(TR.subject).setText(subject + " - " + url)
 
-    if (extras.containsKey(EXTRA_SCREENSHOT)) {
-      val bitmap: Bitmap = extras.getParcelable("share_screenshot")
-      findView(TR.share_screenshot).setImageDrawable(
-        new BitmapDrawable(getResources, bitmap))
-    } else findView(TR.share_screenshot).setVisibility(View.GONE)
 
     Future {
       val uri = new URI(url)
