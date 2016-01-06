@@ -138,7 +138,7 @@ object Database {
     for {
       p    <- resolvePath(db)
       keyf <- Futures.traverseO(keyfile)(resolvePath)
-      db <- checkedOpen(p, keyf)
+      db   <- checkedOpen(p, keyf)
     } yield db
   }
 

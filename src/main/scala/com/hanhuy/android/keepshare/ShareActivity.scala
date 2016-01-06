@@ -157,7 +157,7 @@ class ShareActivity extends Activity with TypedFindView {
   def init() {
     setContentView(R.layout.share)
     val (url,subject) = (for {
-      intent<- Option(getIntent)
+      intent <- Option(getIntent)
       extras <- Option(intent.getExtras)
       u      <- Option(extras.getString(Intent.EXTRA_TEXT, "")) map (_.trim)
       s      <- Option(extras.getString(Intent.EXTRA_SUBJECT, "")) map (_.trim)

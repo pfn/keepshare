@@ -91,7 +91,7 @@ object AccessibilityService {
     override def mkString = {
       val t = node map { _.getClassName } getOrElse "null"
       val tx = node map { _.getText } getOrElse "null"
-      val c = children map (_.mkString)
+      val c = children map (_.toString)
       "Node[%s: id=%s password=%s text=%s children=[%s]]" format (
         t, viewIdResourceName, isPassword, tx, c mkString ",")
     }
@@ -127,7 +127,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
    * @return Option[A] result of f
    */
   def withTree[A](windowId: Int)(f: (String, Option[URI],
-      AccessibilityTree, Option[AccessibilityTree]) => A): Option[A] = {
+      AccessibilityTree, AccessibilityTree) => A): Option[A] = {
 
     val root = getRootInActiveWindow
     val tree = AccessibilityTree(root)
@@ -136,35 +136,34 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
     // any views with systemui should be filtered out
     val r = if (tree.windowId.contains(windowId) && !tree.exists (
         _.viewIdResourceName exists (_ startsWith "com.android.systemui"))) {
-      val password = tree find (_.isPassword)
-
-      // ugly
-      val packageName = tree.packageName.get
-      val searchURI = if (password.isDefined) {
-        if (packageName == "com.android.chrome") {
-          val urlbar = tree.findNodeById("com.android.chrome:id/url_bar")
-          val d = urlbar map { u =>
-            val url = u.getText.toString
-
-            Try {
-              new URI(if (url.indexOf(":/") < 0) "http://" + url else url)
-            } toOption
-          } getOrElse None
-          d
-        } else if (packageName == "com.android.browser") {
-          val urlbar = tree.findNodeById("com.android.browser:id/url")
-          val d = urlbar map { u =>
+      for {
+        packageName <- tree.packageName
+        password    <- tree find (_.isPassword)
+      } yield {
+        val searchURI = if (packageName == "com.android.chrome") {
+          tree.findNodeById("com.android.chrome:id/url_bar") flatMap { u =>
             val url = u.getText.toString
             Try(new URI(if (url.indexOf(":/") < 0) "http://" + url else url)).toOption
-          } getOrElse None
-          d
+          }
+        } else if (packageName == "com.android.browser") {
+          tree.findNodeById("com.android.browser:id/url") flatMap { u =>
+            val url = u.getText.toString
+            Try(new URI(if (url.indexOf(":/") < 0) "http://" + url else url)).toOption
+          }
+        } else if (packageName == "com.opera.browser" || packageName == "com.opera.mini.native") {
+          // mini uses a different package name
+          val pkg = if (packageName == "com.opera.browser") packageName else "com.opera.android"
+          tree.findNodeById(pkg + ":id/url_field") flatMap { u =>
+            val url = u.getText.toString
+            Try(new URI(if (url.indexOf(":/") < 0) "http://" + url else url)).toOption
+          }
         } else {
           val appHost = packageName.toString
             .split( """\.""").reverse.mkString(".")
           Some(new URI("android-package://" + appHost))
         }
-      } else None
-      Some(f(packageName.toString, searchURI, tree, password))
+        f(packageName.toString, searchURI, tree, password)
+      }
     } else {
       None
     }
@@ -187,7 +186,7 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
           val r: Runnable = { () =>
             withTree(windowId) { (pkg, searchURI, tree, password) =>
 
-              if (password.isDefined && lastCanceledSearchURI != searchURI) {
+              if (lastCanceledSearchURI != searchURI) {
 
                 fillInfo match {
                   case Some(x) => fillIn(x, pkg, searchURI, tree, password)
@@ -285,10 +284,9 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
              pkg: String,
              searchURI: Option[URI],
              tree: AccessibilityTree,
-             passwordField: Option[AccessibilityTree]): Unit = synchronized {
+             passwordField: AccessibilityTree): Unit = synchronized {
     log.d("Fill in %s == %s ?" format (event.pkg, pkg))
-    if (event.pkg == pkg && passwordField.isDefined &&
-        (searchURI.map (_.toString) == Option(event.uri))) {
+    if (event.pkg == pkg && (searchURI.map (_.toString) == Option(event.uri))) {
       // needs to run on ui thread
       //val clipboard = systemService[ClipboardManager]
       //val clip = clipboard.getPrimaryClip
@@ -299,8 +297,8 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
       val text = (edits takeWhile (!_.isPassword)).lastOption
 
       // do password first because some username fields have autocompletes...
-      passwordField foreach (_.node foreach { n =>
-          pasteData(n, event.password) })
+      passwordField.node foreach { n =>
+          pasteData(n, event.password) }
 
       text foreach (_.node foreach { n =>
         Thread.sleep(100)
