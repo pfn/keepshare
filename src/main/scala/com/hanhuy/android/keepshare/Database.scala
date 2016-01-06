@@ -29,25 +29,27 @@ object Database {
   SprEngine.FilterCompile.add(new EventHandler[SprEventArgs] {
     val TOTP_PLACEHOLDER = "{TOTP}"
     override def delegate(sender: Any, e: SprEventArgs) = {
-      if (e.getText.toUpperCase.contains(TOTP_PLACEHOLDER)) {
-        val strings = e.getContext.getEntry.getStrings
-        def getKey(k: String, f: String => Array[Byte]): Option[Array[Byte]] =
-          Option(strings.Get(k)).map(ps => f(ps.ReadString()))
-        def getValue[A](k: String, default: A)(f: String => Option[A]): A =
-          Option(strings.Get(k)).flatMap(ps => f(ps.ReadString())).getOrElse(default)
-        val key =
-          getKey("HmacOtp-Secret",          s => s.getBytes(StrUtil.Utf8))        orElse
+      if (e.getContext.getFlags.contains(SprCompileFlags.ExtActive)) {
+        if (e.getText.toUpperCase.contains(TOTP_PLACEHOLDER)) {
+          val strings = e.getContext.getEntry.getStrings
+          def getKey(k: String, f: String => Array[Byte]): Option[Array[Byte]] =
+            Option(strings.Get(k)).map(ps => f(ps.ReadString()))
+          def getValue[A](k: String, default: A)(f: String => Option[A]): A =
+            Option(strings.Get(k)).flatMap(ps => f(ps.ReadString())).getOrElse(default)
+          val key =
+            getKey("HmacOtp-Secret",        s => s.getBytes(StrUtil.Utf8))        orElse
             getKey("HmacOtp-Secret-Hex",    s => MemUtil.HexStringToByteArray(s)) orElse
             getKey("HmacOtp-Secret-Base32", s => MemUtil.ParseBase32(s))          orElse
             getKey("HmacOtp-Secret-Base64", s => BaseEncoding.base64().decode(s)) getOrElse
             Array.ofDim[Byte](0)
 
-        val t0 = getValue("TimeOtp-T0",     0l)(s => Try(s.toLong).toOption)
-        val step = getValue("TimeOtp-Step", 30)(s => Try(s.toInt).toOption)
-        val size = getValue("TimeOtp-Size",  6)(s => Try(s.toInt).toOption)
-        val t = System.currentTimeMillis / 1000
-        e.setText(StrUtil.ReplaceCaseInsensitive(e.getText, TOTP_PLACEHOLDER,
-          HmacOtp.Generate(key, (t - t0) / step, size, false, -1)))
+          val t0 = getValue("TimeOtp-T0",     0l)(s => Try(s.toLong).toOption)
+          val step = getValue("TimeOtp-Step", 30)(s => Try(s.toInt).toOption)
+          val size = getValue("TimeOtp-Size",  6)(s => Try(s.toInt).toOption)
+          val t = System.currentTimeMillis / 1000
+          e.setText(StrUtil.ReplaceCaseInsensitive(e.getText, TOTP_PLACEHOLDER,
+            HmacOtp.Generate(key, (t - t0) / step, size, false, -1)))
+        }
       }
     }
   })
