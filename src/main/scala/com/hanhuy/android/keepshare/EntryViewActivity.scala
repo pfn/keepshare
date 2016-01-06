@@ -7,7 +7,6 @@ import android.graphics.drawable.{LayerDrawable, BitmapDrawable}
 import android.os.Bundle
 import android.support.v7.app.ActionBar
 import android.support.v7.widget.Toolbar
-import android.text.InputType
 import android.text.method.{LinkMovementMethod, PasswordTransformationMethod}
 import android.text.util.Linkify
 import android.util.AttributeSet
@@ -20,6 +19,7 @@ import Futures._
 import EntryViewActivity._
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
+import com.hanhuy.keepassj.spr.{SprEngine, SprCompileFlags, SprContext}
 import scala.collection.JavaConverters._
 import TypedResource._
 
@@ -140,7 +140,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
         if (isCreating) {
           val e = new PwEntry(true, true)
           copyFromModel(e, true)
-          showEntry(e)
+          showEntry(e, Database.pwdatabase)
         } else {
           val needBackup = editor.baseModel.exists(_.needsBackup(editor.model))
           val needMove = editor.baseModel.exists(_.group != editor.model.group)
@@ -148,7 +148,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
             if (needBackup) e.CreateBackup(null)
             copyFromModel(e, needMove)
             e.Touch(true, false)
-            showEntry(e)
+            showEntry(e, Database.pwdatabase)
           }
         }
       }
@@ -166,9 +166,9 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
     } {
       val uuid = new PwUuid(KeyManager.bytes(entry))
       database map { db =>
-        db.getRootGroup.FindEntry(uuid, true)
-      } onSuccessMain { case e =>
-        showEntry(e)
+        db -> db.getRootGroup.FindEntry(uuid, true)
+      } onSuccessMain { case (db,e) =>
+        showEntry(e, db)
         if (Option(savedInstanceState) exists (_.getBoolean(STATE_IS_EDITING, false))) {
           editing(true)
         }
@@ -238,7 +238,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
     case _ => super.onOptionsItemSelected(item)
   }
 
-  private def showEntry(e: PwEntry): Unit = {
+  private def showEntry(e: PwEntry, db: PwDatabase): Unit = {
     val histIdx = for {
       intent <- Option(getIntent)
       extra  <- Option(intent.getIntExtra(EXTRA_HISTORY_IDX, -1)) if extra != -1
@@ -329,13 +329,14 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
       fieldlist.addView(notesfield)
     }
 
+    val sprcontext = new SprContext(e, db, SprCompileFlags.All.flags)
     strings.asScala map { e => (e.getKey,e.getValue) } foreach { case (k,v) =>
       if (!PwDefs.IsStandardField(k)) {
         val field = new CustomField(this)
         field.first = first
         first = false
         field.hint = k
-        field.text = v.ReadString
+        field.text = SprEngine.Compile(v.ReadString, sprcontext)
         field.password = v.isProtected
         fieldlist.addView(field)
       }
