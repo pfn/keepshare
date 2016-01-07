@@ -596,6 +596,7 @@ class ObservableFab(c: Context, attrs: AttributeSet) extends FloatingActionButto
 
 class HideFabBehavior(context: Context, attrs: AttributeSet) extends CoordinatorLayout.Behavior[ViewGroup](context, attrs) {
   private[this] var fab = Option.empty[FloatingActionButton]
+  private[this] var scrolling = false
 
   override def layoutDependsOn(parent: CoordinatorLayout, child: ViewGroup, dependency: View) = {
     dependency match {
@@ -605,13 +606,21 @@ class HideFabBehavior(context: Context, attrs: AttributeSet) extends Coordinator
     false
   }
 
-  override def onNestedScroll(coordinatorLayout: CoordinatorLayout, child: ViewGroup, target: View, dxConsumed: Int, dyConsumed: Int, dxUnconsumed: Int, dyUnconsumed: Int) = {
-    if (dyConsumed <= 0) {
-      fab.foreach(_.show())
-    } else {
-      fab.foreach(_.hide())
+  override def onNestedScroll(coordinatorLayout: CoordinatorLayout, child: ViewGroup, target: View, dxConsumed: Int, dyConsumed: Int, dxUnconsumed: Int, dyUnconsumed: Int) =
+    fab.foreach { f =>
+      if (dyConsumed <= 0 && dyUnconsumed == 0) f.show()
+      else if (dyUnconsumed != 0) {
+        if (scrolling) {
+          if (f.isShown) f.hide() else f.show()
+          scrolling = false
+        }
+      } else {
+        f.hide()
+      }
     }
-  }
 
-  override def onStartNestedScroll(coordinatorLayout: CoordinatorLayout, child: ViewGroup, directTargetChild: View, target: View, nestedScrollAxes: Int) = true
+  override def onStartNestedScroll(coordinatorLayout: CoordinatorLayout, child: ViewGroup, directTargetChild: View, target: View, nestedScrollAxes: Int) = {
+    scrolling = true
+    true
+  }
 }
