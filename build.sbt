@@ -30,7 +30,7 @@ libraryDependencies ++= Seq(
   "com.hanhuy.android" %% "scala-conversions" % "1.6",
   "com.hanhuy.android" %% "scala-conversions-design" % "1.6",
   "com.hanhuy.android" %% "scala-common" % "1.0",
-  "com.hanhuy.keepassj" % "keepassj" % "2.30.5" exclude("xpp3", "xpp3"),
+  "com.hanhuy.keepassj" % "keepassj" % "2.30.6" exclude("xpp3", "xpp3"),
   "com.android.support" % "recyclerview-v7" % supportSdkVersion,
   "com.android.support" % "design" % supportSdkVersion,
   "com.android.support" % "appcompat-v7" % supportSdkVersion,
