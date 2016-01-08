@@ -37,10 +37,10 @@ object Database {
           def getValue[A](k: String, default: A)(f: String => Option[A]): A =
             Option(strings.Get(k)).flatMap(ps => f(ps.ReadString())).getOrElse(default)
           val key =
-            getKey("HmacOtp-Secret",        s => s.getBytes(StrUtil.Utf8))        orElse
-            getKey("HmacOtp-Secret-Hex",    s => MemUtil.HexStringToByteArray(s)) orElse
-            getKey("HmacOtp-Secret-Base32", s => MemUtil.ParseBase32(s))          orElse
-            getKey("HmacOtp-Secret-Base64", s => BaseEncoding.base64().decode(s)) getOrElse
+            getKey("HmacOtp-Secret",        s => s.getBytes(StrUtil.Utf8))                    orElse
+            getKey("HmacOtp-Secret-Hex",    s => MemUtil.HexStringToByteArray(s.toUpperCase)) orElse
+            getKey("HmacOtp-Secret-Base32", s => MemUtil.ParseBase32(s.toUpperCase))          orElse
+            getKey("HmacOtp-Secret-Base64", s => BaseEncoding.base64().decode(s.toUpperCase)) getOrElse
             Array.ofDim[Byte](0)
 
           val t0 = getValue("TimeOtp-T0",     0l)(s => Try(s.toLong).toOption)
