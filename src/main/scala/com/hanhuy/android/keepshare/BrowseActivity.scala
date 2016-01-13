@@ -38,6 +38,11 @@ import TypedResource._
  * @author pfnguyen
  */
 object BrowseActivity {
+
+  @inline def animationEnd[A](@inline f: Animator => A): Animator.AnimatorListener = new AnimatorListenerAdapter {
+    override def onAnimationEnd(animation: Animator) = f(animation)
+  }
+
   val EXTRA_GROUP_ID = "keepshare.extra.GROUP_ID"
   val EXTRA_STACK = "keepshare.extra.STACK"
   def browse(a: Activity, group: PwGroup): Unit = {
@@ -322,9 +327,9 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
 
       val adapter = new GroupAdapter(db,
         Option(group.getParentGroup), groups, entries)
+      list.setLayoutManager(new LinearLayoutManager(this))
       list.setAdapter(adapter)
       list.setNestedScrollingEnabled(true)
-      list.setLayoutManager(new LinearLayoutManager(this))
     }
     if (ready) database onFailureMain { case e =>
       Toast.makeText(this, "Failed to load database: " + e.getMessage,
@@ -544,11 +549,9 @@ class FabToolbar(val context: Context, attrs: AttributeSet) extends FrameLayout(
       container.getHeight
       val xy = Array.ofDim[Int](2)
       container.getLocationOnScreen(xy)
-      container.animate().yBy(container.getHeight).setListener(new AnimatorListenerAdapter {
-        override def onAnimationEnd(animation: Animator) = {
-          container.setVisibility(View.GONE)
-          button.show()
-        }
+      container.animate().yBy(container.getHeight).setListener(animationEnd {_ =>
+        container.setVisibility(View.GONE)
+        button.show()
       }).start()
     }
   }
@@ -570,13 +573,10 @@ class FabToolbar(val context: Context, attrs: AttributeSet) extends FrameLayout(
     animator.start()
   }
 
-  val closeListener = new AnimatorListenerAdapter {
-    override def onAnimationEnd(animation: Animator) = {
-      container.setVisibility(View.GONE)
-      button.show()
-    }
+  val closeListener = animationEnd { _ =>
+    container.setVisibility(View.GONE)
+    button.show()
   }
-
 }
 
 class ObservableFab(c: Context, attrs: AttributeSet) extends FloatingActionButton(c, attrs) {
