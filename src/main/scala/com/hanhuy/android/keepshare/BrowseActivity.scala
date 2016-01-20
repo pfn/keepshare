@@ -5,12 +5,15 @@ import android.annotation.TargetApi
 import android.app.FragmentManager.OnBackStackChangedListener
 import android.content.{Context, ComponentName, Intent}
 import android.database.Cursor
-import android.graphics.BitmapFactory
+import android.graphics.{Rect, Canvas, BitmapFactory}
 import android.graphics.drawable.{BitmapDrawable, LayerDrawable}
 import android.os.Bundle
 import android.support.design.widget.{CoordinatorLayout, FloatingActionButton, Snackbar}
 import android.support.v4.widget.SwipeRefreshLayout
 import android.support.v7.app.ActionBar
+import android.support.v7.widget.RecyclerView.{State, ViewHolder}
+import android.support.v7.widget.helper.ItemTouchHelper
+import android.support.v7.widget.helper.ItemTouchHelper.SimpleCallback
 import android.support.v7.widget.{LinearLayoutManager, RecyclerView, Toolbar}
 import android.util.AttributeSet
 import android.view.animation.AccelerateDecelerateInterpolator
@@ -312,7 +315,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
       val group = groupId flatMap { id =>
         Option(root.FindGroup(id, true)) } getOrElse root
       val ab = getSupportActionBar
-      ab.setSubtitle(group.getName)
+      ab.setTitle(group.getName)
 //      if (PwUuid.Zero == group.getCustomIconUuid) {
         val bm = BitmapFactory.decodeResource(getResources, Database.Icons(group.getIconId.ordinal))
         val bd = new BitmapDrawable(getResources, bm)
@@ -325,10 +328,86 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
       val groups = group.GetGroups(false).asScala.toList
       val entries = group.GetEntries(false).asScala.toList
 
-      val adapter = new GroupAdapter(db,
-        Option(group.getParentGroup), groups, entries)
+      val adapter = new GroupAdapter(db, Option(group.getParentGroup), groups, entries)
       list.setLayoutManager(new LinearLayoutManager(this))
       list.setAdapter(adapter)
+      val callback = new SimpleCallback(0, ItemTouchHelper.RIGHT) {
+        override def onSwiped(viewHolder: ViewHolder, direction: Int) = {
+          val gh = viewHolder.asInstanceOf[GroupHolder]
+          gh.upper.animate().x(viewHolder.itemView.getRight).alpha(0).start()
+          gh.item.foreach { item =>
+            val pos = viewHolder.getAdapterPosition
+            val (inRecycle, title) = item.fold({ g =>
+              adapter.groups = adapter.groups filterNot (_ == g)
+              val inRecycle = Database.recycleBin.exists(g.IsContainedIn)
+              Database.delete(g)
+              (inRecycle, g.getName)
+            }, { e =>
+              adapter.entries = adapter.entries filterNot (_ == e)
+              val inRecycle = (for {
+                p <- Option(e.getParentGroup)
+                r <- Database.recycleBin
+              } yield {
+                p == r || p.IsContainedIn(r)
+              }) getOrElse false
+              Database.delete(e)
+              (inRecycle, e.getStrings.ReadSafe(PwDefs.TitleField))
+            })
+            DatabaseSaveService.save()
+            adapter.data = adapter.sortedData
+            adapter.notifyItemRemoved(pos)
+            val sb = Snackbar.make(viewHolder.itemView,
+              getString(R.string.delete_entry, title), 5000)
+            if (!inRecycle) sb.setAction(R.string.undo, () => {
+              item.fold({ g =>
+                adapter.groups  = g :: adapter.groups
+                Database.recycleBin.foreach(_.getGroups.Remove(g))
+                group.getGroups.Add(g)
+                g.setParentGroup(group)
+                g.Touch(true, false)
+              }, { e =>
+                adapter.entries = e :: adapter.entries
+                Database.recycleBin.foreach(_.getEntries.Remove(e))
+                group.getEntries.Add(e)
+                e.setParentGroup(group)
+                e.Touch(true, false)
+              })
+              DatabaseSaveService.save()
+              adapter.data = adapter.sortedData
+              adapter.notifyItemInserted(adapter.data.indexOf(item))
+            })
+            sb.show()
+          }
+        }
+
+        override def onMove(recyclerView: RecyclerView, viewHolder: ViewHolder, target: ViewHolder) =
+          false
+
+        override def onChildDraw(c: Canvas, recyclerView: RecyclerView,
+                                 viewHolder: ViewHolder, dX: Float, dY: Float,
+                                 actionState: Int, isCurrentlyActive: Boolean) = {
+          val width = recyclerView.getWidth
+          val alpha = dX.toFloat / width
+          val upper = viewHolder.asInstanceOf[GroupHolder].upper
+          upper.setTranslationX(dX)
+          upper.setAlpha(1-alpha)
+        }
+
+        override def getSwipeThreshold(viewHolder: ViewHolder) = 0.5f
+
+        override def getSwipeDirs(recyclerView: RecyclerView, viewHolder: ViewHolder) = {
+          val gh = viewHolder.asInstanceOf[GroupHolder]
+          val isRecycle = (for {
+            i <- gh.item
+            rid <- Database.recycleBinId
+          } yield {
+            i.left.exists(_.getUuid == rid)
+          }) getOrElse false
+          if (gh.isUp || isRecycle) 0 else ItemTouchHelper.RIGHT
+        }
+      }
+      if (Database.writeSupported && !Database.recycleBinId.contains(group.getUuid))
+        new ItemTouchHelper(callback).attachToRecyclerView(list)
       list.setNestedScrollingEnabled(true)
     }
     if (ready) database onFailureMain { case e =>
@@ -434,11 +513,18 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
   }
 
   case class GroupHolder(view: ViewGroup, parent: Option[PwGroup], db: PwDatabase) extends RecyclerView.ViewHolder(view) {
+    private[this] var _item = Option.empty[Either[PwGroup,PwEntry]]
+    private[this] var upItem = false
+    def item = _item
+    def isUp = upItem
+    lazy val upper = view.getChildAt(1)
     lazy val name = view.findView(TR.name)
     lazy val folder_image = view.findView(TR.folder_image)
     lazy val entry_image = view.findView(TR.entry_image)
 
     def bind(item: Either[PwGroup,PwEntry]): Unit = {
+      _item = Some(item)
+      upItem = false
       name.setText(item.fold(_.getName, _.getStrings.ReadSafe(PwDefs.TitleField)))
 
       item.left foreach { group =>
@@ -446,6 +532,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
           R.drawable.ic_delete_black_24dp else R.drawable.ic_folder_open_black_24dp)
         if (parent exists (_.getUuid.equals(group.getUuid))) {
           folder_image.setImageResource(R.drawable.ic_expand_less_black_24dp)
+          upItem = true
         }
         folder_image.setVisibility(View.VISIBLE)
         //        if (PwUuid.Zero == group.getCustomIconUuid)
@@ -458,6 +545,8 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
       }
       view.onClick0 {
         view.setActivated(true)
+        import iota.std.Configurations._
+        implicit val c = BrowseActivity.this
         item.left foreach { grp =>
           browse(BrowseActivity.this, grp)
           overridePendingTransition(0, 0)
@@ -470,8 +559,10 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
       }
     }
   }
-  class GroupAdapter(db: PwDatabase, parent: Option[PwGroup], groups: Seq[PwGroup], entries: Seq[PwEntry]) extends RecyclerView.Adapter[GroupHolder] {
+  class GroupAdapter(db: PwDatabase, parent: Option[PwGroup], _groups: List[PwGroup], _entries: List[PwEntry]) extends RecyclerView.Adapter[GroupHolder] {
     import TypedResource._
+    var groups = _groups
+    var entries = _entries
     var data = sortedData
 
     override def getItemCount = data.size
@@ -488,6 +579,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
 
     registerAdapterDataObserver(new RecyclerView.AdapterDataObserver {
       override def onChanged() = data = sortedData
+      override def onItemRangeRemoved(positionStart: Int, itemCount: Int) = data = sortedData
     })
 
     def sortedData: Vector[Either[PwGroup,PwEntry]] = {

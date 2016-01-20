@@ -14,8 +14,6 @@ versionCode := {
   Option(cmd !!) map (_.trim.toInt)
 }
 
-resolvers += "circular reveal" at "https://jitpack.io"
-
 android.dsl.javacFlags(Compile)("-target", "1.7", "-source", "1.7")
 
 scalacOptions in Compile += "-feature"

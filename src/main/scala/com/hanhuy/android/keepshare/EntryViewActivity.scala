@@ -248,7 +248,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
 
     val ab = getSupportActionBar
     val strings = entry.getStrings
-    ab.setSubtitle(strings.ReadSafe(PwDefs.TitleField))
+    ab.setTitle(strings.ReadSafe(PwDefs.TitleField))
 //    if (PwUuid.Zero == entry.getCustomIconUuid) {
       val bm = BitmapFactory.decodeResource(getResources,
         if (histIdx.nonEmpty) R.drawable.ic_history_black_36dp

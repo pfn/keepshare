@@ -221,13 +221,11 @@ object Database {
     } {
       p.getGroups.Remove(group)
       if (db.isRecycleBinEnabled) {
-        Option(group.getParentGroup) foreach { p =>
-          if (p == r || p.IsContainedIn(r)) {
-            deletePermanent(group, db, now)
-          } else {
-            r.AddGroup(group, true, true)
-            group.Touch(false)
-          }
+        if (p == r || p.IsContainedIn(r)) {
+          deletePermanent(group, db, now)
+        } else {
+          r.AddGroup(group, true, true)
+          group.Touch(false)
         }
       } else {
         deletePermanent(group, db, now)
@@ -242,9 +240,8 @@ object Database {
       r  <- ensureRecycleBin(db)
     } {
       val del = if (db.isRecycleBinEnabled) (e: PwEntry) => {
-        e.getParentGroup.getEntries.Remove(e)
-
         Option(e.getParentGroup) foreach { p =>
+          p.getEntries.Remove(e)
           if (p == r || p.IsContainedIn(r)) {
             deletePermanent(e, db, now)
           } else {
@@ -270,6 +267,7 @@ object Database {
   }
   private[this] def deletePermanent(g: PwGroup, db: PwDatabase, now: java.util.Date) {
     Option(g.getParentGroup) foreach { p =>
+      p.getGroups.Remove(g)
       g.DeleteAllObjects(db)
       val pdo = new PwDeletedObject(g.getUuid, now)
       db.getDeletedObjects.Add(pdo)
