@@ -151,7 +151,7 @@ class ShareActivity extends Activity with TypedFindView {
   import ShareActivity._
 
   val EXTRA_SCREENSHOT = "share_screenshot"
-  lazy val settings = new Settings(this)
+  lazy val settings = Settings(this)
 
 
   def init() {

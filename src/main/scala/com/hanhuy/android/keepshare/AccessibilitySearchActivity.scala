@@ -27,7 +27,7 @@ import scala.concurrent.Future
  */
 class AccessibilitySearchActivity extends Activity with TypedFindView {
 
-  lazy val settings = new Settings(this)
+  lazy val settings = Settings(this)
 
   def init() {
     setContentView(R.layout.accessibility_search_activity)

@@ -31,7 +31,7 @@ class CredentialHolderService extends Service with EventBus.RefOwner {
   protected[keepshare] var password: String = _
   protected[keepshare] var username: String = _
 
-  private lazy val settings = new Settings(this)
+  private lazy val settings = Settings(this)
 
   val finishRunnable: Runnable = () => {
     instance foreach { _ =>

@@ -1,88 +1,71 @@
 package com.hanhuy.android.keepshare
 
-import android.content.Context
+import android.content.{SharedPreferences, Context}
 import android.preference.PreferenceManager
-
-import scala.reflect.ClassTag
 
 object Setting {
   def keys = settings.values
   private var settings = Map.empty[String,Setting[_]]
   def unapply(key: String): Option[Setting[_]] = settings get key
-  def apply[A](key: String, default: A) = new Setting(key, default, None)
-  def apply[A](key: String, res: Int) = new Setting(key,
-    null.asInstanceOf[A], Some(res))
 }
-class Setting[A](val key: String, val default: A, val defaultRes: Option[Int]) {
+sealed trait Setting[A] {
+  type T = A
+  def get(c: Context, p: SharedPreferences): T
+  def set(p: SharedPreferences, value: T): Unit
+  def key: String
+  def default: T
   Setting.settings = Setting.settings + (key -> this)
+}
+case class StringSetting(key: String, default: String = null, defaultRes: Option[Int] = None) extends Setting[String] {
+  def get(c: Context, p: SharedPreferences): String =
+    p.getString(key, defaultRes.fold(default)(c.getString))
+  def set(p: SharedPreferences, value: String): Unit = p.edit().putString(key, value).apply()
+}
+case class IntSetting(key: String, default: Int) extends Setting[Int] {
+  def get(c: Context, p: SharedPreferences): Int = p.getInt(key, default)
+  def set(p: SharedPreferences, value: Int): Unit = p.edit().putInt(key, value).apply()
+}
+case class LongSetting(key: String, default: Long) extends Setting[Long] {
+  def get(c: Context, p: SharedPreferences): Long = p.getLong(key, default)
+  def set(p: SharedPreferences, value: Long): Unit = p.edit().putLong(key, value).apply()
+}
+case class BooleanSetting(key: String, default: Boolean) extends Setting[Boolean] {
+  def get(c: Context, p: SharedPreferences): Boolean = p.getBoolean(key, default)
+  def set(p: SharedPreferences, value: Boolean): Unit = p.edit().putBoolean(key, value).apply()
 }
 
 object Settings {
-  val KEYBOARD_TIMEOUT = new Setting[Int]("timeout", 60, None)
-  val PIN_TIMEOUT = new Setting[Int]("pin_timeout", 1, None)
-  val FIRST_RUN = Setting[Boolean]("first_run", true)
-  val CLOUD_KEY_HASH = Setting[String]("cloud_key_hash", null)
-  val LOCAL_KEY = Setting[String]("local_key", null)
-  val VERIFY_DATA = Setting[String]("verify_data", null)
-  val DATABASE_FILE = Setting[String]("database_file", null)
-  val KEYFILE_PATH = Setting[String]("key_file", null)
-  val PASSWORD = Setting[String]("password", null)
-  val IME = Setting[String]("ime", null)
-  val PASSWORD_OVERRIDE = Setting[Boolean]("password_override", false)
-  val NEEDS_PIN = Setting[Boolean]("needs_pin", false)
-  val PIN_VERIFIER = Setting[String]("pin_verifier", "")
+  val KEYBOARD_TIMEOUT = IntSetting("timeout", 60)
+  val PIN_TIMEOUT = IntSetting("pin_timeout", 1)
+  val FIRST_RUN = BooleanSetting("first_run", true)
+  val CLOUD_KEY_HASH = StringSetting("cloud_key_hash")
+  val LOCAL_KEY = StringSetting("local_key")
+  val VERIFY_DATA = StringSetting("verify_data")
+  val DATABASE_FILE = StringSetting("database_file")
+  val KEYFILE_PATH = StringSetting("key_file")
+  val PASSWORD = StringSetting("password")
+  val IME = StringSetting("ime")
+  val PASSWORD_OVERRIDE = BooleanSetting("password_override", false)
+  val NEEDS_PIN = BooleanSetting("needs_pin", false)
+  val PIN_VERIFIER = StringSetting("pin_verifier", "")
   // PIN_TIMESTAMP must default to a value larger than FINGERPRINT_TIMESTAMP
   // or registration will fail
-  val PIN_TIMESTAMP = Setting[Long]("pin_timestamp", 1l)
-  val FINGERPRINT_TIMESTAMP = Setting[Long]("fingerprint_timestamp", 0l)
-  val FINGERPRINT_PIN = Setting[String]("fingerprint_pin", null)
-  val FINGERPRINT_ENABLE = Setting[Boolean]("fingerprint_enable", true)
+  val PIN_TIMESTAMP = LongSetting("pin_timestamp", 1l)
+  val FINGERPRINT_TIMESTAMP = LongSetting("fingerprint_timestamp", 0l)
+  val FINGERPRINT_PIN = StringSetting("fingerprint_pin")
+  val FINGERPRINT_ENABLE = BooleanSetting("fingerprint_enable", true)
 
-  val BROWSE_SORT_ALPHA = Setting[Boolean]("browse_sort_order", true)
+  val BROWSE_SORT_ALPHA = BooleanSetting("browse_sort_order", true)
 
   def apply(c: Context) = {
     new Settings(c.getApplicationContext)
   }
 }
 
-class Settings(val context: Context) {
+class Settings private(val context: Context) {
     val p = PreferenceManager.getDefaultSharedPreferences(context)
-
-  def get[A](setting: Setting[A])(implicit m: ClassTag[A]): A = {
-    // :Any is necessary, or else Int turns into Float?!
-    val result: Any = if (classOf[String] == m.runtimeClass) {
-      val default: String = setting.defaultRes map {
-        context.getString
-      } getOrElse setting.default.asInstanceOf[String]
-      p.getString(setting.key, default)
-    } else if (classOf[Boolean] == m.runtimeClass) {
-      p.getBoolean(setting.key, setting.default.asInstanceOf[Boolean])
-    } else if (classOf[Float] == m.runtimeClass) {
-      p.getFloat(setting.key, setting.default.asInstanceOf[Float])
-    } else if (classOf[Long] == m.runtimeClass) {
-      p.getLong(setting.key, setting.default.asInstanceOf[Long])
-    } else if (classOf[Int] == m.runtimeClass) {
-      p.getInt(setting.key, setting.default.asInstanceOf[Int])
-    } else {
-      throw new IllegalArgumentException("Unknown type: " + m.runtimeClass)
-    }
-    result.asInstanceOf[A]
-  }
-  def set[A](setting: Setting[A], value: A)(implicit m: ClassTag[A]) {
-    val editor = p.edit()
-    if (classOf[Boolean] == m.runtimeClass) {
-      editor.putBoolean(setting.key, value.asInstanceOf[Boolean])
-    } else if (classOf[String] == m.runtimeClass) {
-        editor.putString(setting.key, value.asInstanceOf[String])
-    } else if (classOf[Int] == m.runtimeClass) {
-      editor.putInt(setting.key, value.asInstanceOf[Int])
-    } else if (classOf[Long] == m.runtimeClass) {
-      editor.putLong(setting.key, value.asInstanceOf[Long])
-    } else {
-      throw new IllegalArgumentException("Unknown type: " + m.runtimeClass)
-    }
-    editor.commit()
-  }
+  def get[A](setting: Setting[A]): setting.T = setting.get(context, p)
+  def set[A](setting: Setting[A], value: A) = setting.set(p, value)
 
   def clear() {
     Setting.keys foreach { k => p.edit.remove(k.key).commit() }

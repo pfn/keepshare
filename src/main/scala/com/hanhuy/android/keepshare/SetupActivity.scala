@@ -414,12 +414,12 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
       w[TextView] >>= text(keepassSetupInfo) >>= id(Id.text) >>= lpK(MATCH_PARENT, WRAP_CONTENT)(margins(all = 8.dp)),
       l[TextInputLayout](
         w[AppCompatEditText] >>= id(Id.database_file) >>= hint("Database File") >>= lp(MATCH_PARENT, WRAP_CONTENT) >>= kestrel(_.setSingleLine(true)) >>= tint
-      ) >>= id(Id.database_file_layout) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { (p: LP) =>
+      ) >>= id(Id.database_file_layout) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { p: LP =>
         p.addRule(BELOW, Id.text)
         p.addRule(LEFT_OF, Id.database_file_browse)
         margins(left = 8.dp, right = 8.dp)(p)
       },
-      w[Button] >>= id(Id.database_file_browse) >>= text(R.string.browse) >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
+      w[Button] >>= id(Id.database_file_browse) >>= text(R.string.browse) >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { p: LP =>
         p.addRule(ALIGN_PARENT_RIGHT, 1)
         p.addRule(ALIGN_TOP, Id.database_file_layout)
       } >>= hook0.onClick(IO(browseHandler(BROWSE_DATABASE, if (v(19)) "application/*" else "file/*"))),
@@ -429,39 +429,39 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
           e.setSingleLine(true)
           e.setTransformationMethod(PasswordTransformationMethod.getInstance)
         }
-      ) >>= id(Id.password_layout) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { (p: LP) =>
+      ) >>= id(Id.password_layout) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { p: LP =>
         p.addRule(BELOW, Id.database_file_layout)
         margins(left = 8.dp, right = 8.dp)(p)
       },
       l[TextInputLayout](
         w[AppCompatEditText] >>= id(Id.database_key) >>= hint("Key File") >>= lp(MATCH_PARENT, WRAP_CONTENT) >>= kestrel(_.setSingleLine(true)) >>= tint
-      ) >>= id(Id.database_key_layout) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { (p: LP) =>
+      ) >>= id(Id.database_key_layout) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { p: LP =>
         p.addRule(BELOW, Id.password_layout)
         p.addRule(LEFT_OF, Id.database_key_browse)
         margins(left = 8.dp, right = 8.dp)(p)
       },
-      w[Button] >>= id(Id.database_key_browse) >>= text(R.string.browse) >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
+      w[Button] >>= id(Id.database_key_browse) >>= text(R.string.browse) >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { p: LP =>
         p.addRule(BELOW, Id.database_key_layout)
         p.addRule(ALIGN_PARENT_RIGHT, 1)
         p.addRule(ALIGN_TOP, Id.database_key_layout)
       } >>= hook0.click(IO(browseHandler(BROWSE_KEYFILE, "*/*")))
-    ) >>= padding(all = 16.dp)) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { (p: LP) =>
+    ) >>= padding(all = 16.dp)) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { p: LP =>
       p.addRule(ALIGN_PARENT_TOP, 1)
       p.addRule(ABOVE, Id.save)
       p.alignWithParent = true
     },
     w[TextView] >>= id(Id.error_text) >>= textGravity(Gravity.CENTER) >>=
-      kestrel(_.setTextColor(0xffff0000)) >>= lpK(MATCH_PARENT, WRAP_CONTENT){ (p: LP) =>
+      kestrel(_.setTextColor(0xffff0000)) >>= lpK(MATCH_PARENT, WRAP_CONTENT){ p: LP =>
       p.addRule(ABOVE, Id.save)
       p.alignWithParent = true
       margins(all = 8.dp)(p)
     },
-    IO(new ProgressBar(this, null, android.R.attr.progressBarStyleSmall)) >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { (p: LP) =>
+    IO(new ProgressBar(this, null, android.R.attr.progressBarStyleSmall)) >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { p: LP =>
       p.addRule(CENTER_HORIZONTAL, 1)
       p.addRule(ABOVE, Id.save)
       margins(all = 8.dp)(p)
     } >>= gone >>= id(Id.progress),
-    w[Button] >>= id(Id.save) >>= text(R.string.save) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { (p: LP) =>
+    w[Button] >>= id(Id.save) >>= text(R.string.save) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { p: LP =>
       p.addRule(ALIGN_PARENT_BOTTOM, 1)
       margins(all = 8.dp)(p)
     } >>= hook0.click(save())
