@@ -14,7 +14,7 @@ import android.support.v7.app.ActionBar
 import android.support.v7.widget.RecyclerView.{State, ViewHolder}
 import android.support.v7.widget.helper.ItemTouchHelper
 import android.support.v7.widget.helper.ItemTouchHelper.SimpleCallback
-import android.support.v7.widget.{LinearLayoutManager, RecyclerView, Toolbar}
+import android.support.v7.widget.{LinearLayoutManager, RecyclerView}
 import android.util.AttributeSet
 import android.view.animation.AccelerateDecelerateInterpolator
 import com.hanhuy.android.conversions._
@@ -699,15 +699,17 @@ class HideFabBehavior(context: Context, attrs: AttributeSet) extends Coordinator
   }
 
   override def onNestedScroll(coordinatorLayout: CoordinatorLayout, child: ViewGroup, target: View, dxConsumed: Int, dyConsumed: Int, dxUnconsumed: Int, dyUnconsumed: Int) =
-    fab.foreach { f =>
-      if (dyConsumed <= 0 && dyUnconsumed == 0) f.show()
-      else if (dyUnconsumed != 0) {
-        if (scrolling) {
-          if (f.isShown) f.hide() else f.show()
-          scrolling = false
+    if (Database.writeSupported) {
+      fab.foreach { f =>
+        if (dyConsumed <= 0 && dyUnconsumed == 0) f.show()
+        else if (dyUnconsumed != 0) {
+          if (scrolling) {
+            if (f.isShown) f.hide() else f.show()
+            scrolling = false
+          }
+        } else {
+          f.hide()
         }
-      } else {
-        f.hide()
       }
     }
 
