@@ -145,21 +145,16 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
           error.setVisibility(View.GONE)
           pinEntry.setText("xxxxxx")
           pin = fpin
-          fpicon.animate().rotation(360.0f).setDuration(250).setListener(new AnimatorListenerAdapter {
-            override def onAnimationEnd(animation: Animator) = verifyPin()
-          }).start()
+          fpicon.animate().rotation(360.0f).setDuration(250).setListener(
+            BrowseActivity.animationEnd(_ => verifyPin())).start()
         case Left(errorString) =>
           error.setVisibility(View.VISIBLE)
           error.setText(errorString)
           UiBus.handler.removeCallbacks(clearError)
           UiBus.handler.postDelayed(clearError, 3000)
       }, ex => {
-        fpicon.animate().alpha(0.0f).setListener(
-          new AnimatorListenerAdapter {
-            override def onAnimationEnd(animation: Animator) =
-              fpicon.setVisibility(View.GONE)
-
-        }).start()
+        fpicon.animate().alpha(0.0f).setListener(BrowseActivity.animationEnd(
+          _ => fpicon.setVisibility(View.GONE))).start()
         error.setVisibility(View.VISIBLE)
         error.setText("Fingerprint:  " + ex.getMessage)
         UiBus.handler.removeCallbacks(clearError)

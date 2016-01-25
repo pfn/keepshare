@@ -63,7 +63,7 @@ object Settings {
 }
 
 class Settings private(val context: Context) {
-    val p = PreferenceManager.getDefaultSharedPreferences(context)
+  val p = PreferenceManager.getDefaultSharedPreferences(context)
   def get[A](setting: Setting[A]): setting.T = setting.get(context, p)
   def set[A](setting: Setting[A], value: A) = setting.set(p, value)
 
