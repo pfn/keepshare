@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.support.design.widget.{CoordinatorLayout, FloatingActionButton, Snackbar}
 import android.support.v4.widget.SwipeRefreshLayout
 import android.support.v7.app.ActionBar
+import android.support.v7.widget.Toolbar
 import android.support.v7.widget.RecyclerView.{State, ViewHolder}
 import android.support.v7.widget.helper.ItemTouchHelper
 import android.support.v7.widget.helper.ItemTouchHelper.SimpleCallback
