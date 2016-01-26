@@ -13,7 +13,7 @@
                    android:layout_height="wrap_content"
                    android:scaleType="center"
                    android:layout_gravity="center|left"
-                   android:paddingLeft="16dp"
+                   android:paddingLeft="8dp"
                    android:src="@drawable/ic_delete_white_24dp"
 
         />
