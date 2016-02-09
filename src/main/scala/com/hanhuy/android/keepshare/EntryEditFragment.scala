@@ -3,11 +3,11 @@ package com.hanhuy.android.keepshare
 import android.app.{Activity, AlertDialog, Fragment}
 import android.content.Context
 import android.os.{Parcel, Parcelable, Bundle}
-import android.text.{InputType, TextUtils}
+import android.text.{TextWatcher, InputType, TextUtils}
 import android.util.{SparseArray, AttributeSet}
 import android.view.{View, ViewGroup, LayoutInflater}
 import android.widget._
-import com.hanhuy.android.common.{Futures, UiBus}
+import com.hanhuy.android.common._
 
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
@@ -18,8 +18,7 @@ import Futures._
 import Rx._
 
 import rx.android.schedulers.AndroidSchedulers.mainThread
-import rx.android.widget.WidgetObservable
-import rx.lang.scala.{Observable, Subscription, Subject}
+import rx.lang.scala.{Observable, Subject}
 
 import scala.annotation.tailrec
 import scala.language.postfixOps
@@ -118,20 +117,20 @@ class EntryEditFragment extends AuthorizedFragment {
     group.groupChange.observeOn(mainThread).subscribe { g =>
       model = model.copy(group = g.getUuid)
     }
-    WidgetObservable.text(title.textfield).asScala.subscribe(n =>
-      model = model.copy(title = Option(n.text) map (_.toString))
+    title.textfield.onTextChanged(s =>
+      model = model.copy(title = s.? map (_.toString))
     )
-    WidgetObservable.text(username.textfield).asScala.subscribe(n =>
-      model = model.copy(username = Option(n.text) map (_.toString))
+    username.textfield.onTextChanged(s =>
+      model = model.copy(username = s.? map (_.toString))
     )
-    WidgetObservable.text(password.textfield).asScala.subscribe(n =>
-      model = model.copy(password = Option(n.text) map (_.toString))
+    password.textfield.onTextChanged(s =>
+      model = model.copy(password = s.? map (_.toString))
     )
-    WidgetObservable.text(url.textfield).asScala.subscribe(n =>
-      model = model.copy(url = Option(n.text) map (_.toString))
+    url.textfield.onTextChanged(s =>
+      model = model.copy(url = s.? map (_.toString))
     )
-    WidgetObservable.text(notes.textfield).asScala.subscribe(n =>
-      model = model.copy(notes = Option(n.text) map (_.toString))
+    notes.textfield.onTextChanged(s =>
+      model = model.copy(notes = s.? map (_.toString))
     )
 
     activity.database map { db =>
@@ -205,8 +204,8 @@ class EntryEditFragment extends AuthorizedFragment {
         field.text = v.ReadString()
         field.password = v.isProtected
         field.iconfield.onClick0 { handleFieldUpdate(field, k) }
-        WidgetObservable.text(field.textfield).asScala.subscribe(n =>
-          model = model.copy(fields = model.fields.updated(k, new ProtectedString(v.isProtected, n.text.toString)))
+        field.textfield.onTextChanged(s =>
+          model = model.copy(fields = model.fields.updated(k, new ProtectedString(v.isProtected, s.toString)))
         )
         fieldlist.addView(field)
       }
@@ -254,8 +253,8 @@ class EntryEditFragment extends AuthorizedFragment {
         field.hint = n.getText.toString
         field.password = c.isChecked
         field.iconfield.onClick0 { handleFieldUpdate(field, field.hint.toString) }
-        WidgetObservable.text(field.textfield).asScala.subscribe(n =>
-          model = model.copy(fields = model.fields.updated(field.hint.toString, new ProtectedString(c.isChecked, n.text.toString)))
+        field.textfield.onTextChanged(s =>
+          model = model.copy(fields = model.fields.updated(field.hint.toString, new ProtectedString(c.isChecked, s.toString)))
         )
         fieldlist.addView(field)
         UiBus.post {

@@ -5,14 +5,14 @@ import android.os.Bundle
 import android.view.{LayoutInflater, View, ViewGroup}
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
-import com.hanhuy.android.common.Futures._
+import com.hanhuy.android.common._
 import com.hanhuy.android.keepshare.TypedResource._
 import com.hanhuy.keepassj._
 import rx.android.schedulers.AndroidSchedulers.mainThread
-import rx.android.widget.WidgetObservable
 import rx.lang.scala.Subject
 
 import Rx._
+import Futures._
 
 object GroupEditFragment {
   def edit(group: PwGroup) = {
@@ -56,11 +56,11 @@ class GroupEditFragment extends AuthorizedFragment {
     group.groupChange.observeOn(mainThread).subscribe { g =>
       model = model.copy(group = g.getUuid)
     }
-    WidgetObservable.text(title.textfield).asScala.subscribe(n =>
-      model = model.copy(title = Option(n.text) map (_.toString))
+    title.textfield.onTextChanged(s =>
+      model = model.copy(title = s.? map (_.toString))
     )
-    WidgetObservable.text(notes.textfield).asScala.subscribe(n =>
-      model = model.copy(notes = Option(n.text) map (_.toString))
+    notes.textfield.onTextChanged(s =>
+      model = model.copy(notes = s.? map (_.toString))
     )
 
     activity.database map { db =>

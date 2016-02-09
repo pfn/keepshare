@@ -12,7 +12,6 @@ import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
 import rx.lang.scala.Observable
-import rx.android.widget.WidgetObservable
 import Rx._
 import rx.lang.scala.Subject
 
@@ -478,16 +477,16 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
     super.onCreate(savedInstanceState)
     getSupportActionBar.setDisplayHomeAsUpEnabled(true)
     setContentView(setupLayout.perform())
-    WidgetObservable.text(dp).asScala.subscribe { n =>
-      model = model.copy(password = Option(n.text) map (_.toString.trim) filterNot (_.isEmpty))
+    dp.onTextChanged { s =>
+      model = model.copy(password = s.? map (_.toString.trim) filterNot (_.isEmpty))
       modelSubject.onNext(model)
     }
-    WidgetObservable.text(df).asScala.subscribe { n =>
-      model = model.copy(db = Option(n.text) map (_.toString.trim) filterNot (_.isEmpty))
+    df.onTextChanged { s =>
+      model = model.copy(db = s.? map (_.toString.trim) filterNot (_.isEmpty))
       modelSubject.onNext(model)
     }
-    WidgetObservable.text(dk).asScala.subscribe { n =>
-      model = model.copy(keyfile = Option(n.text) map (_.toString.trim) filterNot (_.isEmpty))
+    dk.onTextChanged { s =>
+      model = model.copy(keyfile = s.? map (_.toString.trim) filterNot (_.isEmpty))
       modelSubject.onNext(model)
     }
     modelChange.subscribe { m =>
