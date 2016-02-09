@@ -411,21 +411,21 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
   lazy val setupLayout = l[RelativeLayout](
     l[ScrollView](
     l[RelativeLayout](
-      w[TextView] >>= text(keepassSetupInfo) >>= id(Id.text) >>= lpK(MATCH_PARENT, WRAP_CONTENT)(margins(all = 8.dp)),
+      w[TextView] >>= k.text(keepassSetupInfo) >>= id(Id.text) >>= lpK(MATCH_PARENT, WRAP_CONTENT)(margins(all = 8.dp)),
       l[TextInputLayout](
-        w[AppCompatEditText] >>= id(Id.database_file) >>= hint("Database File") >>= lp(MATCH_PARENT, WRAP_CONTENT) >>= kestrel(_.setSingleLine(true)) >>= tint
+        IO(df) >>= id(Id.database_file) >>= k.hint("Database File") >>= lp(MATCH_PARENT, WRAP_CONTENT) >>= k.singleLine(true) >>= tint
       ) >>= id(Id.database_file_layout) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { p: LP =>
         p.addRule(BELOW, Id.text)
         p.addRule(LEFT_OF, Id.database_file_browse)
         margins(left = 8.dp, right = 8.dp)(p)
       },
-      w[Button] >>= id(Id.database_file_browse) >>= text(R.string.browse) >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { p: LP =>
+      w[Button] >>= id(Id.database_file_browse) >>= k.text(R.string.browse) >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { p: LP =>
         p.addRule(ALIGN_PARENT_RIGHT, 1)
         p.addRule(ALIGN_TOP, Id.database_file_layout)
       } >>= hook0.onClick(IO(browseHandler(BROWSE_DATABASE, if (v(19)) "application/*" else "file/*"))),
       l[TextInputLayout](
-        w[AppCompatEditText] >>= id(Id.password) >>= hint("Password") >>= tint >>= lp(MATCH_PARENT, WRAP_CONTENT)
-          >>= inputType(InputType.TYPE_TEXT_VARIATION_PASSWORD) >>= kestrel { e =>
+        IO(dp) >>= id(Id.password) >>= k.hint("Password") >>= tint >>= lp(MATCH_PARENT, WRAP_CONTENT)
+          >>= k.inputType(InputType.TYPE_TEXT_VARIATION_PASSWORD) >>= kestrel { e =>
           e.setSingleLine(true)
           e.setTransformationMethod(PasswordTransformationMethod.getInstance)
         }
@@ -434,13 +434,13 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
         margins(left = 8.dp, right = 8.dp)(p)
       },
       l[TextInputLayout](
-        w[AppCompatEditText] >>= id(Id.database_key) >>= hint("Key File") >>= lp(MATCH_PARENT, WRAP_CONTENT) >>= kestrel(_.setSingleLine(true)) >>= tint
+        IO(dk) >>= id(Id.database_key) >>= k.hint("Key File") >>= lp(MATCH_PARENT, WRAP_CONTENT) >>= kestrel(_.setSingleLine(true)) >>= tint
       ) >>= id(Id.database_key_layout) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { p: LP =>
         p.addRule(BELOW, Id.password_layout)
         p.addRule(LEFT_OF, Id.database_key_browse)
         margins(left = 8.dp, right = 8.dp)(p)
       },
-      w[Button] >>= id(Id.database_key_browse) >>= text(R.string.browse) >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { p: LP =>
+      w[Button] >>= id(Id.database_key_browse) >>= k.text(R.string.browse) >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { p: LP =>
         p.addRule(BELOW, Id.database_key_layout)
         p.addRule(ALIGN_PARENT_RIGHT, 1)
         p.addRule(ALIGN_TOP, Id.database_key_layout)
@@ -450,27 +450,29 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
       p.addRule(ABOVE, Id.save)
       p.alignWithParent = true
     },
-    w[TextView] >>= id(Id.error_text) >>= textGravity(Gravity.CENTER) >>=
+    IO(errorText) >>= id(Id.error_text) >>= k.gravity(Gravity.CENTER) >>=
       kestrel(_.setTextColor(0xffff0000)) >>= lpK(MATCH_PARENT, WRAP_CONTENT){ p: LP =>
       p.addRule(ABOVE, Id.save)
       p.alignWithParent = true
       margins(all = 8.dp)(p)
     },
-    IO(new ProgressBar(this, null, android.R.attr.progressBarStyleSmall)) >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { p: LP =>
+    IO(progressBar) >>= lpK(WRAP_CONTENT, WRAP_CONTENT) { p: LP =>
       p.addRule(CENTER_HORIZONTAL, 1)
       p.addRule(ABOVE, Id.save)
       margins(all = 8.dp)(p)
-    } >>= gone >>= id(Id.progress),
-    w[Button] >>= id(Id.save) >>= text(R.string.save) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { p: LP =>
+    } >>= k.visibility(View.GONE) >>= id(Id.progress),
+    IO(saveButton) >>= id(Id.save) >>= k.text(R.string.save) >>= lpK(MATCH_PARENT, WRAP_CONTENT) { p: LP =>
       p.addRule(ALIGN_PARENT_BOTTOM, 1)
       margins(all = 8.dp)(p)
     } >>= hook0.click(save())
-  ) >>= backgroundResource(android.R.drawable.picture_frame)
+  ) >>= k.backgroundResource(android.R.drawable.picture_frame)
 
-  lazy val dk: TextView = findView(Id.database_key)
-  lazy val df: TextView = findView(Id.database_file)
-  lazy val dp: TextView = findView(Id.password)
-  lazy val saveButton = findView(Id.save)
+  lazy val progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleSmall)
+  lazy val dk: AppCompatEditText = new AppCompatEditText(this)
+  lazy val df: AppCompatEditText = new AppCompatEditText(this)
+  lazy val dp: AppCompatEditText = new AppCompatEditText(this)
+  lazy val saveButton = new Button(this)
+  lazy val errorText = new TextView(this)
 
   override def onCreate(savedInstanceState: Bundle) = {
     super.onCreate(savedInstanceState)
@@ -492,7 +494,7 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
       saveButton.setVisibility(if (m.ready) View.VISIBLE else View.GONE)
       saveButton.setEnabled(m.ready)
       if (m.ready)
-        findView(Id.error_text).setVisibility(View.GONE)
+        errorText.setVisibility(View.GONE)
     }
     val intent = Option(getIntent)
     intent.flatMap(i => Option(i.getStringExtra(EXTRA_DATABASE))).foreach(df.setText)
@@ -525,7 +527,7 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
       if (!database.startsWith("content:") && !db.isFile) {
         error(R.string.database_no_exist)
       } else {
-        findView(Id.progress).setVisibility(View.VISIBLE)
+        progressBar.setVisibility(View.VISIBLE)
         val f = Database.open(database, Option(password),
           Option(keyfile) filterNot (_.isEmpty)) flatMap {
           _ => keymanager.localKey  }
@@ -552,7 +554,7 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
 
         f onCompleteMain { _ =>
           saveButton.setEnabled(true)
-          findView(Id.progress).setVisibility(View.GONE)
+          progressBar.setVisibility(View.GONE)
         }
       }
     }
@@ -688,9 +690,8 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
     dismissAllDialogs()
   }
   def error(error: String) {
-    val view = findView(Id.error_text)
-    view.setVisibility(View.VISIBLE)
-    view.setText(error)
+    errorText.setVisibility(View.VISIBLE)
+    errorText.setText(error)
     saveButton.setEnabled(false)
     saveButton.setVisibility(View.GONE)
   }

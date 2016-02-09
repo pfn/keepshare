@@ -24,10 +24,10 @@ debugIncludesTests := false
 
 libraryDependencies ++= Seq(
   "ch.acra" % "acra" % "4.7.0",
-  "com.hanhuy.android" %% "iota" % "0.8",
-  "com.hanhuy.android" %% "scala-conversions" % "1.6",
-  "com.hanhuy.android" %% "scala-conversions-design" % "1.6",
-  "com.hanhuy.android" %% "scala-common" % "1.0",
+  "com.hanhuy.android" %% "iota" % "1.0.0",
+  "com.hanhuy.android" %% "scala-conversions" % supportSdkVersion,
+  "com.hanhuy.android" %% "scala-conversions-design" % supportSdkVersion,
+  "com.hanhuy.android" %% "scala-common" % "1.2",
   "com.hanhuy.keepassj" % "keepassj" % "2.31.0" exclude("xpp3", "xpp3"),
   "com.android.support" % "recyclerview-v7" % supportSdkVersion,
   "com.android.support" % "design" % supportSdkVersion,

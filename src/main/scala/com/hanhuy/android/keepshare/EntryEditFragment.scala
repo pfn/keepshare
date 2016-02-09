@@ -338,7 +338,6 @@ class StandardEditView(c: Context, attrs: AttributeSet) extends StandardFieldVie
 
   override def hint_=(s: String) = {
     inputlayout.setHint(s)
-    textfield.setHint(s)
   }
 }
 
