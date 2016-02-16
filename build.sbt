@@ -1,4 +1,4 @@
-val keepshare = project.in(file(".")).settings(androidBuild)
+lazy val keepshare = project.in(file(".")).settings(androidBuild)
 
 val supportSdkVersion = "23.1.1"
 
@@ -24,7 +24,7 @@ debugIncludesTests := false
 
 libraryDependencies ++= Seq(
   "ch.acra" % "acra" % "4.7.0",
-  "com.hanhuy.android" %% "iota" % "1.0.1-SNAPSHOT",
+  "com.hanhuy.android" %% "iota" % "1.0.1",
   "com.hanhuy.android" %% "scala-conversions" % supportSdkVersion,
   "com.hanhuy.android" %% "scala-conversions-design" % supportSdkVersion,
   "com.hanhuy.android" %% "scala-common" % "1.2",

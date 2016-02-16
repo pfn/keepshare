@@ -176,7 +176,7 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
     requestPermission(android.Manifest.permission.GET_ACCOUNTS,
       R.string.require_get_accounts, flipper) onFailureMain { case _ => finish() }
 
-    if (Option(getIntent).exists(_.getBooleanExtra(EXTRA_FOR_RESULT, false)))
+    if (Option(getIntent).exists(_.getBooleanExtra(EXTRA_FOR_RESULT, false)) && !settings.get(Settings.FIRST_RUN))
       setupDatabase()
   }
 
