@@ -23,7 +23,7 @@ scalaVersion := "2.11.7"
 debugIncludesTests := false
 
 libraryDependencies ++= Seq(
-  "ch.acra" % "acra" % "4.7.0",
+  "ch.acra" % "acra" % "4.8.2",
   "com.hanhuy.android" %% "iota" % "1.0.1",
   "com.hanhuy.android" %% "scala-conversions" % supportSdkVersion,
   "com.hanhuy.android" %% "scala-conversions-design" % supportSdkVersion,

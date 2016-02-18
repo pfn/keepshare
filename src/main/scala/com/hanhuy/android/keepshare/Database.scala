@@ -13,6 +13,7 @@ import com.hanhuy.android.common.{ManagedResource, Futures, ServiceBus}
 import com.hanhuy.keepassj.AesEngines.KeyTransformer
 import com.hanhuy.keepassj._
 import com.hanhuy.keepassj.spr.{SprEventArgs, SprEngine, SprContext, SprCompileFlags}
+import org.acra.ACRA
 
 import scala.concurrent.{Promise, Future}
 
@@ -132,7 +133,9 @@ object Database {
         database = Some(pwdb)
         Future.successful(pwdb)
       } catch {
-        case e: OutOfMemoryError => Future.failed(e)
+        case e: OutOfMemoryError =>
+          ACRA.getErrorReporter.handleSilentException(e)
+          Future.failed(e)
       }
     }
     for {
@@ -183,7 +186,13 @@ object Database {
     } yield {
       resolvePath(path) map { p =>
         val mergeIn = new PwDatabase
-        mergeIn.Open(IOConnectionInfo.FromPath(p), d.getMasterKey, null)
+        try {
+          mergeIn.Open(IOConnectionInfo.FromPath(p), d.getMasterKey, null)
+        } catch {
+          case e: OutOfMemoryError =>
+            ACRA.getErrorReporter.handleSilentException(e)
+            throw new IllegalArgumentException(e)
+        }
         d.MergeIn(mergeIn, PwMergeMethod.Synchronize)
         mergeIn.Close()
         d.Save(null)
