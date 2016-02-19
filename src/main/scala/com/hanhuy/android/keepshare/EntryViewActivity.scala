@@ -7,7 +7,9 @@ import android.graphics.drawable.{LayerDrawable, BitmapDrawable}
 import android.os.Bundle
 import android.support.v7.app.ActionBar
 import android.support.v7.widget.Toolbar
+import android.text.{Spanned, SpannableString}
 import android.text.method.{LinkMovementMethod, PasswordTransformationMethod}
+import android.text.style.ForegroundColorSpan
 import android.text.util.Linkify
 import android.util.AttributeSet
 import android.view._
@@ -275,12 +277,43 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
       fieldlist.addView(userfield)
     }
 
+    sealed trait CharType
+    case object Uppercase extends CharType
+    case object Lowercase extends CharType
+    case object Symbol extends CharType
+    case object Digit extends CharType
+    case class Spans(chartype: CharType, start: Int, end: Int)
     if (Option(strings.Get(PwDefs.PasswordField)) exists (_.Length > 0)) {
       val passfield = new StandardFieldView(this)
       passfield.first = first
       first = false
       passfield.hint = "Password"
-      passfield.text = Database.getField(entry, PwDefs.PasswordField) getOrElse ""
+      passfield.text = Database.getField(entry, PwDefs.PasswordField).fold("": CharSequence) { p =>
+        val (spans,last) = p.zipWithIndex.foldLeft((List.empty[Spans],Spans(Lowercase, 0, 0))) { case ((a,span), (c,i)) =>
+          val chartype = if (c.isDigit) Digit
+          else if (c.isLower) Lowercase
+          else if (c.isUpper) Uppercase
+          else Symbol
+          if (span.chartype == chartype) {
+            (a,span)
+          } else {
+            (span.copy(end = i) :: a,Spans(chartype, i, i))
+          }
+        }
+        val s = new SpannableString(p)
+        (last.copy(end = p.length) :: spans).foreach { span =>
+          if (span.end > 0) {
+            val fg = span.chartype match {
+              case Uppercase => new ForegroundColorSpan(0xff5C6BC0) // indigo 400
+              case Lowercase => new ForegroundColorSpan(0xff424242) // grey 800
+              case Symbol    => new ForegroundColorSpan(0xff009688) // teal 500
+              case Digit     => new ForegroundColorSpan(0xff9C27B0) // purple 500
+            }
+            s.setSpan(fg, span.start, span.end, Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
+          }
+        }
+        s
+      }
       passfield.icon = R.drawable.ic_lock_outline_black_36dp
       passfield.password = true
       fieldlist.addView(passfield)
@@ -461,7 +494,7 @@ class StandardFieldView(c: Context, attrs: AttributeSet) extends FrameLayout(c, 
 
   def hint = textfield.getHint
   def hint_=(s: String) = textfield.setHint(s)
-  def text_=(s: String) = textfield.setText(s, TextView.BufferType.SPANNABLE)
+  def text_=(s: CharSequence) = textfield.setText(s, TextView.BufferType.SPANNABLE)
   def text = textfield.getText.toString
 
   private[this] var _password: Boolean = false
