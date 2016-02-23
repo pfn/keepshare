@@ -1,5 +1,6 @@
 package com.hanhuy.android.keepshare
 
+import android.annotation.TargetApi
 import android.app.DialogFragment
 import android.content.{ClipData, ClipboardManager, DialogInterface, Context}
 import android.os.{Build, Bundle}
@@ -26,12 +27,13 @@ object PasswordGeneratorFragment {
 
   val UPPER = 'A' to 'Z'
   val LOWER = 'a' to 'z'
-  val NUMS = '0' to '9'
-  val SYMS = '!' :: '@' :: '#' :: '$' :: '%' :: '^' :: '&' :: '*' :: '+' :: '=' :: '?' :: '/' :: '\\' :: Nil
+  val NUMS  = '0' to '9'
+  val SYMS  = '!' :: '@' :: '#' :: '$' :: '%' :: '^' :: '&' :: '*' :: '+' :: '=' :: '?' :: '/' :: '\\' :: Nil
 }
 class PasswordGeneratorFragment extends AlertDialogFragment with PureFragment[PasswordGeneratorModel] {
   import iota._
   import ViewGroup.LayoutParams._
+
   lazy val lengthSlider = {
     val s = new SeekBar(getActivity)
     s.setMax(24)
@@ -42,32 +44,67 @@ class PasswordGeneratorFragment extends AlertDialogFragment with PureFragment[Pa
   lazy val minUppLabel = new TextView(getActivity)
   lazy val minNumLabel = new TextView(getActivity)
   lazy val minSymLabel = new TextView(getActivity)
-  lazy val uppSlider = new SeekBar(getActivity)
-  lazy val numSlider = new SeekBar(getActivity)
-  lazy val symSlider = new SeekBar(getActivity)
+  lazy val uppSlider   = new SeekBar(getActivity)
+  lazy val numSlider   = new SeekBar(getActivity)
+  lazy val symSlider   = new SeekBar(getActivity)
+
   def stdH[A <: View]: Kestrel[A] = c[LinearLayout](lp(MATCH_PARENT, 48.dp): Kestrel[A])
   def checkbox(implicit ctx: Context) = if (Build.VERSION.SDK_INT >= 21)
     new CheckBox(ctx) else new android.support.v7.widget.AppCompatCheckBox(ctx)
   val MODEL = "keepshare.generator.model"
+
   setStyle(DialogFragment.STYLE_NORMAL, android.R.style.Theme_DeviceDefault_Light_Dialog)
+
+  @TargetApi(21)
+  def generatedBar(state: PasswordGeneratorModel) = l[FrameLayout](
+    IO(generatedPassword) >>= k.text(generate(state)) >>=
+      k.textAppearance(getActivity, android.R.style.TextAppearance_Medium) >>=
+      k.gravity(Gravity.CENTER) >>=
+      k.backgroundColor(getResources.getColor(android.R.color.darker_gray)) >>= lp(MATCH_PARENT, MATCH_PARENT),
+    IO(new ImageButton(getActivity, null, R.attr.borderlessButtonStyle)) >>=
+      k.imageResource(R.drawable.ic_refresh_black_24dp) >>=
+      lp(WRAP_CONTENT, WRAP_CONTENT, Gravity.LEFT | Gravity.CENTER) >>=
+      hook0.click(for {
+        st <- transformState(identity)
+        _  <- IO(generatedPassword) >>= k.text(generate(st))
+      } yield ()),
+    IO(new ImageButton(getActivity, null, R.attr.borderlessButtonStyle)) >>=
+      k.imageResource(R.drawable.ic_content_copy_black_24dp) >>=
+      lp(WRAP_CONTENT, WRAP_CONTENT, Gravity.RIGHT | Gravity.CENTER) >>=
+      hook0.click(IO {
+        systemService[ClipboardManager].setPrimaryClip(ClipData.newPlainText("", generatedPassword.getText))
+        Toast.makeText(getActivity, R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show()
+      })
+  ) >>= stdH >>= condK(v(21) ? k.elevation(12.dp))
+
+  case class SeekBarInfo(bar: SeekBar, min: PasswordGeneratorModel => Int, max: PasswordGeneratorModel => Int)
+  lazy val upperBar = SeekBarInfo(uppSlider, _.minUpper, s => s.minSym + s.minNum)
+  lazy val numBar   = SeekBarInfo(numSlider, _.minNum, s => s.minSym + s.minUpper)
+  lazy val symBar   = SeekBarInfo(symSlider, _.minSym, s => s.minNum + s.minUpper)
+  def newSlider(state: PasswordGeneratorModel, labelres: Int, label: TextView, countRes: Int,
+                slider: SeekBar, enableTransform: (PasswordGeneratorModel, Boolean) => PasswordGeneratorModel,
+                isEnabled: PasswordGeneratorModel => Boolean, min: PasswordGeneratorModel => Int,
+                updateMin: (PasswordGeneratorModel,Int) => PasswordGeneratorModel,
+                seek1: SeekBarInfo, seek2: SeekBarInfo) = {
+    c[LinearLayout](l[LinearLayout](
+      IO(checkbox) >>= stdH >>= k.text(labelres) >>= k.checked(isEnabled(state)) >>=
+        hookM.checkedChange.onCheckedChanged((v: CompoundButton, b: Boolean) => enable(slider, b, transformState(enableTransform(_,b)))),
+
+      IO(label) >>= k.text(getString(countRes, min(state).asInstanceOf[Integer])),
+
+      IO(slider) >>= stdH >>= k.max(state.length) >>= k.progress(min(state)) >>= k.enabled(isEnabled(state)) >>=
+        hookM.seekBarChange.onProgressChanged((sb: SeekBar, p: Int, user: Boolean) => for {
+          st <- transformState(updateMin(_,p))
+          _ <- IO(label) >>= k.text(getString(countRes, p.asInstanceOf[Integer]))
+          _ <- IO(seek1.bar) >>= k.progress(math.min(seek1.min(st), math.max(st.length - seek1.max(st), 0)))
+          _ <- IO(seek2.bar) >>= k.progress(math.min(seek2.min(st), math.max(st.length - seek2.max(st), 0)))
+        } yield ())
+    ) >>= k.orientation(LinearLayout.VERTICAL) >>= lp(MATCH_PARENT, WRAP_CONTENT))
+  }
+
   override def applyState[T](s: FragmentState[T]) = s match {
     case OnCreateView(state, inflater, container) => s.applyResult(l[LinearLayout](
-      l[FrameLayout](
-        IO(generatedPassword) >>= k.text(generate(state)) >>=
-          k.textAppearance(getActivity, android.R.style.TextAppearance_Medium) >>=
-          k.gravity(Gravity.CENTER) >>=
-          k.backgroundColor(getResources.getColor(android.R.color.darker_gray)) >>= lp(MATCH_PARENT, MATCH_PARENT),
-        IO(new ImageButton(getActivity, null, R.attr.borderlessButtonStyle)) >>= k.imageResource(R.drawable.ic_refresh_black_24dp) >>= lp(WRAP_CONTENT, WRAP_CONTENT, Gravity.LEFT | Gravity.CENTER) >>=
-        hook0.click(for {
-          st <- transformState(identity)
-          _  <- IO(generatedPassword) >>= k.text(generate(st))
-        } yield ()),
-        IO(new ImageButton(getActivity, null, R.attr.borderlessButtonStyle)) >>= k.imageResource(R.drawable.ic_content_copy_black_24dp) >>= lp(WRAP_CONTENT, WRAP_CONTENT, Gravity.RIGHT | Gravity.CENTER) >>=
-        hook0.click(IO {
-          systemService[ClipboardManager].setPrimaryClip(ClipData.newPlainText("", generatedPassword.getText))
-          Toast.makeText(getActivity, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-        })
-      ) >>= stdH >>= condK(v(21) ? k.elevation(12.dp)),
+      generatedBar(state),
       l[ScrollView](
         l[LinearLayout](
           IO(lengthLabel) >>= k.text(getString(R.string.minimum_length, state.length.asInstanceOf[Integer])),
@@ -79,42 +116,21 @@ class PasswordGeneratorFragment extends AlertDialogFragment with PureFragment[Pa
               _  <- IO(numSlider) >>= k.max(st.length) >>= k.progress(math.min(st.minNum, math.max(st.length - st.minUpper - st.minSym, 0)))
               _  <- IO(symSlider) >>= k.max(st.length) >>= k.progress(math.min(st.minSym, math.max(st.length - st.minUpper - st.minNum, 0)))
             } yield ()),
-          IO(checkbox) >>= stdH >>= k.text("Lowercase (a-z)") >>= k.checked(state.lower) >>=
+          IO(checkbox) >>= stdH >>= k.text(R.string.lowercase_enable) >>= k.checked(state.lower) >>=
             hookM.checkedChange.onCheckedChanged((v: CompoundButton, b: Boolean) => transformState(_.copy(lower = b))),
-          IO(checkbox) >>= stdH >>= k.text("Uppercase (A-Z)") >>= k.checked(state.upper) >>=
-            hookM.checkedChange.onCheckedChanged((v: CompoundButton, b: Boolean) => enable(uppSlider, b, transformState(_.copy(upper = b)))),
-          IO(minUppLabel) >>= k.text(getString(R.string.minimum_uppercase, state.minUpper.asInstanceOf[Integer])),
-          IO(uppSlider) >>= stdH >>= k.max(state.length) >>= k.progress(state.minUpper) >>= k.enabled(state.upper) >>=
-            hookM.seekBarChange.onProgressChanged((sb: SeekBar, p: Int, user: Boolean) => for {
-              st <- transformState(_.copy(minUpper = p))
-              _  <- IO(minUppLabel) >>= k.text(getString(R.string.minimum_uppercase, p.asInstanceOf[Integer]))
-              _  <- IO(numSlider) >>= k.progress(math.min(st.minNum, math.max(st.length - st.minUpper - st.minSym, 0)))
-              _  <- IO(symSlider) >>= k.progress(math.min(st.minSym, math.max(st.length - st.minUpper - st.minNum, 0)))
-            } yield ()),
-          IO(checkbox) >>= stdH >>= k.text("Numbers (0-9)") >>= k.checked(state.num) >>=
-            hookM.checkedChange.onCheckedChanged((v: CompoundButton, b: Boolean) => enable(numSlider, b, transformState(_.copy(num = b)))),
-          IO(minNumLabel) >>= k.text(getString(R.string.minimum_numbers, state.minNum.asInstanceOf[Integer])),
-          IO(numSlider) >>= stdH >>= k.max(state.length) >>= k.progress(state.minNum) >>= k.enabled(state.num) >>=
-            hookM.seekBarChange.onProgressChanged((sb: SeekBar, p: Int, user: Boolean) => for {
-              st <- transformState(_.copy(minNum = p))
-              _  <- IO(minNumLabel) >>= k.text(getString(R.string.minimum_numbers, p.asInstanceOf[Integer]))
-              _  <- IO(uppSlider) >>= k.progress(math.min(st.minUpper, math.max(st.length - st.minNum - st.minSym, 0)))
-              _  <- IO(symSlider) >>= k.progress(math.min(st.minSym, math.max(st.length - st.minUpper - st.minNum, 0)))
-            } yield ()),
-          IO(checkbox) >>= stdH >>= k.text("Symbols (!@#$%^&*+=?/\\)") >>= k.checked(state.sym) >>=
-            hookM.checkedChange.onCheckedChanged((v: CompoundButton, b: Boolean) => enable(symSlider, b, transformState(_.copy(sym = b)))),
-          IO(minSymLabel) >>= k.text(getString(R.string.minimum_symbols, state.minSym.asInstanceOf[Integer])),
-          IO(symSlider) >>= stdH >>= k.max(state.length) >>= k.progress(state.minSym) >>= k.enabled(state.sym) >>=
-            hookM.seekBarChange.onProgressChanged((sb: SeekBar, p: Int, user: Boolean) => for {
-              st <- transformState(_.copy(minSym = p))
-              _  <- IO(minSymLabel) >>= k.text(getString(R.string.minimum_symbols, p.asInstanceOf[Integer]))
-              _  <- IO(uppSlider) >>= k.progress(math.min(st.minUpper, math.max(st.length - st.minNum - st.minSym, 0)))
-              _  <- IO(numSlider) >>= k.progress(math.min(st.minNum, math.max(st.length - st.minUpper - st.minSym, 0)))
-            } yield ())
+          newSlider(state, R.string.uppercase_enable, minUppLabel, R.string.minimum_uppercase,
+            uppSlider, (s,b) => s.copy(upper = b), _.upper, _.minUpper, (s,c) => s.copy(minUpper = c),
+            numBar, symBar),
+          newSlider(state, R.string.numbers_enable, minNumLabel, R.string.minimum_numbers,
+            numSlider, (s,b) => s.copy(num = b), _.num, _.minNum, (s,c) => s.copy(minNum = c),
+            symBar, upperBar),
+          newSlider(state, R.string.symbols_enable, minSymLabel, R.string.minimum_symbols,
+            symSlider, (s,b) => s.copy(sym = b), _.sym, _.minSym, (s,c) => s.copy(minSym = c),
+            numBar, upperBar)
         ) >>= k.orientation(LinearLayout.VERTICAL) >>= padding(all = 16.dp)
       ) >>= lp(MATCH_PARENT, WRAP_CONTENT, 1)
-    ) >>= k.orientation(LinearLayout.VERTICAL)
-    )
+    ) >>= k.orientation(LinearLayout.VERTICAL))
+
     case SaveState(state, bundle) => s(IO(bundle.putSerializable(MODEL, state)))
     // TODO save settings to shared prefs
     case TransformState(st,_) => s(IO(generatedPassword) >>= k.text(generate(st)))
@@ -134,7 +150,7 @@ class PasswordGeneratorFragment extends AlertDialogFragment with PureFragment[Pa
         (if (state.num)   NUMS  else Nil) ++
         (if (state.sym)   SYMS  else Nil)
     if (ALL.isEmpty) {
-      "UNABLE TO GENERATE"
+      getString(R.string.unable_to_generate_password)
     } else {
       val required = (if (state.upper) {
         (0 until state.minUpper) map (_ => UPPER(random.nextInt(UPPER.size)))
@@ -168,12 +184,10 @@ abstract class AlertDialogFragment extends DialogFragment {
     import com.hanhuy.android.conversions._
     new android.app.AlertDialog(getActivity, R.style.DialogTheme) {
       setTitle(title)
-      setButton(DialogInterface.BUTTON_POSITIVE, positiveLabel, (dlg: DialogInterface, b: Int) => {
-        onPositiveClick()
-      })
-      setButton(DialogInterface.BUTTON_NEGATIVE, negativeLabel, (dlg: DialogInterface, b: Int) => {
-        onNegativeClick()
-      })
+      setButton(DialogInterface.BUTTON_POSITIVE, positiveLabel,
+        (dlg: DialogInterface, b: Int) => onPositiveClick())
+      setButton(DialogInterface.BUTTON_NEGATIVE, negativeLabel,
+        (dlg: DialogInterface, b: Int) => onNegativeClick())
 
       override def setContentView(view: View) = setView(view)
     }

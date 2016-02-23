@@ -45,7 +45,7 @@
     <string name="pin_holder_notif_title">%s: database open</string>
     <string name="toast_unable_load_key">Unable to load key from Google Drive, retrying: %s</string>
     <string name="clear_user_data">Clear user data</string>
-    <string name="filename_hint">filename...</string>
+    <string name="filename_hint">filename…</string>
     <string name="browse">Browse</string>
     <string name="confirm_password">Confirm Password</string>
     <string name="confirm_password_match">does not match</string>
@@ -61,8 +61,14 @@
     <string name="minimum_uppercase">Minimum Uppercase: %d</string>
     <string name="minimum_numbers">Minimum Numbers: %d</string>
     <string name="minimum_symbols">Minimum Symbols: %d</string>
+    <string name="lowercase_enable">Lowercase (a-z)</string>
+    <string name="uppercase_enable">Uppercase (A-Z)</string>
+    <string name="numbers_enable">Numbers (0–9)</string>
+    <string name="symbols_enable">Symbols (!@#$%^&amp;*+=?/\)</string>
     <string name="generate_password">Generate Password</string>
-    <string name="password_hint">database password...</string>
+    <string name="password_hint">database password…</string>
+    <string name="copied_to_clipboard">Copied to clipboard</string>
+    <string name="unable_to_generate_password">UNABLE TO GENERATE</string>
     <string name="key_file">Key file</string>
     <string name="connect">Connect</string>
     <string name="database">Database</string>
@@ -84,11 +90,11 @@
     <string name="enter_pin_subtitle">: Enter PIN</string>
     <string name="ready_to_use">Ready to use!</string>
     <string name="keepassdroid_not_installed">KeePassDroid is not installed</string>
-    <string name="loading">Loading...</string>
-    <string name="saving">Saving...</string>
-    <string name="loading_key">Loading Key...</string>
-    <string name="loading_database">Reading Database...</string>
-    <string name="saving_database">Saving Database...</string>
+    <string name="loading">Loading…</string>
+    <string name="saving">Saving…</string>
+    <string name="loading_key">Loading Key…</string>
+    <string name="loading_database">Reading Database…</string>
+    <string name="saving_database">Saving Database…</string>
     <string name="please_wait">Please wait</string>
     <string name="screenshot">screenshot</string>
     <string name="not_a_url">Not a URL</string>
@@ -136,7 +142,7 @@
     <string name="search_usernames_passwords">Search usernames and passwords
     </string>
     <string name="no_search_results">No search results</string>
-    <string name="searching">Searching...</string>
+    <string name="searching">Searching…</string>
     <string name="running_search">Running your search</string>
     <string name="no_search_query">No search query</string>
     <string name="setup">Settings</string>
