@@ -3,7 +3,7 @@ package com.hanhuy.android.keepshare
 import android.app.{Activity, AlertDialog, Fragment}
 import android.content.Context
 import android.os.{Parcel, Parcelable, Bundle}
-import android.text.{TextWatcher, InputType, TextUtils}
+import android.text.{InputType, TextUtils}
 import android.util.{SparseArray, AttributeSet}
 import android.view.{View, ViewGroup, LayoutInflater}
 import android.widget._
@@ -92,6 +92,8 @@ class EntryEditFragment extends AuthorizedFragment {
   var model: EntryEditModel = EntryEditModel.blank
   var baseModel = Option.empty[EntryEditModel]
 
+  def password = getView.findView(TR.edit_password)
+
   override def onCreateView(inflater: LayoutInflater, container: ViewGroup,
                             savedInstanceState: Bundle) = {
     val view = inflater.inflate(TR.layout.entry_edit, container, false)
@@ -101,12 +103,12 @@ class EntryEditFragment extends AuthorizedFragment {
     val groupId = Option(getArguments) flatMap(a =>
       Option(a.getString(BrowseActivity.EXTRA_GROUP_ID)))
 
+    val password = view.findView(TR.edit_password)
     val fieldlist = view.findView(TR.field_list)
     val newfield = view.findView(TR.new_field_button)
     val group = view.findView(TR.edit_group)
     val title = view.findView(TR.edit_title)
     val username = view.findView(TR.edit_username)
-    val password = view.findView(TR.edit_password)
     val url = view.findView(TR.edit_url)
     val notes = view.findView(TR.edit_notes)
     val iconObservable: Subject[Int] = Subject()
@@ -267,9 +269,11 @@ class EntryEditFragment extends AuthorizedFragment {
     title.iconfield.onClick0 {
       EntryEditFragment.iconPicker(activity, title.iconfield, iconObservable.onNext)
     }
+    password.iconfield.onClick0 {
+      new PasswordGeneratorFragment().show(getFragmentManager, "password-generator")
+    }
     view
   }
-
 }
 
 object StandardEditView {

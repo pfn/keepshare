@@ -60,6 +60,39 @@ object EntryViewActivity {
     a.startActivity(intent)
     PINHolderService.ping()
   }
+
+  sealed trait CharType
+  case object Uppercase extends CharType
+  case object Lowercase extends CharType
+  case object Symbol extends CharType
+  case object Digit extends CharType
+  case class Spans(chartype: CharType, start: Int, end: Int)
+  def colorPassword(p: String): CharSequence = {
+    val (spans,last) = p.zipWithIndex.foldLeft((List.empty[Spans],Spans(Lowercase, 0, 0))) { case ((a,span), (c,i)) =>
+      val chartype = if (c.isDigit) Digit
+      else if (c.isLower) Lowercase
+      else if (c.isUpper) Uppercase
+      else Symbol
+      if (span.chartype == chartype) {
+        (a,span)
+      } else {
+        (span.copy(end = i) :: a,Spans(chartype, i, i))
+      }
+    }
+    val s = new SpannableString(p)
+    (last.copy(end = p.length) :: spans).foreach { span =>
+      if (span.end > 0) {
+        val fg = span.chartype match {
+          case Uppercase => new ForegroundColorSpan(0xff5C6BC0) // indigo 400
+          case Lowercase => new ForegroundColorSpan(0xff424242) // grey 800
+          case Symbol    => new ForegroundColorSpan(0xff009688) // teal 500
+          case Digit     => new ForegroundColorSpan(0xff9C27B0) // purple 500
+        }
+        s.setSpan(fg, span.start, span.end, Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
+      }
+    }
+    s
+  }
 }
 class EntryViewActivity extends AuthorizedActivity with TypedFindView {
   private var pwentry = Option.empty[PwEntry]
@@ -185,6 +218,12 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
     }
   }
 
+  def saveGeneratedPassword(pw: CharSequence): Unit = {
+    val f = Option(getFragmentManager.findFragmentByTag("editor"))
+    f foreach { case editor: EntryEditFragment =>
+        editor.password.text = pw
+    }
+  }
   def creating(parent: String): Unit = {
     updating(true, EntryEditFragment.create(parent))
     isCreating = true
@@ -277,43 +316,12 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
       fieldlist.addView(userfield)
     }
 
-    sealed trait CharType
-    case object Uppercase extends CharType
-    case object Lowercase extends CharType
-    case object Symbol extends CharType
-    case object Digit extends CharType
-    case class Spans(chartype: CharType, start: Int, end: Int)
     if (Option(strings.Get(PwDefs.PasswordField)) exists (_.Length > 0)) {
       val passfield = new StandardFieldView(this)
       passfield.first = first
       first = false
       passfield.hint = "Password"
-      passfield.text = Database.getField(entry, PwDefs.PasswordField).fold("": CharSequence) { p =>
-        val (spans,last) = p.zipWithIndex.foldLeft((List.empty[Spans],Spans(Lowercase, 0, 0))) { case ((a,span), (c,i)) =>
-          val chartype = if (c.isDigit) Digit
-          else if (c.isLower) Lowercase
-          else if (c.isUpper) Uppercase
-          else Symbol
-          if (span.chartype == chartype) {
-            (a,span)
-          } else {
-            (span.copy(end = i) :: a,Spans(chartype, i, i))
-          }
-        }
-        val s = new SpannableString(p)
-        (last.copy(end = p.length) :: spans).foreach { span =>
-          if (span.end > 0) {
-            val fg = span.chartype match {
-              case Uppercase => new ForegroundColorSpan(0xff5C6BC0) // indigo 400
-              case Lowercase => new ForegroundColorSpan(0xff424242) // grey 800
-              case Symbol    => new ForegroundColorSpan(0xff009688) // teal 500
-              case Digit     => new ForegroundColorSpan(0xff9C27B0) // purple 500
-            }
-            s.setSpan(fg, span.start, span.end, Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
-          }
-        }
-        s
-      }
+      passfield.text = Database.getField(entry, PwDefs.PasswordField).fold("": CharSequence)(colorPassword)
       passfield.icon = R.drawable.ic_lock_outline_black_36dp
       passfield.password = true
       fieldlist.addView(passfield)
@@ -369,7 +377,8 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
         field.first = first
         first = false
         field.hint = k
-        field.text = SprEngine.Compile(v.ReadString, sprcontext)
+        val fvalue = SprEngine.Compile(v.ReadString, sprcontext)
+        field.text = if (v.isProtected) EntryViewActivity.colorPassword(fvalue) else fvalue
         field.password = v.isProtected
         fieldlist.addView(field)
       }

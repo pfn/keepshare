@@ -14,7 +14,6 @@ import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
 import com.hanhuy.keepassj._
 import rx.lang.scala.Observable
-import Rx._
 import rx.lang.scala.Subject
 
 import collection.JavaConversions._
@@ -515,88 +514,58 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
     } else b
   }
 
-
   override def onOptionsItemSelected(item: MenuItem) = {
     item.getItemId match {
       case R.id.create_database =>
-        val intent = new Intent(Intent.ACTION_CREATE_DOCUMENT)
-        val passwordTweaks: Kestrel[StandardEditView] = kestrel { v =>
-          v.hint = getString(R.string.password)
-          v.first = true
-          v.password = true
-          v.errors = true
-          v.icon = R.drawable.ic_lock_outline_black_36dp
-        }
-        lazy val password = new StandardEditView(this)
-        lazy val confirm = new StandardEditView(this)
-        password.textfield.onTextChanged(_ => password.error = null)
-        confirm.textfield.onTextChanged(_ => confirm.error = null)
-        val dialog = new AlertDialog.Builder(this)
-          .setCancelable(true)
-          .setTitle(R.string.create_database)
-          .setView((l[LinearLayout](
-            IO(password) >>= passwordTweaks >>= lp(MATCH_PARENT, WRAP_CONTENT),
-            IO(confirm) >>= passwordTweaks >>= kestrel(_.hint = getString(R.string.confirm_password)) >>= lp(MATCH_PARENT, WRAP_CONTENT)
-          ) >>= k.orientation(LinearLayout.VERTICAL) >>= padding(all = 16.dp)).perform())
-          .setPositiveButton(R.string.create, null)
-          .setNegativeButton(R.string.cancel, null)
-          .show()
-        dialog.getButton(DialogInterface.BUTTON_POSITIVE).onClick0 {
-          password.error = if (password.text.length < 8)
-            getString(R.string.password_min_length)
-          else null
-          confirm.error = if (password.text != confirm.text && password.error == null)
-            getString(R.string.confirm_password_match)
-          else null
-
-          if (password.error == null && confirm.error == null) {
-            val newpw = password.text
-            dialog.dismiss()
-            intent.addCategory(Intent.CATEGORY_OPENABLE)
-            intent.putExtra(Intent.EXTRA_TITLE, getString(R.string.database_new_file))
-            intent.setType("application/vnd.keepass")
-            (for {
-              i <- requestActivityResult(intent)
-              p <- Database.resolvePath(i.getData.toString)
-            } yield {
-              val db = new PwDatabase
-              val key = new CompositeKey
-              key.AddUserKey(new KcpPassword(newpw))
-              db.New(IOConnectionInfo.FromPath(p), key)
-              val root = db.getRootGroup
-              root.setName(getString(R.string.passwords))
-              root.Touch(true)
-              val entry = new PwEntry(true, true)
-              entry.getStrings.Set(PwDefs.TitleField, new ProtectedString(false, getString(R.string.database_password)))
-              entry.getStrings.Set(PwDefs.PasswordField, new ProtectedString(true, newpw))
-              entry.getStrings.Set(PwDefs.NotesField, new ProtectedString(false, getString(R.string.password_reminder_note)))
-
-              root.getEntries.Add(entry)
-              entry.setParentGroup(root)
-              db.Save(null)
-              for {
-                in  <- using(new FileInputStream(p))
-                out <- using(Application.instance.getContentResolver.openOutputStream(Uri.parse(i.getData.toString)))
-              } {
-                val buf = Array.ofDim[Byte](32768)
-                Stream.continually(in.read(buf, 0, 32768)) takeWhile (_ != -1) foreach { read =>
-                  out.write(buf, 0, read)
-                }
-              }
-              (i,p,newpw)
-            }) onCompleteMain {
-              case util.Success((i,path, pw)) =>
-                dp.setText(pw)
-                setDataPath(i, df.setText)
-              case util.Failure(e) =>
-                Toast.makeText(this, "Failed: " + e, Toast.LENGTH_LONG).show()
-                log.e("Failed to create database", e)
-            }
-          }
-        }
+        new CreateDatabaseFragment().show(getFragmentManager, "create-database")
         true
       case _ =>
         super.onOptionsItemSelected (item)
+    }
+  }
+
+  def createNewDatabase(newpw: String): Unit = {
+    val intent = new Intent(Intent.ACTION_CREATE_DOCUMENT)
+    intent.addCategory(Intent.CATEGORY_OPENABLE)
+    intent.putExtra(Intent.EXTRA_TITLE, getString(R.string.database_new_file))
+    intent.setType("application/vnd.keepass")
+    (for {
+      i <- requestActivityResult(intent)
+      p <- Database.resolvePath(i.getData.toString)
+    } yield {
+      val db = new PwDatabase
+      val key = new CompositeKey
+      key.AddUserKey(new KcpPassword(newpw))
+      db.New(IOConnectionInfo.FromPath(p), key)
+      val root = db.getRootGroup
+      root.setName(getString(R.string.passwords))
+      root.Touch(true)
+      val entry = new PwEntry(true, true)
+      entry.getStrings.Set(PwDefs.TitleField, new ProtectedString(false, getString(R.string.database_password)))
+      entry.getStrings.Set(PwDefs.PasswordField, new ProtectedString(true, newpw))
+      entry.getStrings.Set(PwDefs.NotesField, new ProtectedString(false, getString(R.string.password_reminder_note)))
+
+      root.getEntries.Add(entry)
+      entry.setParentGroup(root)
+      db.Save(null)
+      for {
+        in  <- using(new FileInputStream(p))
+        out <- using(Application.instance.getContentResolver.openOutputStream(Uri.parse(i.getData.toString)))
+      } {
+        val buf = Array.ofDim[Byte](32768)
+        Stream.continually(in.read(buf, 0, 32768)) takeWhile (_ != -1) foreach { read =>
+          out.write(buf, 0, read)
+        }
+      }
+      (i,p,newpw)
+    }) onCompleteMain {
+      case util.Success((i,path, pw)) =>
+        dp.setText(pw)
+        setDataPath(i, df.setText)
+      case util.Failure(e) if e != ActivityResultCancel =>
+        Toast.makeText(this, "Failed: " + e, Toast.LENGTH_LONG).show()
+        log.e("Failed to create database", e)
+      case util.Failure(_) =>
     }
   }
 
@@ -794,4 +763,48 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
 
   def hideIME(): Unit =
     Option(getCurrentFocus).foreach(f => systemService[InputMethodManager].hideSoftInputFromWindow(f.getWindowToken, 0))
+}
+
+class CreateDatabaseFragment extends AlertDialogFragment {
+  import iota._
+  import ViewGroup.LayoutParams._
+  def title = getString(R.string.create_database)
+  def activity = getActivity.asInstanceOf[DatabaseSetupActivity]
+  lazy val password = new StandardEditView(getActivity)
+  lazy val confirm = new StandardEditView(getActivity)
+  val passwordTweaks: Kestrel[StandardEditView] = kestrel { v =>
+    v.hint = getString(R.string.password)
+    v.first = true
+    v.password = true
+    v.errors = true
+    v.icon = R.drawable.ic_lock_outline_black_36dp
+  }
+  override def positiveLabel = getString(R.string.create)
+
+  override def onCreateView(inflater: LayoutInflater, container: ViewGroup, savedInstanceState: Bundle) = {
+    password.textfield.onTextChanged(_ => password.error = null)
+    confirm.textfield.onTextChanged(_ => confirm.error = null)
+    (l[LinearLayout](
+      IO(password) >>= passwordTweaks >>= id(Id.password) >>= lp(MATCH_PARENT, WRAP_CONTENT),
+      IO(confirm) >>= passwordTweaks >>= id(Id.confirm_password) >>=
+        kestrel(_.hint = getString(R.string.confirm_password)) >>= lp(MATCH_PARENT, WRAP_CONTENT)
+    ) >>= k.orientation(LinearLayout.VERTICAL) >>= padding(all = 16.dp)).perform()
+  }
+
+  override def onStart(): Unit = {
+    super.onStart()
+    getDialog.asInstanceOf[android.app.AlertDialog].getButton(DialogInterface.BUTTON_POSITIVE).onClick0 {
+      password.error = if (password.text.length < 8)
+        getString(R.string.password_min_length)
+      else null
+      confirm.error = if (password.text != confirm.text && password.error == null)
+        getString(R.string.confirm_password_match)
+      else null
+
+      if (password.error == null && confirm.error == null) {
+        getDialog.dismiss()
+        activity.createNewDatabase(password.text)
+      }
+    }
+  }
 }

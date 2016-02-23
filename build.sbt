@@ -24,6 +24,7 @@ debugIncludesTests := false
 
 libraryDependencies ++= Seq(
   "ch.acra" % "acra" % "4.8.2",
+  "com.hanhuy.android" %% "iota-pure" % "0.1-SNAPSHOT",
   "com.hanhuy.android" %% "iota" % "1.0.3",
   "com.hanhuy.android" %% "scala-conversions" % supportSdkVersion,
   "com.hanhuy.android" %% "scala-conversions-design" % supportSdkVersion,
@@ -40,7 +41,7 @@ libraryDependencies ++= Seq(
 proguardOptions ++=
   "-keepclassmembers class scala.runtime.RichInt { ** until(); }" ::
   "-dontwarn android.app.Notification" ::
-  "-dontwarn iota.**" ::
+  "-dontwarn iota.Internal210**" ::
   "-dontwarn javax.naming.**" ::
   "-dontwarn com.google.common.**" ::
   "-dontwarn sun.misc.Unsafe" ::

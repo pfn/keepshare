@@ -57,6 +57,11 @@
         This entry is here to remind you of the password set for this database when it was created. Feel free to
         delete this entry if it is no longer needed. Any changes to this entry will not affect the rest of the database.
     </string>
+    <string name="minimum_length">Password Length: %d</string>
+    <string name="minimum_uppercase">Minimum Uppercase: %d</string>
+    <string name="minimum_numbers">Minimum Numbers: %d</string>
+    <string name="minimum_symbols">Minimum Symbols: %d</string>
+    <string name="generate_password">Generate Password</string>
     <string name="password_hint">database password...</string>
     <string name="key_file">Key file</string>
     <string name="connect">Connect</string>
