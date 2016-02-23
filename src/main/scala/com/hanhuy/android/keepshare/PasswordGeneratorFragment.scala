@@ -24,11 +24,14 @@ object PasswordGeneratorFragment {
                                     minUpper: Int = 1,
                                     minNum: Int = 1,
                                     minSym: Int = 1)
-
-  val UPPER = 'A' to 'Z'
-  val LOWER = 'a' to 'z'
-  val NUMS  = '0' to '9'
-  val SYMS  = '!' :: '@' :: '#' :: '$' :: '%' :: '^' :: '&' :: '*' :: '+' :: '=' :: '?' :: '/' :: '\\' :: Nil
+  def chartype(ct: EntryViewActivity.CharType) = Stream.continually(ct)
+  val UPPER = ('A' to 'Z').zip(chartype(EntryViewActivity.Uppercase)).toVector
+  val LOWER = ('a' to 'z').zip(chartype(EntryViewActivity.Lowercase)).toVector
+  val NUMS  = ('0' to '9').zip(chartype(EntryViewActivity.Digit)).toVector
+  val SYMS  = ('!' ::
+    '@' :: '#' :: '$' :: '%' :: '^' :: '&' ::
+    '*' :: '+' :: '=' :: '?' :: '/' :: '\\' ::
+    Nil).zip(chartype(EntryViewActivity.Symbol)).toVector
 }
 class PasswordGeneratorFragment extends AlertDialogFragment with PureFragment[PasswordGeneratorModel] {
   import iota._
@@ -159,9 +162,20 @@ class PasswordGeneratorFragment extends AlertDialogFragment with PureFragment[Pa
       } else Nil) ++ (if (state.sym) {
         (0 until state.minSym) map (_ => SYMS(random.nextInt(SYMS.size)))
       } else Nil)
-      val remainder = (0 until math.max(0, state.length - required.size)) map (_ => ALL(random.nextInt(ALL.size)))
 
-      EntryViewActivity.colorPassword(util.Random.shuffle(required ++ remainder).mkString)
+      // drop from required list when found, reduces disproportionate occurance with minimum
+      @annotation.tailrec
+      def assemblePW(reqs: List[(Char,EntryViewActivity.CharType)], selected: List[(Char,EntryViewActivity.CharType)]): List[(Char,EntryViewActivity.CharType)] = {
+        if (reqs.size + selected.size >= state.length)
+          reqs ++ selected
+        else {
+          val c = ALL(random.nextInt(ALL.size))
+          val (xs, ys) = reqs.span(_._2 != c._2)
+          assemblePW(xs ++ ys.drop(1), c :: selected)
+        }
+      }
+
+      EntryViewActivity.colorPassword(util.Random.shuffle(assemblePW(required.toList, Nil).map(_._1)).mkString)
     }
   }
   override def title = getString(R.string.generate_password)
