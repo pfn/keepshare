@@ -316,6 +316,11 @@ class StandardEditView(c: Context, attrs: AttributeSet) extends StandardFieldVie
   setSaveEnabled(true)
   setSaveFromParentEnabled(true)
 
+  def errors = inputlayout.isErrorEnabled
+  def errors_=(b: Boolean) = inputlayout.setErrorEnabled(b)
+  def error = inputlayout.getError
+  def error_=(s: CharSequence) = inputlayout.setError(s)
+
   override def onSaveInstanceState() = {
     val ss = new StandardEditView.SavedState(super.onSaveInstanceState())
     ss.text = text

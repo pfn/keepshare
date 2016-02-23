@@ -47,7 +47,16 @@
     <string name="clear_user_data">Clear user data</string>
     <string name="filename_hint">filename...</string>
     <string name="browse">Browse</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="confirm_password_match">does not match</string>
+    <string name="database_password">Database Password</string>
     <string name="password">Password</string>
+    <string name="passwords">Passwords</string>
+    <string name="password_min_length">must be at least 8 characters long</string>
+    <string name="password_reminder_note">
+        This entry is here to remind you of the password set for this database when it was created. Feel free to
+        delete this entry if it is no longer needed. Any changes to this entry will not affect the rest of the database.
+    </string>
     <string name="password_hint">database password...</string>
     <string name="key_file">Key file</string>
     <string name="connect">Connect</string>
@@ -57,6 +66,7 @@
     <string name="keepass_no_respond">KeePass provider did not respond</string>
     <string name="keyfile_no_exist">Key file does not exist!</string>
     <string name="password_no_blank">Password cannot be blank</string>
+    <string name="database_new_file">KeepShare Database.kdbx</string>
     <string name="database_no_exist">Database file does not exist!</string>
     <string name="database_no_blank">Database cannot be blank</string>
     <string name="decrypt_saved_failed">Failed to decrypt saved data :-(</string>
@@ -88,6 +98,8 @@
     <string name="delete_name">Delete %s?</string>
     <string name="delete_entry">Deleted %s</string>
     <string name="undo">Undo</string>
+    <string name="create_database">Create New Database</string>
+    <string name="create">Create</string>
     <string name="move_to_recycle">It can be found in the recycle bin later if you change your mind</string>
     <string name="delete_permanently">It will be permanently deleted</string>
     <string name="failed_verify">

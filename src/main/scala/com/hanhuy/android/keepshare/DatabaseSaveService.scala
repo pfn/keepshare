@@ -1,14 +1,12 @@
 package com.hanhuy.android.keepshare
 
 import android.widget.Toast
-import com.hanhuy.android.common._
 
 import android.app.{Notification, Service}
 import android.content.Intent
 import android.support.v4.app.NotificationCompat
 import com.hanhuy.android.common.Futures
 import com.hanhuy.keepassj.PwDatabase
-import org.acra.ACRA
 import rx.lang.scala.subjects.BehaviorSubject
 import rx.lang.scala.{Observable, Subject}
 
