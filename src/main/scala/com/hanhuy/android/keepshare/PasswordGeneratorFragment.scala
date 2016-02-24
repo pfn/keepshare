@@ -82,8 +82,8 @@ class PasswordGeneratorFragment extends AlertDialogFragment with PureFragment[Pa
 
   case class SeekBarInfo(bar: SeekBar, min: PasswordGeneratorModel => Int, max: PasswordGeneratorModel => Int)
   lazy val upperBar = SeekBarInfo(uppSlider, _.minUpper, s => s.minSym + s.minNum)
-  lazy val numBar   = SeekBarInfo(numSlider, _.minNum, s => s.minSym + s.minUpper)
-  lazy val symBar   = SeekBarInfo(symSlider, _.minSym, s => s.minNum + s.minUpper)
+  lazy val numBar   = SeekBarInfo(numSlider, _.minNum,   s => s.minSym + s.minUpper)
+  lazy val symBar   = SeekBarInfo(symSlider, _.minSym,   s => s.minNum + s.minUpper)
   def newSlider(state: PasswordGeneratorModel, labelres: Int, label: TextView, countRes: Int,
                 slider: SeekBar, enableTransform: (PasswordGeneratorModel, Boolean) => PasswordGeneratorModel,
                 isEnabled: PasswordGeneratorModel => Boolean, min: PasswordGeneratorModel => Int,
@@ -146,6 +146,7 @@ class PasswordGeneratorFragment extends AlertDialogFragment with PureFragment[Pa
   } yield ()
 
   def generate(state: PasswordGeneratorModel): CharSequence = {
+    import util.Random._
     val random = new java.security.SecureRandom
     val ALL =
       (if (state.lower)   LOWER else Nil) ++
@@ -158,9 +159,9 @@ class PasswordGeneratorFragment extends AlertDialogFragment with PureFragment[Pa
       val required = (if (state.upper) {
         (0 until state.minUpper) map (_ => UPPER(random.nextInt(UPPER.size)))
       } else Nil) ++ (if (state.num) {
-        (0 until state.minNum) map (_ => NUMS(random.nextInt(NUMS.size)))
+        (0 until state.minNum)   map (_ =>  NUMS(random.nextInt(NUMS.size)))
       } else Nil) ++ (if (state.sym) {
-        (0 until state.minSym) map (_ => SYMS(random.nextInt(SYMS.size)))
+        (0 until state.minSym)   map (_ =>  SYMS(random.nextInt(SYMS.size)))
       } else Nil)
 
       // drop from required list when found, reduces disproportionate occurance with minimum
@@ -175,7 +176,7 @@ class PasswordGeneratorFragment extends AlertDialogFragment with PureFragment[Pa
         }
       }
 
-      EntryViewActivity.colorPassword(util.Random.shuffle(assemblePW(required.toList, Nil).map(_._1)).mkString)
+      EntryViewActivity.colorPassword(random.shuffle(assemblePW(required.toList, Nil).map(_._1)).mkString)
     }
   }
   override def title = getString(R.string.generate_password)
