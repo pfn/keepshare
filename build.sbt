@@ -1,6 +1,6 @@
 lazy val keepshare = project.in(file(".")).settings(androidBuild)
 
-val supportSdkVersion = "23.1.1"
+val supportSdkVersion = "23.2.0"
 
 name := "keepshare"
 
