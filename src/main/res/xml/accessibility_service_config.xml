@@ -6,7 +6,7 @@
                        android:accessibilityEventTypes="typeWindowStateChanged|typeViewHoverEnter|typeViewHoverExit|typeWindowContentChanged"
                        android:accessibilityFlags="flagRequestEnhancedWebAccessibility|flagReportViewIds"
                        android:accessibilityFeedbackType="feedbackGeneric"
-                       android:notificationTimeout="0"
+                       android:notificationTimeout="1000"
                        android:canRetrieveWindowContent="true"
                        android:canRequestEnhancedWebAccessibility="true"
                        android:settingsActivity="com.hanhuy.android.keepshare.SetupActivity"
