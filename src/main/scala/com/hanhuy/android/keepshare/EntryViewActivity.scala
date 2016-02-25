@@ -271,7 +271,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
         if (!hasOTP) {
           menu.removeItem(R.id.toggle_otp)
         }
-        item.setChecked(e.getStrings.ReadSafe(OTP_MODE).toBoolean)
+        item.setChecked(e.getStrings.GetKeys.asScala.contains(OTP_MODE))
       }
       super.onCreateOptionsMenu(menu)
     }
@@ -453,7 +453,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
         f
       } ::: history.drop(1)) foreach fieldlist.addView
     }
-    if (e.getStrings.ReadSafe(OTP_MODE).toBoolean)
+    if (e.getStrings.GetKeys.asScala.contains(OTP_MODE))
       OtpFragment.show(getFragmentManager, e)
   }
 
