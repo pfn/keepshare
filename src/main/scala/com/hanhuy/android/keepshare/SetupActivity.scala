@@ -13,8 +13,6 @@ import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
 import com.hanhuy.keepassj._
-import rx.lang.scala.Observable
-import rx.lang.scala.Subject
 
 import collection.JavaConversions._
 
@@ -390,8 +388,8 @@ case class DatabaseSetupModel(db: Option[String], password: Option[String], keyf
 class DatabaseSetupActivity extends AppCompatActivity with DialogManager with PermissionManager with ActivityResultManager {
   val log = Logcat("DatabaseSetupActivity")
   private[this] var model = DatabaseSetupModel.empty
-  private[this] val modelSubject = Subject[DatabaseSetupModel]()
-  val modelChange: Observable[DatabaseSetupModel] = modelSubject
+  private[this] val modelSubject = Var(model)
+  val modelChange: Obs[DatabaseSetupModel] = modelSubject
   import iota._
   import RequestCodes._
   import RelativeLayout._
@@ -480,15 +478,15 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
     setContentView(setupLayout.perform())
     dp.onTextChanged { s =>
       model = model.copy(password = s.? map (_.toString.trim) filterNot (_.isEmpty))
-      modelSubject.onNext(model)
+      modelSubject() = model
     }
     df.onTextChanged { s =>
       model = model.copy(db = s.? map (_.toString.trim) filterNot (_.isEmpty))
-      modelSubject.onNext(model)
+      modelSubject() = model
     }
     dk.onTextChanged { s =>
       model = model.copy(keyfile = s.? map (_.toString.trim) filterNot (_.isEmpty))
-      modelSubject.onNext(model)
+      modelSubject() = model
     }
     modelChange.subscribe { m =>
       saveButton.setVisibility(if (m.ready) View.VISIBLE else View.GONE)

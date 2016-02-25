@@ -1,9 +1,6 @@
 package com.hanhuy.android.keepshare
 
-import android.animation.{AnimatorListenerAdapter, Animator}
 import android.support.v7.app.AppCompatActivity
-import android.view.animation.Animation
-import android.view.animation.Animation.AnimationListener
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
@@ -14,9 +11,6 @@ import android.view.{MenuItem, Menu, View}
 import android.content.Intent
 
 import Futures._
-import rx.android.schedulers.AndroidSchedulers
-import Rx._
-import rx.lang.scala.Subscription
 
 import scala.util.Try
 
@@ -28,7 +22,6 @@ object PINEntryActivity {
   }
 }
 class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogManager {
-  private val log = Logcat("PINEntryActivity")
   lazy val prompt = findView(TR.pin_prompt)
   lazy val pinEntry = findView(TR.pin)
   lazy val ok = findView(TR.pin_ok)
@@ -38,7 +31,7 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
   lazy val vibrator = this.systemService[Vibrator]
   lazy val fpm = FingerprintManager(this, settings)
   lazy val fpmObs = fpm.authenticate()
-  private[this] var subscription = Option.empty[Subscription]
+  private[this] var subscription = Option.empty[Sub]
 
   private[this] var pin = ""
 
@@ -139,26 +132,33 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
     }
     if (fpm.hasFingerprints && allowFingerprint) {
       val fpicon = findView(TR.fingerprint_icon)
+      def fingerprintError(err: CharSequence, sub: Sub): Unit = {
+        fpicon.animate().alpha(0.0f).setListener(BrowseActivity.animationEnd(
+          _ => fpicon.setVisibility(View.GONE))).start()
+        error.setVisibility(View.VISIBLE)
+        error.setText("Fingerprint:  " + err)
+        UiBus.handler.removeCallbacks(clearError)
+        UiBus.handler.postDelayed(clearError, 5000)
+        sub.unsubscribe()
+      }
       fpicon.setVisibility(View.VISIBLE)
-      subscription = Some(fpmObs.observeOn(AndroidSchedulers.mainThread).subscribe({
-        case Right(fpin) =>
+      import FingerprintManager._
+      subscription = Some(fpmObs.subscribe2((r, sub) => r match {
+        case FingerprintSuccess(fpin) =>
+          sub.unsubscribe()
           error.setVisibility(View.GONE)
           pinEntry.setText("xxxxxx")
           pin = fpin
           fpicon.animate().rotation(360.0f).setDuration(250).setListener(
             BrowseActivity.animationEnd(_ => verifyPin())).start()
-        case Left(errorString) =>
+        case FingerprintFailure(errorString) =>
           error.setVisibility(View.VISIBLE)
           error.setText(errorString)
           UiBus.handler.removeCallbacks(clearError)
           UiBus.handler.postDelayed(clearError, 3000)
-      }, ex => {
-        fpicon.animate().alpha(0.0f).setListener(BrowseActivity.animationEnd(
-          _ => fpicon.setVisibility(View.GONE))).start()
-        error.setVisibility(View.VISIBLE)
-        error.setText("Fingerprint:  " + ex.getMessage)
-        UiBus.handler.removeCallbacks(clearError)
-        UiBus.handler.postDelayed(clearError, 5000)
+        case FingerprintException(ex) => fingerprintError(ex.getMessage, sub)
+        case FingerprintUnavailable => fingerprintError(r.toString, sub)
+        case FingerprintAuthenticationError(code, err) => fingerprintError(err, sub)
       }))
     }
   }

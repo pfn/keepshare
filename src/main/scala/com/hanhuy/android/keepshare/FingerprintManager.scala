@@ -14,8 +14,6 @@ import android.security.keystore.{KeyGenParameterSpec, KeyProperties}
 import com.hanhuy.android.common.{Futures, Logcat}
 
 import iota.v
-import rx.lang.scala.{Subscription, Observable}
-
 import scala.concurrent.Future
 
 /**
@@ -25,6 +23,14 @@ object FingerprintManager {
   val KEY_NAME = "keepshare-fingerprint-key"
   val CIPHER_ALG = "RSA/ECB/OAEPWithSHA-256AndMGF1Padding"
   val AKS = "AndroidKeyStore"
+
+  sealed trait FingerprintResult
+  case class FingerprintSuccess(pin: String) extends FingerprintResult
+  case class FingerprintFailure(failure: CharSequence) extends FingerprintResult
+  sealed trait FingerprintError extends FingerprintResult
+  case object FingerprintUnavailable extends FingerprintError
+  case class FingerprintException(e: Exception) extends FingerprintError
+  case class FingerprintAuthenticationError(code: Int, error: CharSequence) extends FingerprintError
 }
 case class FingerprintManager(context: Context, settings: Settings) {
   import FingerprintManager._
@@ -77,9 +83,9 @@ case class FingerprintManager(context: Context, settings: Settings) {
     settings.get(Settings.FINGERPRINT_ENABLE)
 
   @TargetApi(23)
-  def authenticate(): Observable[Either[CharSequence,String]] = {
+  def authenticate(): Obs[FingerprintResult] = {
     val cancelToken = new CancellationSignal
-    Observable.create {obs =>
+    Obs.create { sig =>
       fpm match {
         case Some(m) if hasFingerprints =>
           val ks = KeyStore.getInstance(AKS)
@@ -95,39 +101,34 @@ case class FingerprintManager(context: Context, settings: Settings) {
                 val fpin = settings.get(Settings.FINGERPRINT_PIN)
                 val bytes = KeyManager.bytes(fpin)
                 val pin = new String(cipher.doFinal(bytes), "utf-8")
-                obs.onNext(Right(pin))
-                obs.onCompleted()
+                sig(FingerprintSuccess(pin))
                 cancelToken.cancel()
               }
 
               override def onAuthenticationError(errorCode: Int, errString: CharSequence) = {
-                obs.onError(FingerprintAuthenticationError(errorCode, errString))
+                sig(FingerprintAuthenticationError(errorCode, errString))
                 cancelToken.cancel()
               }
 
               override def onAuthenticationFailed() = {
-                obs.onNext(Left(context.getString(R.string.fingerprint_unrecognized)))
+                sig(FingerprintFailure(context.getString(R.string.fingerprint_unrecognized)))
               }
 
-              override def onAuthenticationHelp(helpCode: Int, helpString: CharSequence) = obs.onNext(Left(helpString))
+              override def onAuthenticationHelp(helpCode: Int, helpString: CharSequence) = sig(FingerprintFailure(helpString))
             }, null)
           } catch {
             case e: Exception =>
               settings.set(Settings.FINGERPRINT_TIMESTAMP, 0l)
-              obs.onError(e)
+              sig(FingerprintException(e))
               cancelToken.cancel()
           }
         case _ =>
           settings.set(Settings.FINGERPRINT_TIMESTAMP, 0l)
-          obs.onError(FingerprintUnavailable)
+          sig(FingerprintUnavailable)
           cancelToken.cancel()
       }
-      Subscription(cancelToken.cancel())
+      Sub(() => cancelToken.cancel())
     }
   }
 
-  sealed trait FingerprintError extends Exception
-  case object FingerprintUnavailable extends FingerprintError
-  case object FingerprintAuthenticationFailed extends FingerprintError
-  case class FingerprintAuthenticationError(code: Int, error: CharSequence) extends FingerprintError
 }

@@ -33,8 +33,6 @@ libraryDependencies ++= Seq(
   "com.android.support" % "recyclerview-v7" % supportSdkVersion,
   "com.android.support" % "design" % supportSdkVersion,
   "com.android.support" % "appcompat-v7" % supportSdkVersion,
-  "io.reactivex" %% "rxscala" % "0.24.1",
-  "io.reactivex" % "rxandroid" % "0.24.0",
   "com.google.android.gms" % "play-services-drive" % "8.3.0"
 )
 

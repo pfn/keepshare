@@ -15,10 +15,6 @@ import com.hanhuy.keepassj._
 
 import TypedResource._
 import Futures._
-import Rx._
-
-import rx.android.schedulers.AndroidSchedulers.mainThread
-import rx.lang.scala.{Observable, Subject}
 
 import scala.annotation.tailrec
 import scala.language.postfixOps
@@ -111,12 +107,12 @@ class EntryEditFragment extends AuthorizedFragment {
     val username = view.findView(TR.edit_username)
     val url = view.findView(TR.edit_url)
     val notes = view.findView(TR.edit_notes)
-    val iconObservable: Subject[Int] = Subject()
-    iconObservable.observeOn(mainThread).subscribe { icon =>
+    val iconObservable: Var[Int] = Var(title.icon)
+    iconObservable.subscribe { icon =>
       model = model.copy(icon = icon)
       title.icon = icon
     }
-    group.groupChange.observeOn(mainThread).subscribe { g =>
+    group.groupChange.subscribe { g =>
       model = model.copy(group = g.getUuid)
     }
     title.textfield.onTextChanged(s =>
@@ -142,7 +138,7 @@ class EntryEditFragment extends AuthorizedFragment {
       }
     } onSuccessMain { case g =>
       g foreach { grp =>
-        iconObservable.onNext(Database.Icons(grp.getIconId.ordinal))
+        iconObservable() = Database.Icons(grp.getIconId.ordinal)
         group.group = grp
         view.findView(TR.delete).setVisibility(View.GONE)
       }
@@ -156,9 +152,8 @@ class EntryEditFragment extends AuthorizedFragment {
       entry foreach { e =>
         val s = e.getStrings
 
-        group.group = e.getParentGroup
         if (model == EntryEditModel.blank) {
-          iconObservable.onNext(Database.Icons(e.getIconId.ordinal))
+          iconObservable() = Database.Icons(e.getIconId.ordinal)
           title.text = s.ReadSafe(PwDefs.TitleField)
           username.text = s.ReadSafe(PwDefs.UserNameField)
           password.text = s.ReadSafe(PwDefs.PasswordField)
@@ -199,6 +194,7 @@ class EntryEditFragment extends AuthorizedFragment {
 
           baseModel = Some(model)
         }
+        group.group = e.getParentGroup
       }
       model.fields foreach { case (k, v) =>
         val field = new StandardEditView(activity, null)
@@ -267,7 +263,7 @@ class EntryEditFragment extends AuthorizedFragment {
     }
 
     title.iconfield.onClick0 {
-      EntryEditFragment.iconPicker(activity, title.iconfield, iconObservable.onNext)
+      EntryEditFragment.iconPicker(activity, title.iconfield, iconObservable.update)
     }
     password.iconfield.onClick0 {
       new PasswordGeneratorFragment().show(getFragmentManager, "password-generator")
@@ -385,14 +381,14 @@ class GroupEditView(c: Context, attrs: AttributeSet) extends StandardFieldView(c
 
     groupId = None
     text = _group.getName
-    groupSubject.onNext(_group)
+    groupSubject() = _group
     //  if (PwUuid.Zero == g.getCustomIconUuid) {
     imagefield.setImageResource(Database.Icons(_group.getIconId.ordinal))
     //  }
   }
 
-  private[this] val groupSubject = Subject[PwGroup]()
-  val groupChange: Observable[PwGroup] = groupSubject
+  private[this] val groupSubject = Var(_group)
+  val groupChange: Obs[PwGroup] = groupSubject
 
   textfield.setTextIsSelectable(false)
 
@@ -445,7 +441,7 @@ class GroupEditView(c: Context, attrs: AttributeSet) extends StandardFieldView(c
         b.findView(TR.name).setText(getItem(i).getName)
         b.onClick0 {
           group = getItem(i)
-          groupSubject.onNext(group)
+          groupSubject() = group
           popup.dismiss()
         }
         b

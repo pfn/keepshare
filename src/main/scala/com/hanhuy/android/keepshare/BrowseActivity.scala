@@ -5,14 +5,14 @@ import android.annotation.TargetApi
 import android.app.FragmentManager.OnBackStackChangedListener
 import android.content.{Context, ComponentName, Intent}
 import android.database.Cursor
-import android.graphics.{Rect, Canvas, BitmapFactory}
+import android.graphics.{Canvas, BitmapFactory}
 import android.graphics.drawable.{BitmapDrawable, LayerDrawable}
 import android.os.Bundle
 import android.support.design.widget.{CoordinatorLayout, FloatingActionButton, Snackbar}
 import android.support.v4.widget.SwipeRefreshLayout
 import android.support.v7.app.ActionBar
 import android.support.v7.widget.Toolbar
-import android.support.v7.widget.RecyclerView.{State, ViewHolder}
+import android.support.v7.widget.RecyclerView.ViewHolder
 import android.support.v7.widget.helper.ItemTouchHelper
 import android.support.v7.widget.helper.ItemTouchHelper.SimpleCallback
 import android.support.v7.widget.{LinearLayoutManager, RecyclerView}
@@ -26,9 +26,6 @@ import android.app._
 import android.view._
 import android.widget._
 import com.hanhuy.keepassj._
-import rx.android.schedulers.AndroidSchedulers.mainThread
-import rx.lang.scala.JavaConversions._
-import rx.lang.scala.{Subscription, Observable, Subject}
 
 import collection.JavaConverters._
 import Futures._
@@ -214,9 +211,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
 
   private[this] var refreshDialog = Option.empty[Dialog]
   override def onRefresh() = {
-    // because side-effects OP
-    var sub: Subscription = null
-    sub = DatabaseSaveService.saving.observeOn(mainThread).subscribe(b => {
+    DatabaseSaveService.saving.subscribe2((b,sub) => UiBus.run {
       if (b) {
         refreshDialog = Some(showingDialog(ProgressDialog.show(this,
           getString(R.string.saving_database), getString(R.string.please_wait),
@@ -235,7 +230,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
           finish()
         }
       }
-    })
+    }, false)
   }
 
   override def onOptionsItemSelected(item: MenuItem) = item.getItemId match {
@@ -546,7 +541,6 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
       }
       view.onClick0 {
         view.setActivated(true)
-        import iota.std.Configurations._
         implicit val c = BrowseActivity.this
         item.left foreach { grp =>
           browse(BrowseActivity.this, grp)
@@ -605,7 +599,7 @@ class FabToolbar(val context: Context, attrs: AttributeSet) extends FrameLayout(
     if (container != null)
       container.setBackgroundColor(iota.resolveAttr(R.attr.colorAccent, _.data))
     b onClick0 show()
-    b.visibility.observeOn(mainThread).subscribe(b => if (b && showing) hide())
+    b.visibility.subscribe(b => if (b && showing) hide())
   }
 
   private[this] var _container: ViewGroup = _
@@ -673,17 +667,17 @@ class FabToolbar(val context: Context, attrs: AttributeSet) extends FrameLayout(
 }
 
 class ObservableFab(c: Context, attrs: AttributeSet) extends FloatingActionButton(c, attrs) {
-  private[this] val _vis: Subject[Boolean] = Subject()
-  def visibility: Observable[Boolean] = _vis
+  private[this] lazy val _vis: Var[Boolean] = Var(getVisibility == View.VISIBLE)
+  def visibility: Obs[Boolean] = _vis
 
   override def show() = {
     super.show()
-    _vis.onNext(true)
+    _vis() = true
   }
 
   override def hide() = {
     super.hide()
-    _vis.onNext(false)
+    _vis() = false
   }
 }
 
@@ -699,6 +693,7 @@ class HideFabBehavior(context: Context, attrs: AttributeSet) extends Coordinator
     false
   }
 
+  // TODO FIXME cannot handle isEditing (in BrowseActivity)
   override def onNestedScroll(coordinatorLayout: CoordinatorLayout, child: ViewGroup, target: View, dxConsumed: Int, dyConsumed: Int, dxUnconsumed: Int, dyUnconsumed: Int) =
     if (Database.writeSupported) {
       fab.foreach { f =>

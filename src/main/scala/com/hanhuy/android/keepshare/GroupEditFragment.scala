@@ -8,10 +8,6 @@ import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
 import com.hanhuy.android.keepshare.TypedResource._
 import com.hanhuy.keepassj._
-import rx.android.schedulers.AndroidSchedulers.mainThread
-import rx.lang.scala.Subject
-
-import Rx._
 import Futures._
 
 object GroupEditFragment {
@@ -48,12 +44,12 @@ class GroupEditFragment extends AuthorizedFragment {
     val group = view.findView(TR.edit_group)
     val title = view.findView(TR.edit_title)
     val notes = view.findView(TR.edit_notes)
-    val iconObservable: Subject[Int] = Subject()
-    iconObservable.observeOn(mainThread).subscribe { icon =>
+    val iconObservable: Var[Int] = Var(title.icon)
+    iconObservable.subscribe { icon =>
       model = model.copy(icon = icon)
       title.icon = icon
     }
-    group.groupChange.observeOn(mainThread).subscribe { g =>
+    group.groupChange.subscribe { g =>
       model = model.copy(group = g.getUuid)
     }
     title.textfield.onTextChanged(s =>
@@ -73,16 +69,10 @@ class GroupEditFragment extends AuthorizedFragment {
         if (creating) {
           group.group = grp
           view.findView(TR.delete).setVisibility(View.GONE)
-          iconObservable.onNext(Database.Icons(grp.getIconId.ordinal))
+          iconObservable() = Database.Icons(grp.getIconId.ordinal)
         } else {
-          if (grp.getParentGroup == null) {
-            group.setVisibility(View.GONE)
-            title.first = true
-            view.findView(TR.delete).setVisibility(View.GONE)
-          } else
-            group.group = grp.getParentGroup
           if (model == GroupEditModel.blank) {
-            iconObservable.onNext(Database.Icons(grp.getIconId.ordinal))
+            iconObservable() = Database.Icons(grp.getIconId.ordinal)
             title.text = grp.getName
             notes.text = grp.getNotes
 
@@ -117,12 +107,18 @@ class GroupEditFragment extends AuthorizedFragment {
 
             baseModel = Some(model)
           }
+          if (grp.getParentGroup == null) {
+            group.setVisibility(View.GONE)
+            title.first = true
+            view.findView(TR.delete).setVisibility(View.GONE)
+          } else
+            group.group = grp.getParentGroup
         }
       }
     }
 
     title.iconfield.onClick0 {
-      EntryEditFragment.iconPicker(activity, title.iconfield, iconObservable.onNext)
+      EntryEditFragment.iconPicker(activity, title.iconfield, iconObservable.update)
     }
     view
   }
