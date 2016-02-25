@@ -29,6 +29,7 @@ import TypedResource._
  * @author pfnguyen
  */
 object EntryViewActivity {
+  val OTP_MODE = "KeepShare-TimeOtpView"
   val EXTRA_CREATE = "keepshare.extra.CREATE"
   val EXTRA_ENTRY_ID = "keepshare.extra.ENTRY_ID"
   val EXTRA_HISTORY_IDX = "keepshare.extra.HISTORY_IDX"
@@ -264,6 +265,14 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
   override def onCreateOptionsMenu(menu: Menu) = {
     if (!isEditing) {
       getMenuInflater.inflate(R.menu.entry_view, menu)
+      pwentry foreach { e =>
+        val item = menu.findItem(R.id.toggle_otp)
+        val hasOTP = e.getStrings.GetKeys.asScala.exists(_ startsWith "HmacOtp-Secret")
+        if (!hasOTP) {
+          menu.removeItem(R.id.toggle_otp)
+        }
+        item.setChecked(e.getStrings.ReadSafe(OTP_MODE).toBoolean)
+      }
       super.onCreateOptionsMenu(menu)
     }
     true
@@ -275,6 +284,20 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
       true
     case R.id.load_keyboard =>
       pwentry foreach (ShareActivity.selectHandler(this, settings, _))
+      true
+    case R.id.toggle_otp =>
+      val otpmode = !item.isChecked
+      pwentry foreach { e =>
+        item.setChecked(otpmode)
+        if (otpmode) {
+          OtpFragment.show(getFragmentManager, e)
+          e.getStrings.Set(OTP_MODE, new ProtectedString(false, "true"))
+        } else {
+          e.getStrings.Remove(OTP_MODE)
+        }
+        e.Touch(true, false)
+        DatabaseSaveService.save()
+      }
       true
     case _ => super.onOptionsItemSelected(item)
   }
@@ -430,6 +453,8 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
         f
       } ::: history.drop(1)) foreach fieldlist.addView
     }
+    if (e.getStrings.ReadSafe(OTP_MODE).toBoolean)
+      OtpFragment.show(getFragmentManager, e)
   }
 
   override def onSaveInstanceState(outState: Bundle) = {

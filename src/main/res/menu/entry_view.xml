@@ -6,4 +6,10 @@
           android:title="Load into keyboard"
           android:icon="@drawable/ic_settings_keyboard"
           app:showAsAction="ifRoom"/>
+    <item android:id="@+id/toggle_otp"
+        android:checkable="true"
+        app:showAsAction="never"
+        android:menuCategory="container"
+        android:orderInCategory="97"
+        android:title="Show as OTP"/>
 </menu>

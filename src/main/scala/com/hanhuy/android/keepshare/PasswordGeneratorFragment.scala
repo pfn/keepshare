@@ -192,6 +192,8 @@ abstract class AlertDialogFragment extends DialogFragment {
   def title: String
   def onPositiveClick() = ()
   def onNegativeClick() = ()
+  def hasNegativeButton = true
+  def hasPositiveButton = true
   def positiveLabel = getString(R.string.save)
   def negativeLabel = getString(R.string.cancel)
 
@@ -199,10 +201,12 @@ abstract class AlertDialogFragment extends DialogFragment {
     import com.hanhuy.android.conversions._
     new android.app.AlertDialog(getActivity, R.style.DialogTheme) {
       setTitle(title)
-      setButton(DialogInterface.BUTTON_POSITIVE, positiveLabel,
-        (dlg: DialogInterface, b: Int) => onPositiveClick())
-      setButton(DialogInterface.BUTTON_NEGATIVE, negativeLabel,
-        (dlg: DialogInterface, b: Int) => onNegativeClick())
+      if (hasPositiveButton)
+        setButton(DialogInterface.BUTTON_POSITIVE, positiveLabel,
+          (dlg: DialogInterface, b: Int) => onPositiveClick())
+      if (hasNegativeButton)
+        setButton(DialogInterface.BUTTON_NEGATIVE, negativeLabel,
+          (dlg: DialogInterface, b: Int) => onNegativeClick())
 
       override def setContentView(view: View) = setView(view)
     }
