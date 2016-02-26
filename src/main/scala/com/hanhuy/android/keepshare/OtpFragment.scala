@@ -8,13 +8,10 @@ import android.view.{View, Gravity}
 import android.view.ViewGroup.LayoutParams._
 import android.view.animation.LinearInterpolator
 import android.widget.{Toast, LinearLayout, ProgressBar, TextView}
-import com.google.common.io.BaseEncoding
 import com.hanhuy.android.common.UiBus
 import com.hanhuy.keepassj._
 import iota._
 import iota.pure.PureFragment
-
-import scala.util.Try
 
 import OtpFragment._
 /**
@@ -28,7 +25,7 @@ object OtpFragment {
     f.setArguments(b)
     f.show(fm, "otp-view")
   }
-  case class TimeOtpModel(key: Array[Byte], t0: Long, step: Int, size: Int, icon: Int, title: Option[String], username: Option[String])
+  case class TimeOtpModel(data: Database.TotpData, icon: Int, title: Option[String], username: Option[String])
 }
 class OtpFragment extends AlertDialogFragment with PureFragment[Option[TimeOtpModel]] {
   override def hasPositiveButton = false
@@ -42,24 +39,11 @@ class OtpFragment extends AlertDialogFragment with PureFragment[Option[TimeOtpMo
     } yield root.FindEntry(new PwUuid(KeyManager.bytes(id)), true)
     entry map { e =>
       val strings = e.getStrings
-      def getKey(k: String, f: String => Array[Byte]): Option[Array[Byte]] =
-        Option(strings.Get(k)).map(ps => f(ps.ReadString()))
-      def getValue[A](k: String, default: A)(f: String => Option[A]): A =
-        Option(strings.Get(k)).flatMap(ps => f(ps.ReadString())).getOrElse(default)
-      val key =
-        getKey("HmacOtp-Secret",        s => s.getBytes(StrUtil.Utf8))                    orElse
-          getKey("HmacOtp-Secret-Hex",    s => MemUtil.HexStringToByteArray(s.toUpperCase)) orElse
-          getKey("HmacOtp-Secret-Base32", s => MemUtil.ParseBase32(s.toUpperCase))          orElse
-          getKey("HmacOtp-Secret-Base64", s => BaseEncoding.base64().decode(s.toUpperCase)) getOrElse
-          Array.ofDim[Byte](0)
-
-      val t0 = getValue("TimeOtp-T0",     0l)(s => Try(s.toLong).toOption)
-      val step = getValue("TimeOtp-Step", 30)(s => Try(s.toInt).toOption)
-      val size = getValue("TimeOtp-Size",  6)(s => Try(s.toInt).toOption)
+      val data = Database.extractTotpData(e)
       val title = Option(strings.Get(PwDefs.TitleField)).map(_.ReadString)
       val username = Option(strings.Get(PwDefs.UserNameField)).map(_.ReadString)
       val icon = Database.Icons(e.getIconId.ordinal)
-      TimeOtpModel(key, t0, step, size, icon, title, username)
+      TimeOtpModel(data, icon, title, username)
     }
   }
 
@@ -84,8 +68,8 @@ class OtpFragment extends AlertDialogFragment with PureFragment[Option[TimeOtpMo
 
         val t = System.currentTimeMillis / 1000
         state foreach { st =>
-          otpfield.setText(HmacOtp.Generate(st.key,
-            (t - st.t0) / st.step, st.size, false, -1))
+          otpfield.setText(HmacOtp.Generate(st.data.hmac, st.data.key,
+            (t - st.data.t0) / st.data.step, st.data.size, false, -1))
         }
       }
       val listener: AnimatorListener = BrowseActivity.animationEnd { _ =>

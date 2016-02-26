@@ -28,6 +28,17 @@
                   android:theme="@style/AppTheme"
                   android:label="@string/appname">
         </activity>
+        <activity android:name=".CreateFromUrlActivity"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/AppTheme"
+            android:label="@string/appname">
+            <intent-filter>
+                <data android:scheme="otpauth"/>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
+        </activity>
         <activity android:name=".PINSetupActivity"
                   android:windowSoftInputMode="adjustResize"
                   android:theme="@style/AppTheme"

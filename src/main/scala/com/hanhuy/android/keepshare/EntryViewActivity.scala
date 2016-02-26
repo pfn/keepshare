@@ -29,7 +29,8 @@ import TypedResource._
  * @author pfnguyen
  */
 object EntryViewActivity {
-  val OTP_MODE = "KeepShare-TimeOtpView"
+  val TOTP_MODE = "KeepShare-TimeOtpView"
+  val HOTP_MODE = "KeepShare-HmacOtpView"
   val EXTRA_CREATE = "keepshare.extra.CREATE"
   val EXTRA_CREATE_DATA = "keepshare.extra.CREATE_DATA"
   val EXTRA_ENTRY_ID = "keepshare.extra.ENTRY_ID"
@@ -55,11 +56,11 @@ object EntryViewActivity {
     a.startActivity(intent)
     PINHolderService.ping()
   }
-  def create(a: Activity, g: PwGroup, data: Option[EntryCreateData] = None): Unit = {
+  def create(a: Activity, g: Option[PwGroup], data: Option[EntryCreateData] = None): Unit = {
     val intent = new Intent(a, classOf[EntryViewActivity])
     intent.putExtra(EXTRA_CREATE, true)
     intent.putExtra(EXTRA_CREATE_DATA, data.orNull)
-    intent.putExtra(BrowseActivity.EXTRA_GROUP_ID, g.getUuid.ToHexString)
+    intent.putExtra(BrowseActivity.EXTRA_GROUP_ID, g.map(_.getUuid.ToHexString).orNull)
     a.startActivity(intent)
     PINHolderService.ping()
   }
@@ -144,7 +145,22 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
     }
     super.onCreate(savedInstanceState)
     setContentView(R.layout.entry_view)
-
+    for {
+      intent <- Option(getIntent)
+      entry <- Option(intent.getStringExtra(EXTRA_ENTRY_ID))
+    } {
+      val uuid = new PwUuid(KeyManager.bytes(entry))
+      database map { db =>
+        db -> db.getRootGroup.FindEntry(uuid, true)
+      } onSuccessMain { case (db, e) =>
+        showEntry(e, db)
+        if (Option(savedInstanceState) exists (_.getBoolean(STATE_IS_EDITING, false))) {
+          editing(true)
+        }
+      }
+    }
+  }
+  override def onAuthenticated() {
     findView(TR.fab).onClick0 {
       editing(true)
     }
@@ -165,11 +181,11 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
           val custom = e.getStrings.asScala.map { case entry => entry.getKey } filterNot PwDefs.IsStandardField
           custom foreach e.getStrings.Remove
 
-          setField(e, PwDefs.TitleField,    editor.model.title,    false)
+          setField(e, PwDefs.TitleField, editor.model.title, false)
           setField(e, PwDefs.UserNameField, editor.model.username, false)
           setField(e, PwDefs.PasswordField, editor.model.password, true)
-          setField(e, PwDefs.NotesField,    editor.model.notes,    false)
-          setField(e, PwDefs.UrlField,      editor.model.url,      false)
+          setField(e, PwDefs.NotesField, editor.model.notes, false)
+          setField(e, PwDefs.UrlField, editor.model.url, false)
           e.setIconId(PwIcon.values()(Database.Icons.indexOf(editor.model.icon)))
           editor.model.fields foreach { case (k, v) => e.getStrings.Set(k, v) }
 
@@ -207,23 +223,9 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
 
     for {
       intent <- Option(getIntent)
-      entry  <- Option(intent.getStringExtra(EXTRA_ENTRY_ID))
-    } {
-      val uuid = new PwUuid(KeyManager.bytes(entry))
-      database map { db =>
-        db -> db.getRootGroup.FindEntry(uuid, true)
-      } onSuccessMain { case (db,e) =>
-        showEntry(e, db)
-        if (Option(savedInstanceState) exists (_.getBoolean(STATE_IS_EDITING, false))) {
-          editing(true)
-        }
-      }
-    }
-    for {
-      intent <- Option(getIntent)
     } {
       if (intent.getBooleanExtra(EXTRA_CREATE, false)) {
-        creating(intent.getStringExtra(BrowseActivity.EXTRA_GROUP_ID),
+        creating(Option(intent.getStringExtra(BrowseActivity.EXTRA_GROUP_ID)),
           Option(intent.getSerializableExtra(EntryViewActivity.EXTRA_CREATE_DATA).asInstanceOf[EntryCreateData]))
       }
     }
@@ -235,7 +237,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
         editor.password.text = pw
     }
   }
-  def creating(parent: String, data: Option[EntryCreateData] = None): Unit = {
+  def creating(parent: Option[String], data: Option[EntryCreateData] = None): Unit = {
     updating(true, EntryEditFragment.create(parent, data))
     isCreating = true
     editBar.findView(TR.title).setText("Create entry")
@@ -281,7 +283,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
         if (!hasOTP) {
           menu.removeItem(R.id.toggle_otp)
         }
-        item.setChecked(e.getStrings.GetKeys.asScala.contains(OTP_MODE))
+        item.setChecked(e.getStrings.GetKeys.asScala.contains(TOTP_MODE))
       }
       super.onCreateOptionsMenu(menu)
     }
@@ -301,9 +303,9 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
         item.setChecked(otpmode)
         if (otpmode) {
           OtpFragment.show(getFragmentManager, e)
-          e.getStrings.Set(OTP_MODE, new ProtectedString(false, "true"))
+          e.getStrings.Set(TOTP_MODE, new ProtectedString(false, "true"))
         } else {
-          e.getStrings.Remove(OTP_MODE)
+          e.getStrings.Remove(TOTP_MODE)
         }
         e.Touch(true, false)
         DatabaseSaveService.save()
@@ -463,7 +465,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
         f
       } ::: history.drop(1)) foreach fieldlist.addView
     }
-    if (e.getStrings.GetKeys.asScala.contains(OTP_MODE))
+    if (e.getStrings.GetKeys.asScala.contains(TOTP_MODE))
       OtpFragment.show(getFragmentManager, e)
   }
 
@@ -578,8 +580,8 @@ class CustomField(a: AuthorizedActivity) extends StandardFieldView(a, null) {
   override def inflate() = a.getLayoutInflater.inflate(R.layout.custom_field, this, true)
   override lazy val textfield = findView(TR.custom_field)
   lazy val inputlayout = findView(TR.input_layout)
+  override def hint = inputlayout.getHint
   override def hint_=(s: String) = {
     inputlayout.setHint(s)
-    textfield.setHint(s)
   }
 }

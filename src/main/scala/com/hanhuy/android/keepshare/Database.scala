@@ -14,6 +14,9 @@ import com.hanhuy.keepassj.AesEngines.KeyTransformer
 import com.hanhuy.keepassj._
 import com.hanhuy.keepassj.spr.{SprEventArgs, SprEngine, SprContext, SprCompileFlags}
 import org.acra.ACRA
+import org.bouncycastle.crypto.Digest
+import org.bouncycastle.crypto.digests.{SHA256Digest, SHA512Digest, SHA1Digest}
+import org.bouncycastle.crypto.macs.HMac
 
 import scala.concurrent.{Promise, Future}
 
@@ -27,29 +30,43 @@ import scala.util.Try
  */
 object Database {
 
+  sealed trait Otp
+  case class Totp(step: Int) extends Otp
+  case class Hotp(counter: Long) extends Otp
+
+  case class TotpData(key: Array[Byte], t0: Long, step: Int, size: Int, hmac: HMac)
+  def extractTotpData(e: PwEntry): TotpData = {
+    val strings = e.getStrings
+    def getKey(k: String, f: String => Array[Byte]): Option[Array[Byte]] =
+      Option(strings.Get(k)).map(ps => f(ps.ReadString()))
+    def getValue[A](k: String, default: A)(f: String => Option[A]): A =
+      Option(strings.Get(k)).flatMap(ps => f(ps.ReadString())).getOrElse(default)
+    val key =
+      getKey("HmacOtp-Secret",        s => s.getBytes(StrUtil.Utf8))                    orElse
+        getKey("HmacOtp-Secret-Hex",    s => MemUtil.HexStringToByteArray(s.toUpperCase)) orElse
+        getKey("HmacOtp-Secret-Base32", s => MemUtil.ParseBase32(s.toUpperCase))          orElse
+        getKey("HmacOtp-Secret-Base64", s => BaseEncoding.base64().decode(s.toUpperCase)) getOrElse
+        Array.ofDim[Byte](0)
+
+    val hmac = new HMac(getValue[Digest]("HmacOtp-Algorithm", new SHA1Digest) {
+      case "SHA256"   => Some(new SHA256Digest)
+      case "SHA512"   => Some(new SHA512Digest)
+      case "SHA1" | _ => Some(new SHA1Digest)
+    })
+    val t0 = getValue("TimeOtp-T0",     0l)(s => Try(s.toLong).toOption)
+    val step = getValue("TimeOtp-Step", 30)(s => Try(s.toInt).toOption)
+    val size = getValue("TimeOtp-Size",  6)(s => Try(s.toInt).toOption)
+    TotpData(key, t0, step, size, hmac)
+  }
   SprEngine.FilterCompile.add(new EventHandler[SprEventArgs] {
     val TOTP_PLACEHOLDER = "{TOTP}"
     override def delegate(sender: Any, e: SprEventArgs) = {
       if (e.getContext.getFlags.contains(SprCompileFlags.ExtActive)) {
         if (e.getText.toUpperCase.contains(TOTP_PLACEHOLDER)) {
-          val strings = e.getContext.getEntry.getStrings
-          def getKey(k: String, f: String => Array[Byte]): Option[Array[Byte]] =
-            Option(strings.Get(k)).map(ps => f(ps.ReadString()))
-          def getValue[A](k: String, default: A)(f: String => Option[A]): A =
-            Option(strings.Get(k)).flatMap(ps => f(ps.ReadString())).getOrElse(default)
-          val key =
-            getKey("HmacOtp-Secret",        s => s.getBytes(StrUtil.Utf8))                    orElse
-            getKey("HmacOtp-Secret-Hex",    s => MemUtil.HexStringToByteArray(s.toUpperCase)) orElse
-            getKey("HmacOtp-Secret-Base32", s => MemUtil.ParseBase32(s.toUpperCase))          orElse
-            getKey("HmacOtp-Secret-Base64", s => BaseEncoding.base64().decode(s.toUpperCase)) getOrElse
-            Array.ofDim[Byte](0)
-
-          val t0 = getValue("TimeOtp-T0",     0l)(s => Try(s.toLong).toOption)
-          val step = getValue("TimeOtp-Step", 30)(s => Try(s.toInt).toOption)
-          val size = getValue("TimeOtp-Size",  6)(s => Try(s.toInt).toOption)
+          val data = extractTotpData(e.getContext.getEntry)
           val t = System.currentTimeMillis / 1000
           e.setText(StrUtil.ReplaceCaseInsensitive(e.getText, TOTP_PLACEHOLDER,
-            HmacOtp.Generate(key, (t - t0) / step, size, false, -1)))
+            HmacOtp.Generate(data.hmac, data.key, (t - data.t0) / data.step, data.size, false, -1)))
         }
       }
     }

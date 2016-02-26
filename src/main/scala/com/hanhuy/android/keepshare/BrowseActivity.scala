@@ -147,8 +147,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
       database.onSuccessMain { case db =>
         val root = db.getRootGroup
 
-        EntryViewActivity.create(this,
-          groupId map (root.FindGroup(_, true)) getOrElse root)
+        EntryViewActivity.create(this, groupId map (root.FindGroup(_, true)))
       }
     }
     findView(TR.create_group) onClick0 creating()
@@ -255,8 +254,6 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
       Option(list.getAdapter).foreach(_.notifyDataSetChanged())
       true
     case R.id.scan_cc =>
-      database.onSuccessMain { case db =>
-      }
       val intent = new Intent(this, classOf[CardIOActivity])
       intent.putExtra(CardIOActivity.EXTRA_REQUIRE_EXPIRY, true)
       intent.putExtra(CardIOActivity.EXTRA_REQUIRE_CVV, true)
@@ -273,7 +270,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
             val root = db.getRootGroup
 
             EntryViewActivity.create(this,
-              groupId map (root.FindGroup(_, true)) getOrElse root, Some(
+              groupId map (root.FindGroup(_, true)), Some(
                 EntryViewActivity.EntryCreateData(
                   title = Some("New Credit Card"),
                   fields = (true,"CVV", r.cvv) ::

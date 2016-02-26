@@ -35,6 +35,13 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner with D
 
   def ready = readyPromise.isCompleted
   def database = dbFuture getOrElse openDatabase()
+
+  /**
+    * To be overriden by inheritors
+    */
+  def onAuthenticated(): Unit = {
+  }
+
   override def onCreate(savedInstanceState: Bundle) = {
     super.onCreate(savedInstanceState)
     if (settings.get(Settings.FIRST_RUN)) {
@@ -56,6 +63,7 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner with D
         case Right(_) => database
       } onCompleteMain {_=>
         dismissDialog(d)
+        onAuthenticated()
       }
     }
   }
@@ -81,6 +89,7 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner with D
     else {
       readyPromise.trySuccess()
       dbFuture foreach (_.onFailure { case _ => dbFuture = None })
+      if (requestCode == RequestCodes.REQUEST_PIN) onAuthenticated()
     }
   }
   override def onResume() = {

@@ -36,11 +36,12 @@ object EntryEditFragment {
     f.setArguments(b)
     f
   }
-  def create(parent: String, data: Option[EntryViewActivity.EntryCreateData] = None) = {
+  def create(parent: Option[String], data: Option[EntryViewActivity.EntryCreateData] = None) = {
     val f = new EntryEditFragment
     val b = new Bundle
     f.setArguments(b)
-    b.putString(BrowseActivity.EXTRA_GROUP_ID, parent)
+    b.putBoolean(EntryViewActivity.EXTRA_CREATE, true)
+    b.putString(BrowseActivity.EXTRA_GROUP_ID, parent.orNull)
     b.putSerializable(EntryViewActivity.EXTRA_CREATE_DATA, data.orNull)
     f
   }
@@ -101,8 +102,7 @@ class EntryEditFragment extends AuthorizedFragment {
     val createData = Option(getArguments) flatMap(a =>
       Option(a.getSerializable(EntryViewActivity.EXTRA_CREATE_DATA)
         .asInstanceOf[EntryCreateData]))
-    val groupId = Option(getArguments) flatMap(a =>
-      Option(a.getString(BrowseActivity.EXTRA_GROUP_ID)))
+    val groupId = getArguments.? flatMap(_.getString(BrowseActivity.EXTRA_GROUP_ID).?)
 
     val password = view.findView(TR.edit_password)
     val fieldlist = view.findView(TR.field_list)
@@ -137,23 +137,11 @@ class EntryEditFragment extends AuthorizedFragment {
     )
 
     activity.database map { db =>
-      groupId map { id =>
-        val uuid = new PwUuid(KeyManager.bytes(id))
-        db.getRootGroup.FindGroup(uuid, true)
-      }
-    } onSuccessMain { case g =>
-      g foreach { grp =>
-        iconObservable() = Database.Icons(grp.getIconId.ordinal)
-        group.group = grp
-        view.findView(TR.delete).setVisibility(View.GONE)
-      }
-    }
-    activity.database map { db =>
-      entryId map { id =>
+      db -> (entryId map { id =>
         val uuid = new PwUuid(KeyManager.bytes(id))
         db.getRootGroup.FindEntry(uuid, true)
-      }
-    } onSuccessMain { case entry =>
+      })
+    } onSuccessMain { case (db,entry) =>
       entry foreach { e =>
         val s = e.getStrings
 
@@ -197,6 +185,7 @@ class EntryEditFragment extends AuthorizedFragment {
             }
           }
 
+          model = model.copy(group = e.getParentGroup.getUuid)
           baseModel = Some(model)
         }
         group.group = e.getParentGroup
@@ -213,7 +202,16 @@ class EntryEditFragment extends AuthorizedFragment {
               k -> new ProtectedString(pw, v)
           } toMap)
         }
-        baseModel = Some(model)
+      }
+      if (getArguments.?.exists(_.getBoolean(EntryViewActivity.EXTRA_CREATE, false))) {
+        groupId map { id =>
+          val uuid = new PwUuid(KeyManager.bytes(id))
+          db.getRootGroup.FindGroup(uuid, true)
+        } orElse db.getRootGroup.? foreach { grp =>
+          iconObservable() = Database.Icons(grp.getIconId.ordinal)
+          group.group = grp
+          view.findView(TR.delete).setVisibility(View.GONE)
+        }
       }
       model.fields foreach { case (k, v) =>
         val field = new StandardEditView(activity, null)
@@ -359,9 +357,8 @@ class StandardEditView(c: Context, attrs: AttributeSet) extends StandardFieldVie
   override def dispatchSaveInstanceState(container: SparseArray[Parcelable]) =
     dispatchFreezeSelfOnly(container)
 
-  override def hint_=(s: String) = {
-    inputlayout.setHint(s)
-  }
+  override def hint = inputlayout.getHint
+  override def hint_=(s: String) = inputlayout.setHint(s)
 }
 
 object GroupEditView {
