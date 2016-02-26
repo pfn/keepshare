@@ -4,6 +4,13 @@ val supportSdkVersion = "23.2.0"
 
 name := "keepshare"
 
+ndkAbiFilter :=
+  "armeabi" ::
+  "armeabi-v7a" ::
+  "mips" ::
+  "x86" ::
+  Nil
+
 versionName := {
   import com.typesafe.sbt.SbtGit.GitKeys.gitReader
   gitReader.value.withGit(_.describedVersion)
