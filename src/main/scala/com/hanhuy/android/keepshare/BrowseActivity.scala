@@ -26,6 +26,7 @@ import android.app._
 import android.view._
 import android.widget._
 import com.hanhuy.keepassj._
+import io.card.payment.{CreditCard, CardIOActivity}
 
 import collection.JavaConverters._
 import Futures._
@@ -81,7 +82,7 @@ object BrowseActivity {
     }
   }
 }
-class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRefreshLayout.OnRefreshListener {
+class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRefreshLayout.OnRefreshListener with ActivityResultManager {
   lazy val list = findView(TR.recycler)
   lazy val refresher = findView(TR.refresher)
   private var searchView = Option.empty[SearchView]
@@ -119,7 +120,10 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
         m.setChecked(settings.get(Settings.BROWSE_SORT_ALPHA))
       }
 
-      if (Database.writeSupported) menu.findItem(R.id.edit_group).setVisible(true)
+      if (Database.writeSupported) {
+        menu.findItem(R.id.scan_cc).setVisible(true)
+        menu.findItem(R.id.edit_group).setVisible(true)
+      }
 
       database onSuccessMain { case d =>
         if (groupId.contains(d.getRecycleBinUuid) && Database.writeSupported) {
@@ -250,6 +254,36 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
       item.setChecked(!item.isChecked)
       Option(list.getAdapter).foreach(_.notifyDataSetChanged())
       true
+    case R.id.scan_cc =>
+      database.onSuccessMain { case db =>
+      }
+      val intent = new Intent(this, classOf[CardIOActivity])
+      intent.putExtra(CardIOActivity.EXTRA_REQUIRE_EXPIRY, true)
+      intent.putExtra(CardIOActivity.EXTRA_REQUIRE_CVV, true)
+      val request = requestActivityResult(intent)
+      (for {
+        data <- request
+        db <- database
+      } yield (data,db)) onSuccessMain {
+        case ((data,db)) =>
+          for {
+            i <- Option(data)
+            r <- Option(i.getParcelableExtra(CardIOActivity.EXTRA_SCAN_RESULT).asInstanceOf[CreditCard])
+          } {
+            val root = db.getRootGroup
+
+            EntryViewActivity.create(this,
+              groupId map (root.FindGroup(_, true)) getOrElse root, Some(
+                EntryViewActivity.EntryCreateData(
+                  title = Some("New Credit Card"),
+                  fields = (true,"CVV", r.cvv) ::
+                    (true, "Credit Card Number", r.getFormattedCardNumber) ::
+                    (false, "Expiration", f"${r.expiryMonth}%02d/${r.expiryYear}%02d") ::
+                    Nil
+                )))
+          }
+      }
+      true
 
     case _ => super.onOptionsItemSelected(item)
   }
@@ -283,7 +317,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
     }
   }
 
-  private def navigateUp(): Unit = {
+//  private def navigateUp(): Unit = {
 //    stack match {
 //      case x :: xs =>
 //        stack = xs
@@ -299,7 +333,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
 //    } {
 //      intent.putExtra(EXTRA_GROUP_ID, head.ToHexString)
 //    }
-  }
+//  }
 
   def navigateTo(groupId: Option[PwUuid]): Unit = {
     database flatMap { db =>

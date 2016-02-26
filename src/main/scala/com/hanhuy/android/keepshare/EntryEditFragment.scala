@@ -11,6 +11,7 @@ import com.hanhuy.android.common._
 
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
+import com.hanhuy.android.keepshare.EntryViewActivity.EntryCreateData
 import com.hanhuy.keepassj._
 
 import TypedResource._
@@ -35,11 +36,12 @@ object EntryEditFragment {
     f.setArguments(b)
     f
   }
-  def create(parent: String) = {
+  def create(parent: String, data: Option[EntryViewActivity.EntryCreateData] = None) = {
     val f = new EntryEditFragment
     val b = new Bundle
     f.setArguments(b)
     b.putString(BrowseActivity.EXTRA_GROUP_ID, parent)
+    b.putSerializable(EntryViewActivity.EXTRA_CREATE_DATA, data.orNull)
     f
   }
   def iconPicker[A](activity: Activity, anchor: View, onClick: Int => A): Unit = {
@@ -96,6 +98,9 @@ class EntryEditFragment extends AuthorizedFragment {
 
     val entryId = Option(getArguments) flatMap(a =>
       Option(a.getString(EntryViewActivity.EXTRA_ENTRY_ID)))
+    val createData = Option(getArguments) flatMap(a =>
+      Option(a.getSerializable(EntryViewActivity.EXTRA_CREATE_DATA)
+        .asInstanceOf[EntryCreateData]))
     val groupId = Option(getArguments) flatMap(a =>
       Option(a.getString(BrowseActivity.EXTRA_GROUP_ID)))
 
@@ -195,6 +200,20 @@ class EntryEditFragment extends AuthorizedFragment {
           baseModel = Some(model)
         }
         group.group = e.getParentGroup
+      }
+
+      createData foreach { d =>
+        if (model == EntryEditModel.blank) {
+          title.text = d.title.getOrElse("")
+          username.text = d.username.getOrElse("")
+          password.text = d.password.getOrElse("")
+          url.text = d.url.getOrElse("")
+          notes.text = d.notes.getOrElse("")
+          model = model.copy(fields = d.fields map { case ((pw, k, v)) =>
+              k -> new ProtectedString(pw, v)
+          } toMap)
+        }
+        baseModel = Some(model)
       }
       model.fields foreach { case (k, v) =>
         val field = new StandardEditView(activity, null)

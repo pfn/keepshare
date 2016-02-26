@@ -24,6 +24,7 @@ debugIncludesTests := false
 
 libraryDependencies ++= Seq(
   "ch.acra" % "acra" % "4.8.2",
+  "io.card" % "android-sdk" % "5.3.0",
   "com.hanhuy.android" %% "iota-pure" % "0.1-SNAPSHOT",
   "com.hanhuy.android" %% "iota" % "1.0.3",
   "com.hanhuy.android" %% "scala-conversions" % supportSdkVersion,

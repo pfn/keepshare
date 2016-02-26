@@ -27,15 +27,16 @@ trait BaseResultManager {
                                       resultCode: Int,
                                       data: Intent): Unit = {
     if (results.contains(request)) {
-      if (resultCode != Activity.RESULT_OK) {
+      // can't just check RESULT_OK because of card.io ...
+      if (resultCode == Activity.RESULT_CANCELED) {
         results(request).failure(ActivityResultCancel)
       } else {
         results(request).success(data)
       }
       results -= request
     } else {
-      activityFragmentWrapper.onActivityResult(request, resultCode, data)
       arlog.w(s"Request code $request not found: " + data)
+      activityFragmentWrapper.onActivityResult(request, resultCode, data)
     }
   }
   final def requestActivityResult(intent: Intent): Future[Intent] = {

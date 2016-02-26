@@ -74,6 +74,7 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner with D
       case RequestCodes.REQUEST_PIN => resultCode == Activity.RESULT_OK
       case RequestCodes.REQUEST_SETUP_PIN => invalidateOptionsMenu()
         true
+      case _ => false
     }
     if (!success)
       finish()

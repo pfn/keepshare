@@ -31,6 +31,7 @@ import TypedResource._
 object EntryViewActivity {
   val OTP_MODE = "KeepShare-TimeOtpView"
   val EXTRA_CREATE = "keepshare.extra.CREATE"
+  val EXTRA_CREATE_DATA = "keepshare.extra.CREATE_DATA"
   val EXTRA_ENTRY_ID = "keepshare.extra.ENTRY_ID"
   val EXTRA_HISTORY_IDX = "keepshare.extra.HISTORY_IDX"
   val STATE_IS_EDITING = "keepshare.isEditing"
@@ -54,9 +55,10 @@ object EntryViewActivity {
     a.startActivity(intent)
     PINHolderService.ping()
   }
-  def create(a: Activity, g: PwGroup): Unit = {
+  def create(a: Activity, g: PwGroup, data: Option[EntryCreateData] = None): Unit = {
     val intent = new Intent(a, classOf[EntryViewActivity])
     intent.putExtra(EXTRA_CREATE, true)
+    intent.putExtra(EXTRA_CREATE_DATA, data.orNull)
     intent.putExtra(BrowseActivity.EXTRA_GROUP_ID, g.getUuid.ToHexString)
     a.startActivity(intent)
     PINHolderService.ping()
@@ -94,6 +96,13 @@ object EntryViewActivity {
     }
     s
   }
+
+  case class EntryCreateData(title: Option[String] = None,
+                             username: Option[String] = None,
+                             password: Option[String] = None,
+                             url: Option[String] = None,
+                             notes: Option[String] = None,
+                             fields: List[(Boolean,String,String)] = Nil)
 }
 class EntryViewActivity extends AuthorizedActivity with TypedFindView {
   private var pwentry = Option.empty[PwEntry]
@@ -214,7 +223,8 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
       intent <- Option(getIntent)
     } {
       if (intent.getBooleanExtra(EXTRA_CREATE, false)) {
-        creating(intent.getStringExtra(BrowseActivity.EXTRA_GROUP_ID))
+        creating(intent.getStringExtra(BrowseActivity.EXTRA_GROUP_ID),
+          Option(intent.getSerializableExtra(EntryViewActivity.EXTRA_CREATE_DATA).asInstanceOf[EntryCreateData]))
       }
     }
   }
@@ -225,8 +235,8 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
         editor.password.text = pw
     }
   }
-  def creating(parent: String): Unit = {
-    updating(true, EntryEditFragment.create(parent))
+  def creating(parent: String, data: Option[EntryCreateData] = None): Unit = {
+    updating(true, EntryEditFragment.create(parent, data))
     isCreating = true
     editBar.findView(TR.title).setText("Create entry")
   }

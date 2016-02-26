@@ -11,5 +11,5 @@
         app:showAsAction="never"
         android:menuCategory="container"
         android:orderInCategory="97"
-        android:title="Show as OTP"/>
+        android:title="Show as TOTP"/>
 </menu>
