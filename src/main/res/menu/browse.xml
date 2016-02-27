@@ -10,9 +10,12 @@
           android:title="Sort Alphabetically"/>
     <item android:id="@+id/scan_cc"
         app:showAsAction="never"
-        android:menuCategory="container"
         android:visible="false"
         android:title="Scan Credit Card"/>
+    <item android:id="@+id/scan_otp"
+        app:showAsAction="never"
+        android:visible="false"
+        android:title="Scan OTP Barcode"/>
     <item android:id="@+id/edit_group"
             android:title="Edit Group"
             android:visible="false"/>

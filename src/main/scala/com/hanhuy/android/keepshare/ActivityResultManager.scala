@@ -11,6 +11,11 @@ import scala.concurrent.{Future, Promise}
   * @author pfnguyen
   */
 
+/**
+  * Wraps startActivityForResult into a Future interface. Will fail if the
+  * activity started crosses process boundaries, and the requesting process
+  * dies. Any result that occurs in such a case will be ignored.
+  */
 trait BaseResultManager {
   case object ActivityResultCancel extends Exception
   case class ActivityResultProcessor[A,B](startActivityForResult: (Intent, Int) => A, onActivityResult: (Int, Int, Intent) => B)

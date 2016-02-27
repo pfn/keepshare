@@ -28,6 +28,10 @@
                   android:theme="@style/AppTheme"
                   android:label="@string/appname">
         </activity>
+        <activity android:name=".BarcodeScannerActivity"
+            android:theme="@style/AppTheme"
+            android:label="@string/appname">
+        </activity>
         <activity android:name=".CreateFromUrlActivity"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/AppTheme"

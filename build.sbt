@@ -1,6 +1,7 @@
 lazy val keepshare = project.in(file(".")).settings(androidBuild)
 
 val supportSdkVersion = "23.2.0"
+val gmsVersion = "8.3.0"
 
 name := "keepshare"
 
@@ -41,7 +42,8 @@ libraryDependencies ++= Seq(
   "com.android.support" % "recyclerview-v7" % supportSdkVersion,
   "com.android.support" % "design" % supportSdkVersion,
   "com.android.support" % "appcompat-v7" % supportSdkVersion,
-  "com.google.android.gms" % "play-services-drive" % "8.3.0"
+  "com.google.android.gms" % "play-services-drive" % gmsVersion,
+  "com.google.android.gms" % "play-services-vision" % gmsVersion
 )
 
 proguardOptions ++=

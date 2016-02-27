@@ -122,6 +122,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
 
       if (Database.writeSupported) {
         menu.findItem(R.id.scan_cc).setVisible(true)
+        menu.findItem(R.id.scan_otp).setVisible(true)
         menu.findItem(R.id.edit_group).setVisible(true)
       }
 
@@ -252,6 +253,9 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
       settings.set(Settings.BROWSE_SORT_ALPHA, !item.isChecked)
       item.setChecked(!item.isChecked)
       Option(list.getAdapter).foreach(_.notifyDataSetChanged())
+      true
+    case R.id.scan_otp =>
+      startActivity(new Intent(this, classOf[BarcodeScannerActivity]))
       true
     case R.id.scan_cc =>
       val intent = new Intent(this, classOf[CardIOActivity])
