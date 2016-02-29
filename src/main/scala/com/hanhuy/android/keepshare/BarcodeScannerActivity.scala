@@ -1,9 +1,11 @@
 package com.hanhuy.android.keepshare
 
-import android.graphics.{Paint, Color, RectF, Canvas}
+import android.graphics._
+import android.hardware.Camera
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.text.TextPaint
+import android.view.WindowManager
 import android.widget.Toast
 import com.google.android.gms.common.{GoogleApiAvailability, ConnectionResult}
 import com.google.android.gms.vision.Detector.Detections
@@ -12,6 +14,7 @@ import com.google.android.gms.vision.barcode.{Barcode, BarcodeDetector}
 import com.hanhuy.android.common.Futures
 
 import Futures._
+import com.hanhuy.android.keepshare.camera.{GraphicOverlay, CameraSource}
 import iota.std.Configurations._
 
 /**
@@ -42,11 +45,16 @@ class BarcodeScannerActivity extends AppCompatActivity with TypedFindView with P
       Toast.makeText(this, "Barcode detector is not operational, please try again", Toast.LENGTH_LONG).show()
     }
 
+    import iota.std.Contexts._
+    val size = new Point
+    systemService[WindowManager].getDefaultDisplay.getSize(size)
+
+    // because Camera.Parameters is not a static class...
+    val FOCUS_MODE = (null: Camera).Parameters.FOCUS_MODE_CONTINUOUS_PICTURE
     val builder = new CameraSource.Builder(getApplicationContext, detector)
       .setFacing(CameraSource.CAMERA_FACING_BACK)
-      .setRequestedPreviewSize(1600, 1024)
-      // because Camera.Parameters is not a static class...
-      .setFocusMode("continuous-picture")
+      .setRequestedPreviewSize(size.x, size.y)
+      .setFocusMode(FOCUS_MODE)
       .setRequestedFps(15.0f)
 
     cameraSource = Option(builder.build())
