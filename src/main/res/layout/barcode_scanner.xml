@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/topLayout"
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@android:color/background_dark"
     android:keepScreenOn="true">
 
     <com.hanhuy.android.keepshare.camera.CameraSourcePreview
         android:id="@+id/preview"
+        android:layout_gravity="top|center_horizontal"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
@@ -18,4 +20,13 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
     </com.hanhuy.android.keepshare.camera.CameraSourcePreview>
-</LinearLayout>
+    <TextView
+        android:id="@+id/text"
+        android:singleLine="true"
+        android:layout_gravity="bottom"
+        android:padding="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/scanning_for_otp"
+        android:textAppearance="?android:textAppearanceMediumInverse"/>
+</FrameLayout>
