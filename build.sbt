@@ -6,9 +6,7 @@ val gmsVersion = "8.3.0"
 name := "keepshare"
 
 ndkAbiFilter :=
-  "armeabi" ::
   "armeabi-v7a" ::
-  "mips" ::
   "x86" ::
   Nil
 
