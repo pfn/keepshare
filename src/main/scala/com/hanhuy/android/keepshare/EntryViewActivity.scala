@@ -25,6 +25,8 @@ import com.hanhuy.keepassj.spr.{SprEngine, SprCompileFlags, SprContext}
 import scala.collection.JavaConverters._
 import TypedResource._
 
+import scala.concurrent.Promise
+
 /**
  * @author pfnguyen
  */
@@ -144,6 +146,8 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
     }
   }
 
+  lazy val authenticatedPromise = Promise[Unit]()
+
   override def onCreate(savedInstanceState: Bundle) = {
     if (!BuildConfig.DEBUG) {
       getWindow.setFlags(WindowManager.LayoutParams.FLAG_SECURE,
@@ -165,77 +169,78 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
         }
       }
     }
-  }
-  override def onAuthenticated() {
-    findView(TR.fab).onClick0 {
-      editing(true)
-    }
-    editBar.findView(TR.cancel).onClick0 {
-      if (isCreating)
-        finish()
-      editing(false)
-    }
-    editBar.findView(TR.save).onClick0 {
-      val f = Option(getFragmentManager.findFragmentByTag("editor"))
-      f foreach { case editor: EntryEditFragment =>
-        def setField(e: PwEntry, field: String, value: Option[String], isPassword: Boolean): Unit = {
-          value.foreach { s =>
-            e.getStrings.Set(field, new ProtectedString(false, s))
+    authenticatedPromise.future.onSuccessMain { case _ =>
+      findView(TR.fab).onClick0 {
+        editing(true)
+      }
+      editBar.findView(TR.cancel).onClick0 {
+        if (isCreating)
+          finish()
+        editing(false)
+      }
+      editBar.findView(TR.save).onClick0 {
+        val f = Option(getFragmentManager.findFragmentByTag("editor"))
+        f foreach { case editor: EntryEditFragment =>
+          def setField(e: PwEntry, field: String, value: Option[String], isPassword: Boolean): Unit = {
+            value.foreach { s =>
+              e.getStrings.Set(field, new ProtectedString(false, s))
+            }
           }
-        }
-        def copyFromModel(e: PwEntry, needMove: Boolean): Unit = {
-          val custom = e.getStrings.asScala.map { case entry => entry.getKey } filterNot PwDefs.IsStandardField
-          custom foreach e.getStrings.Remove
+          def copyFromModel(e: PwEntry, needMove: Boolean): Unit = {
+            val custom = e.getStrings.asScala.map { case entry => entry.getKey } filterNot PwDefs.IsStandardField
+            custom foreach e.getStrings.Remove
 
-          setField(e, PwDefs.TitleField, editor.model.title, false)
-          setField(e, PwDefs.UserNameField, editor.model.username, false)
-          setField(e, PwDefs.PasswordField, editor.model.password, true)
-          setField(e, PwDefs.NotesField, editor.model.notes, false)
-          setField(e, PwDefs.UrlField, editor.model.url, false)
-          e.setIconId(PwIcon.values()(Database.Icons.indexOf(editor.model.icon)))
-          editor.model.fields foreach { case (k, v) => e.getStrings.Set(k, v) }
+            setField(e, PwDefs.TitleField, editor.model.title, false)
+            setField(e, PwDefs.UserNameField, editor.model.username, false)
+            setField(e, PwDefs.PasswordField, editor.model.password, true)
+            setField(e, PwDefs.NotesField, editor.model.notes, false)
+            setField(e, PwDefs.UrlField, editor.model.url, false)
+            e.setIconId(PwIcon.values()(Database.Icons.indexOf(editor.model.icon)))
+            editor.model.fields foreach { case (k, v) => e.getStrings.Set(k, v) }
 
-          if (needMove) {
-            Option(e.getParentGroup) foreach (_.getEntries.Remove(e))
-            Database.rootGroup foreach { root =>
-              val group = root.FindGroup(editor.model.group, true)
-              group.getEntries.Add(e)
-              e.setParentGroup(group)
+            if (needMove) {
+              Option(e.getParentGroup) foreach (_.getEntries.Remove(e))
+              Database.rootGroup foreach { root =>
+                val group = root.FindGroup(editor.model.group, true)
+                group.getEntries.Add(e)
+                e.setParentGroup(group)
+              }
+            }
+          }
+          if (isCreating) {
+            val e = new PwEntry(true, true)
+            copyFromModel(e, true)
+            showEntry(e, Database.pwdatabase)
+          } else {
+            val needBackup = editor.baseModel.exists(_.needsBackup(editor.model))
+            val needMove = editor.baseModel.exists(_.group != editor.model.group)
+            pwentry foreach { e =>
+              if (needBackup) e.CreateBackup(null)
+              copyFromModel(e, needMove)
+              e.Touch(true, false)
+              showEntry(e, Database.pwdatabase)
             }
           }
         }
-        if (isCreating) {
-          val e = new PwEntry(true, true)
-          copyFromModel(e, true)
-          showEntry(e, Database.pwdatabase)
-        } else {
-          val needBackup = editor.baseModel.exists(_.needsBackup(editor.model))
-          val needMove = editor.baseModel.exists(_.group != editor.model.group)
-          pwentry foreach { e =>
-            if (needBackup) e.CreateBackup(null)
-            copyFromModel(e, needMove)
-            e.Touch(true, false)
-            showEntry(e, Database.pwdatabase)
-          }
-        }
+        editing(false)
+        DatabaseSaveService.save()
       }
-      editing(false)
-      DatabaseSaveService.save()
-    }
 
-    getSupportActionBar.setCustomView(editBar, new ActionBar.LayoutParams(
-      ViewGroup.LayoutParams.MATCH_PARENT,
-      ViewGroup.LayoutParams.MATCH_PARENT))
+      getSupportActionBar.setCustomView(editBar, new ActionBar.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT,
+        ViewGroup.LayoutParams.MATCH_PARENT))
 
-    for {
-      intent <- Option(getIntent)
-    } {
-      if (intent.getBooleanExtra(EXTRA_CREATE, false)) {
-        creating(Option(intent.getStringExtra(BrowseActivity.EXTRA_GROUP_ID)),
-          Option(intent.getSerializableExtra(EntryViewActivity.EXTRA_CREATE_DATA).asInstanceOf[EntryCreateData]))
+      for {
+        intent <- Option(getIntent)
+      } {
+        if (intent.getBooleanExtra(EXTRA_CREATE, false)) {
+          creating(Option(intent.getStringExtra(BrowseActivity.EXTRA_GROUP_ID)),
+            Option(intent.getSerializableExtra(EntryViewActivity.EXTRA_CREATE_DATA).asInstanceOf[EntryCreateData]))
+        }
       }
     }
   }
+  override def onAuthenticated(): Unit = authenticatedPromise.trySuccess()
 
   def saveGeneratedPassword(pw: CharSequence): Unit = {
     Option(getFragmentManager.findFragmentByTag("editor")) foreach { case editor: EntryEditFragment =>
