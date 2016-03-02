@@ -80,6 +80,8 @@ class PINHolderService extends Service {
     Database.close()
     instance = None
     ServiceBus.send(PINServiceExit)
+    // should have been called before we can be destroyed
+    handler.removeCallbacks(finishRunner)
   }
 
   val notificationRunner: Runnable = () => {
