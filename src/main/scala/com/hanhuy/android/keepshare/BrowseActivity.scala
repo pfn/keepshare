@@ -123,7 +123,8 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
       }
 
       if (Database.writeSupported) {
-        menu.findItem(R.id.scan_cc).setVisible(true)
+        if (CardIOActivity.canReadCardWithCamera)
+          menu.findItem(R.id.scan_cc).setVisible(true)
         menu.findItem(R.id.scan_otp).setVisible(true)
         menu.findItem(R.id.edit_group).setVisible(true)
       }
