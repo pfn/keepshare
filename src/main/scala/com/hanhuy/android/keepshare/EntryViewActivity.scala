@@ -113,12 +113,18 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
     TR.layout.entry_edit_action_bar, null, false)
 
   def confirmPrompt[A](onCancel: => A): Unit = {
-    new AlertDialog.Builder(this)
-      .setTitle(R.string.cancel)
-      .setMessage(R.string.discard_confirm)
-      .setNegativeButton(R.string.discard, () => onCancel)
-      .setPositiveButton(R.string.keep_editing, null)
-      .show()
+    val edited = Option(getFragmentManager.findFragmentByTag("editor")) collect {
+      case editor: EntryEditFragment => editor.baseModel.isEmpty || editor.baseModel.exists(_.needsBackup(editor.model))
+    }
+    if (edited.getOrElse(false)) {
+      new AlertDialog.Builder(this)
+        .setTitle(R.string.cancel)
+        .setMessage(R.string.discard_confirm)
+        .setNegativeButton(R.string.discard, () => onCancel)
+        .setPositiveButton(R.string.keep_editing, null)
+        .show()
+    } else onCancel
+
   }
   override def onBackPressed() = {
     if (isEditing && !isCreating) {
@@ -232,8 +238,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
   }
 
   def saveGeneratedPassword(pw: CharSequence): Unit = {
-    val f = Option(getFragmentManager.findFragmentByTag("editor"))
-    f foreach { case editor: EntryEditFragment =>
+    Option(getFragmentManager.findFragmentByTag("editor")) foreach { case editor: EntryEditFragment =>
         editor.password.text = pw
     }
   }

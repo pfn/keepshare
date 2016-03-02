@@ -17,7 +17,9 @@ import android.support.v7.widget.helper.ItemTouchHelper
 import android.support.v7.widget.helper.ItemTouchHelper.SimpleCallback
 import android.support.v7.widget.{LinearLayoutManager, RecyclerView}
 import android.util.AttributeSet
-import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.ViewGroup.LayoutParams
+import android.view.animation.LayoutAnimationController.AnimationParameters
+import android.view.animation.{LayoutAnimationController, AccelerateDecelerateInterpolator}
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
@@ -165,37 +167,37 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
       updating(false, null)
     }
     editBar.findView(TR.save).onClick0 {
-      val f = Option(getFragmentManager.findFragmentByTag("editor"))
-      f foreach { case editor: GroupEditFragment =>
-        def copyFromModel(e: PwGroup, needMove: Boolean): Unit = {
-          editor.model.title foreach e.setName
-          editor.model.notes foreach e.setNotes
-          e.setIconId(PwIcon.values()(Database.Icons.indexOf(editor.model.icon)))
+      Option(getFragmentManager.findFragmentByTag("editor")) foreach {
+        case editor: GroupEditFragment =>
+          def copyFromModel(e: PwGroup, needMove: Boolean): Unit = {
+            editor.model.title foreach e.setName
+            editor.model.notes foreach e.setNotes
+            e.setIconId(PwIcon.values()(Database.Icons.indexOf(editor.model.icon)))
 
-          if (needMove) {
-            Option(e.getParentGroup) foreach (_.getGroups.Remove(e))
-            Database.rootGroup foreach { root =>
-              val group = root.FindGroup(editor.model.group, true)
-              group.getGroups.Add(e)
-              e.setParentGroup(group)
+            if (needMove) {
+              Option(e.getParentGroup) foreach (_.getGroups.Remove(e))
+              Database.rootGroup foreach { root =>
+                val group = root.FindGroup(editor.model.group, true)
+                group.getGroups.Add(e)
+                e.setParentGroup(group)
+              }
             }
           }
-        }
-        if (isCreating) {
-          val e = new PwGroup(true, true)
-          copyFromModel(e, true)
-          navigateTo(Option(e.getUuid))
-        } else {
-          val needMove = editor.baseModel.exists(_.group != editor.model.group)
-          ((for {
-            root <- Database.rootGroup
-            gid  <- groupId
-          } yield root.FindGroup(gid, true)) orElse Database.rootGroup) foreach { g =>
-            copyFromModel(g, needMove)
-            g.Touch(true, false)
-            navigateTo(Option(g.getUuid))
+          if (isCreating) {
+            val e = new PwGroup(true, true)
+            copyFromModel(e, true)
+            navigateTo(Option(e.getUuid))
+          } else {
+            val needMove = editor.baseModel.exists(_.group != editor.model.group)
+            ((for {
+              root <- Database.rootGroup
+              gid  <- groupId
+            } yield root.FindGroup(gid, true)) orElse Database.rootGroup) foreach { g =>
+              copyFromModel(g, needMove)
+              g.Touch(true, false)
+              navigateTo(Option(g.getUuid))
+            }
           }
-        }
       }
       editing(false)
       DatabaseSaveService.save()
@@ -296,16 +298,20 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
 
 
   override def onBackPressed() = {
-//    navigateUp()
+    val edited = Option(getFragmentManager.findFragmentByTag("editor")) collect {
+      case editor: GroupEditFragment => editor.baseModel.isEmpty || editor.baseModel.exists(_.modified(editor.model))
+    } getOrElse false
     if (isEditing) {
-      new AlertDialog.Builder(this)
-        .setTitle(R.string.cancel)
-        .setMessage(R.string.discard_confirm)
-        .setNegativeButton(R.string.discard, () => {
-          editing(false)
-        })
-        .setPositiveButton(R.string.keep_editing, null)
-        .show()
+      if (edited) {
+        new AlertDialog.Builder(this)
+          .setTitle(R.string.cancel)
+          .setMessage(R.string.discard_confirm)
+          .setNegativeButton(R.string.discard, () => {
+            editing(false)
+          })
+          .setPositiveButton(R.string.keep_editing, null)
+          .show()
+      } else editing(false)
     } else {
       val shouldBack = searchView.exists(_.isIconified) ||
         getResources.getBoolean(R.bool.is_tablet)
@@ -747,5 +753,17 @@ class HideFabBehavior(context: Context, attrs: AttributeSet) extends Coordinator
   override def onStartNestedScroll(coordinatorLayout: CoordinatorLayout, child: ViewGroup, directTargetChild: View, target: View, nestedScrollAxes: Int) = {
     scrolling = true
     true
+  }
+}
+
+class LayoutAnimationRecyclerView(c: Context, attrs: AttributeSet) extends RecyclerView(c, attrs) {
+  override def attachLayoutAnimationParameters(child: View, params: LayoutParams, index: Int, count: Int) = {
+    if (getAdapter != null && params != null) {
+      val lparams = Option(params.layoutAnimationParameters) getOrElse new AnimationParameters
+      params.layoutAnimationParameters = lparams
+      lparams.count = count
+      lparams.index = index
+    } else
+      super.attachLayoutAnimationParameters(child, params, index, count)
   }
 }

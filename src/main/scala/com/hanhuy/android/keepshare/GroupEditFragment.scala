@@ -129,4 +129,7 @@ object GroupEditModel {
     None, None, PwUuid.Zero)
 }
 case class GroupEditModel(icon: Int, title: Option[String],
-                          notes: Option[String], group: PwUuid)
+                          notes: Option[String], group: PwUuid) {
+  def modified(other: GroupEditModel) =
+    other.icon != icon || other.notes != notes || other.title != title
+}
