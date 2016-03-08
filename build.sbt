@@ -35,7 +35,7 @@ libraryDependencies ++= Seq(
   "com.hanhuy.android" %% "iota" % "1.0.4",
   "com.hanhuy.android" %% "scala-conversions" % supportSdkVersion,
   "com.hanhuy.android" %% "scala-conversions-design" % supportSdkVersion,
-  "com.hanhuy.android" %% "scala-common" % "1.2",
+  "com.hanhuy.android" %% "scala-common" % "1.3",
   "com.hanhuy.keepassj" % "keepassj" % "2.31.1" exclude("xpp3", "xpp3"),
   "com.android.support" % "recyclerview-v7" % supportSdkVersion,
   "com.android.support" % "design" % supportSdkVersion,

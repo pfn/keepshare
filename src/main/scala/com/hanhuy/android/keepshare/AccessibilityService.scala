@@ -105,13 +105,21 @@ object AccessibilityService {
     Set(Application.instance.getPackageName, "com.android.systemui", "")
   else
     Set(Application.instance.getPackageName, "com.android.chrome", "com.android.systemui")
+
+  implicit class RunManagedResource[A : ManagedResource.ResourceManager](val mr: ManagedResource[A]) {
+    def run[B](f: A => B): B = try {
+      f(mr.res)
+    } finally {
+      mr.cleanup foreach (_())
+      implicitly[ManagedResource.ResourceManager[A]].dispose(mr.res)
+    }
+  }
 }
 
 @TargetApi(18)
 class AccessibilityService extends Accessibility with EventBus.RefOwner {
   import AccessibilityService._
   val log = Logcat("AccessibilityService")
-  private var lastWindowId: Option[Int] = None
   private var lastCanceledSearchURI: Option[URI] = None
   private var lastSearchURI: Option[URI] = None
 
@@ -126,50 +134,48 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
    * @tparam A whatever you want
    * @return Option[A] result of f
    */
-  def withTree[A](windowId: Int)(f: (String, Option[URI],
-      AccessibilityTree, AccessibilityTree) => A): Option[A] = {
+  def withTree[A](windowId: Int)(
+    f: (String, Option[URI], AccessibilityTree, AccessibilityTree) => A): Option[A] = {
 
     val root = getRootInActiveWindow
-    val tree = AccessibilityTree(root)
-    // half overlays, like IME will show with a different window ID
-    // notifications seem to put in the wrong package name as well
-    // any views with systemui should be filtered out
-    val r = if (tree.windowId.contains(windowId) && !tree.exists (
+    ManagedResource(AccessibilityTree(root)).run { tree =>
+      // half overlays, like IME will show with a different window ID
+      // notifications seem to put in the wrong package name as well
+      // any views with systemui should be filtered out
+      if (tree.windowId.contains(windowId) && !tree.exists(
         _.viewIdResourceName exists (_ startsWith "com.android.systemui"))) {
-      for {
-        packageName <- tree.packageName
-        password    <- tree find (_.isPassword)
-      } yield {
-        val searchURI = if (packageName == "com.android.chrome") {
-          tree.findNodeById("com.android.chrome:id/url_bar") flatMap { u =>
-            val url = u.getText.toString
-            Try(new URI(if (url.indexOf(":/") < 0) "http://" + url else url)).toOption
+        for {
+          packageName <- tree.packageName
+          password <- tree find (_.isPassword)
+        } yield {
+          val searchURI = if (packageName == "com.android.chrome") {
+            tree.findNodeById("com.android.chrome:id/url_bar") flatMap { u =>
+              val url = u.getText.toString
+              Try(new URI(if (url.indexOf(":/") < 0) "http://" + url else url)).toOption
+            }
+          } else if (packageName == "com.android.browser") {
+            tree.findNodeById("com.android.browser:id/url") flatMap { u =>
+              val url = u.getText.toString
+              Try(new URI(if (url.indexOf(":/") < 0) "http://" + url else url)).toOption
+            }
+          } else if (packageName == "com.opera.browser" || packageName == "com.opera.mini.native") {
+            // mini uses a different package name
+            val pkg = if (packageName == "com.opera.browser") packageName else "com.opera.android"
+            tree.findNodeById(pkg + ":id/url_field") flatMap { u =>
+              val url = u.getText.toString
+              Try(new URI(if (url.indexOf(":/") < 0) "http://" + url else url)).toOption
+            }
+          } else {
+            val appHost = packageName.toString
+              .split( """\.""").reverse.mkString(".")
+            Some(new URI("android-package://" + appHost))
           }
-        } else if (packageName == "com.android.browser") {
-          tree.findNodeById("com.android.browser:id/url") flatMap { u =>
-            val url = u.getText.toString
-            Try(new URI(if (url.indexOf(":/") < 0) "http://" + url else url)).toOption
-          }
-        } else if (packageName == "com.opera.browser" || packageName == "com.opera.mini.native") {
-          // mini uses a different package name
-          val pkg = if (packageName == "com.opera.browser") packageName else "com.opera.android"
-          tree.findNodeById(pkg + ":id/url_field") flatMap { u =>
-            val url = u.getText.toString
-            Try(new URI(if (url.indexOf(":/") < 0) "http://" + url else url)).toOption
-          }
-        } else {
-          val appHost = packageName.toString
-            .split( """\.""").reverse.mkString(".")
-          Some(new URI("android-package://" + appHost))
+          f(packageName.toString, searchURI, tree, password)
         }
-        f(packageName.toString, searchURI, tree, password)
+      } else {
+        None
       }
-    } else {
-      None
     }
-
-    tree.dispose()
-    r
   }
   override def onAccessibilityEvent(event: AccessibilityEvent) {
     import AccessibilityEvent._
@@ -216,20 +222,13 @@ class AccessibilityService extends Accessibility with EventBus.RefOwner {
                     lastSearchURI = searchURI
                   }
                 }
-              } else {
-                if (!lastWindowId.contains(windowId)) {
-                  this.systemService[NotificationManager].cancel(Notifications.NOTIF_FOUND)
-                }
               }
+            } getOrElse {
+              this.systemService[NotificationManager].cancel(Notifications.NOTIF_FOUND)
             }
-            lastWindowId = Some(windowId)
           }
           handler.post(r)
           lastCallback = Some(r)
-
-
-        case TYPE_VIEW_HOVER_ENTER | TYPE_VIEW_HOVER_EXIT =>
-          lastWindowId = Some(event.getWindowId)
         case _ =>
       }
     }
