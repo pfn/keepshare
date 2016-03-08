@@ -100,8 +100,14 @@ case class FingerprintManager(context: Context, settings: Settings) {
                 val cipher = co.getCipher
                 val fpin = settings.get(Settings.FINGERPRINT_PIN)
                 val bytes = KeyManager.bytes(fpin)
-                val pin = new String(cipher.doFinal(bytes), "utf-8")
-                sig(FingerprintSuccess(pin))
+                try {
+                  val pin = new String(cipher.doFinal(bytes), "utf-8")
+                  sig(FingerprintSuccess(pin))
+                } catch {
+                  case e: Exception =>
+                    sig(FingerprintAuthenticationError(
+                      android.hardware.fingerprint.FingerprintManager.FINGERPRINT_ERROR_UNABLE_TO_PROCESS, e.getMessage))
+                }
                 cancelToken.cancel()
               }
 
