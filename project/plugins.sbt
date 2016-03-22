@@ -1,4 +1,4 @@
-addSbtPlugin("com.hanhuy.sbt" % "android-sdk-plugin" % "1.5.19")
+addSbtPlugin("com.hanhuy.sbt" % "android-sdk-plugin" % "1.5.20")
 
 addSbtPlugin("com.hanhuy.sbt" % "android-protify" % "1.1.15")
 

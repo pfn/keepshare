@@ -1,6 +1,7 @@
 lazy val keepshare = project.in(file(".")).settings(androidBuild)
 
-val supportSdkVersion = "23.2.0"
+val supportSdkVersion = "23.2.1"
+val conversionsVersion = "23.2.0"
 val gmsVersion = "8.3.0"
 
 name := "keepshare"
@@ -33,8 +34,8 @@ libraryDependencies ++= Seq(
   "io.card" % "android-sdk" % "5.3.0",
   "com.hanhuy.android" %% "iota-pure" % "0.1",
   "com.hanhuy.android" %% "iota" % "1.0.4",
-  "com.hanhuy.android" %% "scala-conversions" % supportSdkVersion,
-  "com.hanhuy.android" %% "scala-conversions-design" % supportSdkVersion,
+  "com.hanhuy.android" %% "scala-conversions" % conversionsVersion,
+  "com.hanhuy.android" %% "scala-conversions-design" % conversionsVersion,
   "com.hanhuy.android" %% "scala-common" % "1.3",
   "com.hanhuy.keepassj" % "keepassj" % "2.32.0" exclude("xpp3", "xpp3"),
   "com.android.support" % "recyclerview-v7" % supportSdkVersion,

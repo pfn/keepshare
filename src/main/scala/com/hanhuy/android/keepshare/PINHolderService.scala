@@ -20,6 +20,7 @@ object PINHolderService {
 
   val EXTRA_PIN = "com.hanhuy.android.keepshare.extra.PIN"
   val ACTION_CANCEL = "com.hanhuy.android.keepshare.action.PIN_CANCEL"
+  val ACTION_SAVED_PIN = "com.hanhuy.android.keepshare.action.SAVED_PIN"
 
   val PIN_VERIFIER = EXTRA_PIN
 
@@ -34,6 +35,12 @@ object PINHolderService {
   def start(pin: String): Unit = {
     val intent = new Intent(Application.instance, classOf[PINHolderService])
     intent.putExtra(PINHolderService.EXTRA_PIN, pin)
+    Application.instance.startService(intent)
+  }
+  def startWithKey(key: String): Unit = {
+    val intent = new Intent(Application.instance, classOf[PINHolderService])
+    intent.setAction(ACTION_SAVED_PIN)
+    intent.putExtra(PINHolderService.EXTRA_PIN, key)
     Application.instance.startService(intent)
   }
 
@@ -112,16 +119,29 @@ class PINHolderService extends Service {
   }
 
   override def onStartCommand(intent: Intent, flags: Int, startId: Int) = {
-    val pin = Option(intent.getStringExtra(EXTRA_PIN))
-    pin match {
-      case Some(p) =>
-        _key = keyFor(p)
-        ping()
-        handler.postDelayed(notificationRunner, 1000)
-        startForeground(Notifications.NOTIF_DATABASE_UNLOCKED, notification)
-        registerReceiver(receiver, ACTION_CANCEL)
-      case None =>
-        stopSelf(startId)
+    def startup(): Unit = {
+      ping()
+      handler.postDelayed(notificationRunner, 1000)
+      startForeground(Notifications.NOTIF_DATABASE_UNLOCKED, notification)
+      registerReceiver(receiver, ACTION_CANCEL)
+    }
+    if (ACTION_SAVED_PIN == intent.getAction && BuildConfig.DEBUG) {
+      intent.getStringExtra(EXTRA_PIN).? match {
+        case Some(key) =>
+          _key = new SecretKeySpec(KeyManager.bytes(key), KeyManager.ALG)
+          startup()
+        case None =>
+          stopSelf(startId)
+      }
+    } else {
+      val pin = Option(intent.getStringExtra(EXTRA_PIN))
+      pin match {
+        case Some(p) =>
+          _key = keyFor(p)
+          startup()
+        case None =>
+          stopSelf(startId)
+      }
     }
     Service.START_NOT_STICKY
   }

@@ -1,12 +1,11 @@
 package com.hanhuy.android.keepshare
 
-import android.app.{Dialog, Activity, ProgressDialog}
+import android.app.{Activity, ProgressDialog}
 import android.content.Intent
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.view.{MenuItem, Menu}
 import android.widget.Toast
-import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
 import com.hanhuy.keepassj.PwDatabase
 
@@ -14,8 +13,9 @@ import scala.concurrent.{Promise, Future}
 
 import Futures._
 
-import scala.util.Try
-
+object AuthorizedActivity {
+  val EXTRA_SAVED_PIN = "keepshare.extra.PIN"
+}
 /**
  * @author pfnguyen
  */
@@ -40,18 +40,12 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner with D
     * To be overriden by inheritors
     */
   def onAuthenticated(): Unit = {
+
   }
 
   override def onCreate(savedInstanceState: Bundle) = {
     super.onCreate(savedInstanceState)
-    if (settings.get(Settings.FIRST_RUN)) {
-      startActivityForResult(SetupActivity.intent, RequestCodes.REQUEST_SETUP)
-    } else if (!km.ready) {
-      if (settings.get(Settings.NEEDS_PIN) && PINHolderService.instance.isEmpty)
-        PINEntryActivity.requestPIN(this)
-      else
-        startActivityForResult(SetupActivity.intent, RequestCodes.REQUEST_SETUP)
-    } else {
+    def onSuccess(): Unit = {
       readyPromise.trySuccess()
       val d = showingDialog(ProgressDialog.show(this, getString(R.string.loading_key),
         getString(R.string.please_wait), true, false))
@@ -61,9 +55,38 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner with D
             SetupActivity.intent, RequestCodes.REQUEST_SETUP)
           Future.failed(KeyError.LoadFailed("need setup"))
         case Right(_) => database
-      } onCompleteMain {_=>
+      } onCompleteMain { _ =>
         dismissDialog(d)
         onAuthenticated()
+      }
+    }
+    (for {
+      state <- savedInstanceState.? if BuildConfig.DEBUG
+      savedkey <- state.getString(AuthorizedActivity.EXTRA_SAVED_PIN).?
+    } yield savedkey) match {
+      case Some(savedkey) =>
+        PINHolderService.startWithKey(savedkey)
+        onSuccess()
+      case None =>
+        if (settings.get(Settings.FIRST_RUN)) {
+          startActivityForResult(SetupActivity.intent, RequestCodes.REQUEST_SETUP)
+        } else if (!km.ready) {
+          if (settings.get(Settings.NEEDS_PIN) && PINHolderService.instance.isEmpty)
+            PINEntryActivity.requestPIN(this)
+          else
+            startActivityForResult(SetupActivity.intent, RequestCodes.REQUEST_SETUP)
+        } else {
+          onSuccess()
+        }
+    }
+  }
+
+
+  override def onSaveInstanceState(outState: Bundle) = {
+    super.onSaveInstanceState(outState)
+    if (BuildConfig.DEBUG) {
+      PINHolderService.instance.foreach { service =>
+        outState.putString(AuthorizedActivity.EXTRA_SAVED_PIN, KeyManager.hex(service.pinKey.getEncoded))
       }
     }
   }
