@@ -38,6 +38,8 @@ object PINHolderService {
     Application.instance.startService(intent)
   }
   def startWithKey(key: String): Unit = {
+    if (!BuildConfig.DEBUG)
+      throw new IllegalStateException("This cannot run in RELEASE!")
     val intent = new Intent(Application.instance, classOf[PINHolderService])
     intent.setAction(ACTION_SAVED_PIN)
     intent.putExtra(PINHolderService.EXTRA_PIN, key)
