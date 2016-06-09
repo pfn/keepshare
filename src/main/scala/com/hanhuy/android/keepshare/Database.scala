@@ -44,7 +44,7 @@ object Database {
     val key =
       getKey("HmacOtp-Secret",        s => s.getBytes(StrUtil.Utf8))                    orElse
         getKey("HmacOtp-Secret-Hex",    s => MemUtil.HexStringToByteArray(s.toUpperCase)) orElse
-        getKey("HmacOtp-Secret-Base32", s => MemUtil.ParseBase32(s.toUpperCase))          orElse
+        getKey("HmacOtp-Secret-Base32", s => BaseEncoding.base32().decode(s.toUpperCase)) orElse
         getKey("HmacOtp-Secret-Base64", s => BaseEncoding.base64().decode(s.toUpperCase)) getOrElse
         Array.ofDim[Byte](0)
 
