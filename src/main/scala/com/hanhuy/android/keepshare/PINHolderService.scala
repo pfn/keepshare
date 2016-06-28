@@ -1,13 +1,14 @@
 package com.hanhuy.android.keepshare
 
 import com.hanhuy.android.common._
-
-import android.app.{NotificationManager, Notification, PendingIntent, Service}
-import android.content.{Context, BroadcastReceiver, Intent}
+import android.app.{Notification, NotificationManager, PendingIntent, Service}
+import android.content.{BroadcastReceiver, Context, Intent}
 import javax.crypto.spec.{PBEKeySpec, SecretKeySpec}
 import javax.crypto.{SecretKey, SecretKeyFactory}
-import android.os.{SystemClock, Handler}
+
+import android.os.{Handler, SystemClock}
 import android.support.v4.app.NotificationCompat
+import android.widget.RemoteViews
 
 object Notifications {
   val NOTIF_FOUND = 0
@@ -18,9 +19,10 @@ object Notifications {
 object PINHolderService {
   var instance = Option.empty[PINHolderService]
 
-  val EXTRA_PIN = "com.hanhuy.android.keepshare.extra.PIN"
-  val ACTION_CANCEL = "com.hanhuy.android.keepshare.action.PIN_CANCEL"
-  val ACTION_SAVED_PIN = "com.hanhuy.android.keepshare.action.SAVED_PIN"
+  val EXTRA_PIN         = "com.hanhuy.android.keepshare.extra.PIN"
+  val ACTION_CANCEL     = "com.hanhuy.android.keepshare.action.PIN_CANCEL"
+  val ACTION_ADD_TIME_1 = "com.hanhuy.android.keepshare.action.ADD_TIME_1"
+  val ACTION_SAVED_PIN  = "com.hanhuy.android.keepshare.action.SAVED_PIN"
 
   val PIN_VERIFIER = EXTRA_PIN
 
@@ -67,7 +69,7 @@ class PINHolderService extends Service {
   private def ping(): Unit = {
     handler.removeCallbacks(finishRunner)
     val pinTimeout = settings.get(Settings.PIN_TIMEOUT) * 60 * 1000
-    shutdownAt = SystemClock.uptimeMillis + pinTimeout
+    shutdownAt = math.max(shutdownAt, SystemClock.uptimeMillis + pinTimeout)
     handler.postAtTime(finishRunner, shutdownAt)
     nm.notify(Notifications.NOTIF_DATABASE_UNLOCKED, notification)
   }
@@ -98,26 +100,28 @@ class PINHolderService extends Service {
     handler.postDelayed(notificationRunner, 1000)
   }
 
-  val finishRunner: Runnable = () => {
-    unregisterReceiver(receiver)
-    handler.removeCallbacks(notificationRunner)
-    stopForeground(true)
-    stopSelf()
-  }
 
   def notification = {
     val remaining = (shutdownAt - SystemClock.uptimeMillis) / 1000
     val minutes = remaining / 60
     val seconds = remaining % 60
-    val ms = f"($minutes%d:$seconds%02d)"
-    new NotificationCompat.Builder(this)
-      .setPriority(Notification.PRIORITY_MIN)
-      .setContentText(getString(R.string.pin_holder_notif_text) + " " + ms)
-      .setContentTitle(getString(R.string.pin_holder_notif_title, getString(R.string.appname)))
-      .setSmallIcon(R.drawable.ic_lock)
-      .setContentIntent(PendingIntent.getBroadcast(
+    val ms = f"$minutes%d:$seconds%02d"
+    val view = new RemoteViews(getPackageName, R.layout.notification)
+    view.setTextViewText(R.id.title, getString(R.string.pin_holder_notif_title, getString(R.string.appname)))
+    view.setTextViewText(R.id.text, getString(R.string.pin_holder_notif_text, ms))
+    view.setImageViewResource(R.id.icon, R.drawable.ic_launcher)
+    view.setOnClickPendingIntent(R.id.action1, PendingIntent.getBroadcast(
+        this, 0, new Intent(ACTION_ADD_TIME_1), PendingIntent.FLAG_UPDATE_CURRENT))
+    view.setOnClickPendingIntent(R.id.action2, PendingIntent.getBroadcast(
       this, 0, new Intent(ACTION_CANCEL), PendingIntent.FLAG_UPDATE_CURRENT))
+    val n = new NotificationCompat.Builder(this)
+      .setPriority(Notification.PRIORITY_MIN)
+      .setContent(view)
+      .setSmallIcon(R.drawable.ic_lock)
+      .setContentIntent(PendingIntent.getActivity(
+      this, 0, new Intent(this, classOf[BrowseActivity]), PendingIntent.FLAG_UPDATE_CURRENT))
     .build
+    n
   }
 
   override def onStartCommand(intent: Intent, flags: Int, startId: Int) = {
@@ -125,7 +129,7 @@ class PINHolderService extends Service {
       ping()
       handler.postDelayed(notificationRunner, 1000)
       startForeground(Notifications.NOTIF_DATABASE_UNLOCKED, notification)
-      registerReceiver(receiver, ACTION_CANCEL)
+      registerReceiver(receiver, Seq(ACTION_CANCEL, ACTION_ADD_TIME_1))
     }
     if (ACTION_SAVED_PIN == intent.getAction && BuildConfig.DEBUG) {
       intent.getStringExtra(EXTRA_PIN).? match {
@@ -150,8 +154,22 @@ class PINHolderService extends Service {
 
   val receiver = new BroadcastReceiver {
     override def onReceive(c: Context, i: Intent) {
-      handler.removeCallbacks(finishRunner)
-      finishRunner.run()
+      i.getAction match {
+        case ACTION_CANCEL =>
+          handler.removeCallbacks(finishRunner)
+          finishRunner.run ()
+        case ACTION_ADD_TIME_1 =>
+          shutdownAt = shutdownAt + 60 * 1000
+          nm.notify(Notifications.NOTIF_DATABASE_UNLOCKED, notification)
+        case _ =>
+      }
     }
+  }
+
+  val finishRunner: Runnable = () => {
+    unregisterReceiver(receiver)
+    handler.removeCallbacks(notificationRunner)
+    stopForeground(true)
+    stopSelf()
   }
 }

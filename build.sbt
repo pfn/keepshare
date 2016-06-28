@@ -1,6 +1,6 @@
 lazy val keepshare = project.in(file(".")).settings(androidBuild)
 
-val supportSdkVersion = "23.2.1"
+val supportSdkVersion = "23.4.0"
 val conversionsVersion = "23.2.0"
 val gmsVersion = "8.3.0"
 
