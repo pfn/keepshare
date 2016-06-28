@@ -31,6 +31,8 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
   lazy val vibrator = this.systemService[Vibrator]
   lazy val fpm = FingerprintManager(this, settings)
   lazy val fpmObs = fpm.authenticate()
+  val keys = List(R.id.pin_0, R.id.pin_1, R.id.pin_2, R.id.pin_3,
+    R.id.pin_4, R.id.pin_5, R.id.pin_6, R.id.pin_7, R.id.pin_8, R.id.pin_9)
   private[this] var subscription = Option.empty[Sub]
 
   private[this] var pin = ""
@@ -47,6 +49,23 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
       vibrator.vibrate(20)
       ok.setEnabled(pin.length > 0)
     }
+    val failCount = settings.get(Settings.PIN_FAIL_COUNT)
+    if (failCount > 0) {
+      val failTime = settings.get(Settings.PIN_FAIL_TIME)
+      val delay = (math.pow(2, failCount) * 5).toInt
+      val unlockTime = failTime + delay * 1000
+      val now = System.currentTimeMillis
+      if (now < unlockTime) {
+        val delayTime = unlockTime - now
+        keys.foreach { findViewById(_).setEnabled(false) }
+        error.setVisibility(View.VISIBLE)
+        error.setText("Previous login failed, please wait")
+        UiBus.handler.postDelayed(() => {
+          keys.foreach { findViewById(_).setEnabled(true) }
+          error.setVisibility(View.GONE)
+        }, delayTime)
+      }
+    }
 
     val cloudKey = km.fetchCloudKey()
     var verifyCount = 0
@@ -60,6 +79,7 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
           KeyManager.decryptToString(key, verifier))).toOption
 
         if (decrypted contains PINHolderService.PIN_VERIFIER) {
+          settings.set(Settings.PIN_FAIL_COUNT, 0)
           PINHolderService.start(pin)
           setResult(Activity.RESULT_OK)
           fpm.registerPin(pin)
@@ -72,6 +92,8 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
           UiBus.handler.removeCallbacks(clearError)
           UiBus.handler.postDelayed(clearError, 1000)
           if (verifyCount > 2) {
+            settings.set(Settings.PIN_FAIL_COUNT, settings.get(Settings.PIN_FAIL_COUNT) + 1)
+            settings.set(Settings.PIN_FAIL_TIME, System.currentTimeMillis)
             error.setText(R.string.no_more_tries)
             setResult(Activity.RESULT_CANCELED)
             finish()
@@ -124,10 +146,7 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
       }
     }
 
-    Seq(R.id.pin_9, R.id.pin_8, R.id.pin_7,
-      R.id.pin_6, R.id.pin_5, R.id.pin_4,
-      R.id.pin_3, R.id.pin_2, R.id.pin_1,
-      R.id.pin_0, R.id.pin_ok, R.id.pin_back) foreach {
+    keys ++ List(R.id.pin_ok, R.id.pin_back) foreach {
       findViewById(_).onClick(onClick)
     }
     if (fpm.hasFingerprints && allowFingerprint) {

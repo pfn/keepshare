@@ -54,6 +54,8 @@ object Settings {
   val FINGERPRINT_TIMESTAMP = LongSetting("fingerprint_timestamp", 0l)
   val FINGERPRINT_PIN = StringSetting("fingerprint_pin")
   val FINGERPRINT_ENABLE = BooleanSetting("fingerprint_enable", true)
+  val PIN_FAIL_COUNT = IntSetting("pin_fail_count", 0)
+  val PIN_FAIL_TIME = LongSetting("pin_fail_time", 0)
 
   val BROWSE_SORT_ALPHA = BooleanSetting("browse_sort_order", true)
 
