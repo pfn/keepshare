@@ -160,6 +160,8 @@ class PINHolderService extends Service {
           finishRunner.run ()
         case ACTION_ADD_TIME_1 =>
           shutdownAt = shutdownAt + 60 * 1000
+          handler.removeCallbacks(finishRunner)
+          handler.postAtTime(finishRunner, shutdownAt)
           nm.notify(Notifications.NOTIF_DATABASE_UNLOCKED, notification)
         case _ =>
       }
