@@ -6,7 +6,6 @@ import com.hanhuy.android.extensions._
 import android.app.Activity
 import android.os.Bundle
 import android.view.View
-import android.content.Intent
 import com.hanhuy.android.common.{Futures, UiBus}
 import Futures._
 import android.widget.Toast
@@ -34,21 +33,26 @@ class PINSetupActivity extends AppCompatActivity with TypedFindView {
       val waitforit = for {
         key <- km.fetchCloudKey()
         lk1 <- km.localKey
-        localKey <- lk1.right.toOption
       } yield {
-        val pinKey = PINHolderService.keyFor(thePin)
-        val newkey = KeyManager.encrypt(key, KeyManager.encrypt(
-          pinKey, localKey.getEncoded))
-        settings.set(Settings.LOCAL_KEY, newkey)
-        settings.set(Settings.NEEDS_PIN, true)
-        settings.set(Settings.PIN_TIMESTAMP, System.currentTimeMillis)
-        FingerprintManager(this, settings).registerPin(thePin)
-        settings.set(Settings.PIN_VERIFIER,
-          KeyManager.encrypt(key, KeyManager.encrypt(pinKey,
-            PINHolderService.PIN_VERIFIER)))
-        setResult(Activity.RESULT_OK)
-        finish()
+        lk1.right foreach { localKey =>
+          val pinKey = PINHolderService.keyFor(thePin)
+          val newkey = KeyManager.encrypt(key, KeyManager.encrypt(
+            pinKey, localKey.getEncoded))
+          settings.set(Settings.LOCAL_KEY, newkey)
+          settings.set(Settings.NEEDS_PIN, true)
+          settings.set(Settings.PIN_TIMESTAMP, System.currentTimeMillis)
+          FingerprintManager(this, settings).registerPin(thePin)
+          settings.set(Settings.PIN_VERIFIER,
+            KeyManager.encrypt(key, KeyManager.encrypt(pinKey,
+              PINHolderService.PIN_VERIFIER)))
+          setResult(Activity.RESULT_OK)
+          finish()
+        }
+        lk1.left foreach { ex =>
+          throw new IllegalStateException("Local key is not available: " + ex)
+        }
       }
+
       waitforit.onFailureMain { case e =>
           Toast.makeText(this, "Failed to save new PIN: " + e.getMessage, Toast.LENGTH_LONG).show()
           ACRA.getErrorReporter.handleSilentException(e)
