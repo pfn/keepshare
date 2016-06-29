@@ -5,18 +5,17 @@ import android.widget.SearchView.OnSuggestionListener
 import com.hanhuy.android.common._
 import com.hanhuy.android.extensions._
 import TypedResource._
-
-import android.app.{Dialog, ProgressDialog, SearchManager, Activity}
+import android.app.{Activity, Dialog, ProgressDialog, SearchManager}
 import android.os.Bundle
 import android.content._
 import android.widget._
 import android.database.{AbstractCursor, Cursor}
 import android.net.Uri
 import android.provider.BaseColumns
-import android.view.{MenuItem, View, ViewGroup, Menu}
-import com.hanhuy.keepassj.{PwUuid, PwDefs}
-
+import android.view.{Menu, MenuItem, View, ViewGroup}
+import com.hanhuy.keepassj.{PwDefs, PwUuid}
 import Futures._
+import org.acra.ACRA
 
 import scala.language.postfixOps
 import scala.concurrent.Await
@@ -170,6 +169,7 @@ class SearchableActivity extends AuthorizedActivity {
     }
     results onFailureMain { case e =>
       dismissDialog(d)
+      ACRA.getErrorReporter.handleSilentException(e)
     }
   }
 

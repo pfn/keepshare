@@ -4,13 +4,12 @@ import android.support.v7.app.AppCompatActivity
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
-
-import android.app.{ProgressDialog, AlertDialog, Activity}
-import android.os.{Vibrator, Bundle}
-import android.view.{MenuItem, Menu, View}
+import android.app.{Activity, AlertDialog, ProgressDialog}
+import android.os.{Bundle, Vibrator}
+import android.view.{Menu, MenuItem, View}
 import android.content.Intent
-
 import Futures._
+import org.acra.ACRA
 
 import scala.util.Try
 
@@ -100,9 +99,10 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
           }
         }
       }
-      cloudKey.onFailureMain { case _ =>
+      cloudKey.onFailureMain { case e =>
         error.setVisibility(View.VISIBLE)
         error.setText(R.string.key_changed_clear_data)
+        ACRA.getErrorReporter.handleSilentException(e)
       }
 
       if (!cloudKey.isCompleted) {

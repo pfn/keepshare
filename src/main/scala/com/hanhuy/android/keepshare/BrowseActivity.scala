@@ -1,11 +1,11 @@
 package com.hanhuy.android.keepshare
 
-import android.animation.{AnimatorListenerAdapter, Animator}
+import android.animation.{Animator, AnimatorListenerAdapter}
 import android.annotation.TargetApi
 import android.app.FragmentManager.OnBackStackChangedListener
-import android.content.{Context, ComponentName, Intent}
+import android.content.{ComponentName, Context, Intent}
 import android.database.Cursor
-import android.graphics.{Canvas, BitmapFactory}
+import android.graphics.{BitmapFactory, Canvas}
 import android.graphics.drawable.{BitmapDrawable, LayerDrawable}
 import android.os.Bundle
 import android.support.design.widget.{CoordinatorLayout, FloatingActionButton, Snackbar}
@@ -19,24 +19,23 @@ import android.support.v7.widget.{LinearLayoutManager, RecyclerView}
 import android.util.AttributeSet
 import android.view.ViewGroup.LayoutParams
 import android.view.animation.LayoutAnimationController.AnimationParameters
-import android.view.animation.{LayoutAnimationController, AccelerateDecelerateInterpolator}
+import android.view.animation.{AccelerateDecelerateInterpolator, LayoutAnimationController}
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
-
 import android.app._
 import android.view._
 import android.widget._
 import com.hanhuy.keepassj._
-import io.card.payment.{CreditCard, CardIOActivity}
+import io.card.payment.{CardIOActivity, CreditCard}
 
 import collection.JavaConverters._
 import Futures._
 import BrowseActivity._
 
 import scala.concurrent.Future
-
 import TypedResource._
+import org.acra.ACRA
 
 /**
  * @author pfnguyen
@@ -234,6 +233,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
         database onFailureMain { case t =>
           refresher.setRefreshing(false)
           Toast.makeText(this, "Unable to reload database: " + t.getMessage, Toast.LENGTH_LONG).show()
+          ACRA.getErrorReporter.handleSilentException(t)
           finish()
         }
       }
@@ -451,6 +451,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
     if (ready) database onFailureMain { case e =>
       Toast.makeText(this, "Failed to load database: " + e.getMessage,
         Toast.LENGTH_LONG).show()
+      ACRA.getErrorReporter.handleSilentException(e)
     }
   }
 

@@ -3,14 +3,14 @@ package com.hanhuy.android.keepshare
 import android.support.v7.app.AppCompatActivity
 import com.hanhuy.android.common._
 import com.hanhuy.android.extensions._
-
 import android.app.Activity
 import android.os.Bundle
 import android.view.View
 import android.content.Intent
 import com.hanhuy.android.common.{Futures, UiBus}
-
 import Futures._
+import android.widget.Toast
+import org.acra.ACRA
 
 class PINSetupActivity extends AppCompatActivity with TypedFindView {
 
@@ -31,11 +31,11 @@ class PINSetupActivity extends AppCompatActivity with TypedFindView {
       val thePin = pin mkString ""
       PINHolderService.start(thePin)
       val km = new KeyManager(this, settings)
-      for {
+      val waitforit = for {
         key <- km.fetchCloudKey()
         lk1 <- km.localKey
         localKey <- lk1.right.toOption
-      } {
+      } yield {
         val pinKey = PINHolderService.keyFor(thePin)
         val newkey = KeyManager.encrypt(key, KeyManager.encrypt(
           pinKey, localKey.getEncoded))
@@ -48,6 +48,10 @@ class PINSetupActivity extends AppCompatActivity with TypedFindView {
             PINHolderService.PIN_VERIFIER)))
         setResult(Activity.RESULT_OK)
         finish()
+      }
+      waitforit.onFailureMain { case e =>
+          Toast.makeText(this, "Failed to save new PIN: " + e.getMessage, Toast.LENGTH_LONG).show()
+          ACRA.getErrorReporter.handleSilentException(e)
       }
     }
     else {

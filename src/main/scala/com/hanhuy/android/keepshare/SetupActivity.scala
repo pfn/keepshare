@@ -3,7 +3,7 @@ package com.hanhuy.android.keepshare
 import android.annotation.TargetApi
 import android.content.res.ColorStateList
 import android.net.Uri
-import android.preference.{PreferenceGroup, ListPreference, CheckBoxPreference, Preference}
+import android.preference.{CheckBoxPreference, ListPreference, Preference, PreferenceGroup}
 import android.support.design.widget.TextInputLayout
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.AppCompatEditText
@@ -15,19 +15,19 @@ import com.hanhuy.android.common._
 import com.hanhuy.keepassj._
 
 import collection.JavaConversions._
-
-import android.app.{AlertDialog, ProgressDialog, Activity}
+import android.app.{Activity, AlertDialog, ProgressDialog}
 import android.os.Bundle
 import android.content._
 import android.view._
 import android.widget._
-import java.io.{FileInputStream, IOException, FileOutputStream, File}
+import java.io.{File, FileInputStream, FileOutputStream, IOException}
+
 import android.text.InputType
 import android.view.inputmethod.InputMethodManager
 import android.provider.{DocumentsContract, OpenableColumns}
-
 import Futures._
 import ManagedResource._
+import org.acra.ACRA
 
 import scala.concurrent.Future
 
@@ -611,6 +611,7 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
         f onFailureMain { case e =>
           error("Unable to open database: " + e.getMessage)
           saveButton.setEnabled(true)
+          ACRA.getErrorReporter.handleSilentException(e)
           log.e("failed to load database", e)
         }
 
