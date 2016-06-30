@@ -151,7 +151,7 @@ object Database {
         Future.successful(pwdb)
       } catch {
         case e: OutOfMemoryError =>
-          ACRA.getErrorReporter.handleSilentException(e)
+          Application.logException("onFailureMain", e)
           Future.failed(e)
       }
     }
@@ -207,7 +207,6 @@ object Database {
           mergeIn.Open(IOConnectionInfo.FromPath(p), d.getMasterKey, null)
         } catch {
           case e: OutOfMemoryError =>
-            ACRA.getErrorReporter.handleSilentException(e)
             throw new IllegalArgumentException(e)
         }
         d.MergeIn(mergeIn, PwMergeMethod.Synchronize)

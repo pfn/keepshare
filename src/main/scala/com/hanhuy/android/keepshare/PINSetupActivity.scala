@@ -55,7 +55,7 @@ class PINSetupActivity extends AppCompatActivity with TypedFindView {
 
       waitforit.onFailureMain { case e =>
           Toast.makeText(this, "Failed to save new PIN: " + e.getMessage, Toast.LENGTH_LONG).show()
-          ACRA.getErrorReporter.handleSilentException(e)
+        Application.logException("waitforit onFailureMain", e)
       }
     }
     else {

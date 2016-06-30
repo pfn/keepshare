@@ -233,7 +233,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
         database onFailureMain { case t =>
           refresher.setRefreshing(false)
           Toast.makeText(this, "Unable to reload database: " + t.getMessage, Toast.LENGTH_LONG).show()
-          ACRA.getErrorReporter.handleSilentException(t)
+          Application.logException("onFailureMain", t)
           finish()
         }
       }
@@ -451,7 +451,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
     if (ready) database onFailureMain { case e =>
       Toast.makeText(this, "Failed to load database: " + e.getMessage,
         Toast.LENGTH_LONG).show()
-      ACRA.getErrorReporter.handleSilentException(e)
+      Application.logException("onFailureMain", e)
     }
   }
 

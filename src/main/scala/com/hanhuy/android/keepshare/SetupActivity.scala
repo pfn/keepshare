@@ -611,7 +611,7 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
         f onFailureMain { case e =>
           error("Unable to open database: " + e.getMessage)
           saveButton.setEnabled(true)
-          ACRA.getErrorReporter.handleSilentException(e)
+          Application.logException("onFailureMain opening database", e)
           log.e("failed to load database", e)
         }
 

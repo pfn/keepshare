@@ -102,7 +102,7 @@ class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogM
       cloudKey.onFailureMain { case e =>
         error.setVisibility(View.VISIBLE)
         error.setText(R.string.key_changed_clear_data)
-        ACRA.getErrorReporter.handleSilentException(e)
+        Application.logException("cloudKey onFailureMain", e)
       }
 
       if (!cloudKey.isCompleted) {

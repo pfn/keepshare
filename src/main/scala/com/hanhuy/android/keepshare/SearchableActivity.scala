@@ -169,7 +169,7 @@ class SearchableActivity extends AuthorizedActivity {
     }
     results onFailureMain { case e =>
       dismissDialog(d)
-      ACRA.getErrorReporter.handleSilentException(e)
+      Application.logException("onFailureMain", e)
     }
   }
 
