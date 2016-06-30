@@ -30,7 +30,7 @@ scalaVersion := "2.11.8"
 debugIncludesTests := false
 
 libraryDependencies ++= Seq(
-  "ch.acra" % "acra" % "4.8.2",
+  "ch.acra" % "acra" % "4.9.0",
   "io.card" % "android-sdk" % "5.3.0",
   "com.hanhuy.android" %% "iota-pure" % "0.1",
   "com.hanhuy.android" %% "iota" % "1.0.4",

@@ -10,6 +10,8 @@ import android.os.{Handler, SystemClock}
 import android.support.v4.app.NotificationCompat
 import android.widget.RemoteViews
 
+import scala.util.Try
+
 object Notifications {
   val NOTIF_FOUND = 0
   val NOTIF_DATABASE_UNLOCKED = 1
@@ -169,7 +171,7 @@ class PINHolderService extends Service {
   }
 
   val finishRunner: Runnable = () => {
-    unregisterReceiver(receiver)
+    Try(unregisterReceiver(receiver))
     handler.removeCallbacks(notificationRunner)
     stopForeground(true)
     stopSelf()

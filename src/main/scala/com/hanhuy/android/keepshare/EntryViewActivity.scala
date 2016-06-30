@@ -253,8 +253,10 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
     editBar.findView(TR.title).setText("Create entry")
   }
   def editing(b: Boolean): Unit = {
-    updating(b, if (b) EntryEditFragment.edit(pwentry.get) else null)
-    editBar.findView(TR.title).setText("Update entry")
+    pwentry foreach { pwe =>
+      updating(b, if (b) EntryEditFragment.edit(pwe) else null)
+      editBar.findView(TR.title).setText("Update entry")
+    }
   }
 
   def updating(b: Boolean, f: Fragment) {
@@ -329,7 +331,11 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
       intent <- Option(getIntent)
       extra  <- Option(intent.getIntExtra(EXTRA_HISTORY_IDX, -1)) if extra != -1
     } yield extra
-    val entry = histIdx map (i => e.getHistory.GetAt(i)) getOrElse e
+    val entry = histIdx map { i =>
+      val hist = e.getHistory
+      val c = hist.getUCount
+      hist.GetAt(if (i >= c) c - 1 else i)
+    } getOrElse e
     pwentry = Some(entry)
 
     val ab = getSupportActionBar

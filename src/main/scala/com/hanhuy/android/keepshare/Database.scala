@@ -9,19 +9,19 @@ import android.net.Uri
 import android.os.SystemClock
 import android.provider.DocumentsContract
 import com.google.common.io.BaseEncoding
-import com.hanhuy.android.common.{ManagedResource, Futures, ServiceBus}
+import com.hanhuy.android.common.{Futures, ManagedResource, ServiceBus}
 import com.hanhuy.keepassj.AesEngines.KeyTransformer
 import com.hanhuy.keepassj._
-import com.hanhuy.keepassj.spr.{SprEventArgs, SprEngine, SprContext, SprCompileFlags}
+import com.hanhuy.keepassj.spr.{SprCompileFlags, SprContext, SprEngine, SprEventArgs}
 import org.acra.ACRA
 import org.bouncycastle.crypto.Digest
-import org.bouncycastle.crypto.digests.{SHA256Digest, SHA512Digest, SHA1Digest}
+import org.bouncycastle.crypto.digests.{SHA1Digest, SHA256Digest, SHA512Digest}
 import org.bouncycastle.crypto.macs.HMac
 
-import scala.concurrent.{Promise, Future}
-
+import scala.concurrent.{Future, Promise}
 import Futures._
 import ManagedResource._
+import com.hanhuy.android.keepshare.KeyError.AuthFailure
 
 import scala.util.Try
 
@@ -153,6 +153,8 @@ object Database {
         case e: OutOfMemoryError =>
           Application.logException("onFailureMain", e)
           Future.failed(e)
+        case k: InvalidCompositeKeyException =>
+          Future.failed(AuthFailure(Application.instance.getString(R.string.failed_authentication)))
       }
     }
     for {

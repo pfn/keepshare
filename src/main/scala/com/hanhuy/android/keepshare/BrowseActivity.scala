@@ -349,104 +349,109 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
         Future.failed(KeyError.NeedLoad)
       }
     } onSuccessMain { case db =>
-      val root = db.getRootGroup
-      val group = groupId flatMap { id =>
-        Option(root.FindGroup(id, true)) } getOrElse root
-      val ab = getSupportActionBar
-      ab.setTitle(group.getName)
-//      if (PwUuid.Zero == group.getCustomIconUuid) {
+      val root = db.getRootGroup.?
+      val group = for {
+        gid <- groupId
+        r   <- root
+      } yield r.FindGroup(gid, true).?.getOrElse(r)
+
+      group foreach { group =>
+        val ab = getSupportActionBar
+        ab.setTitle(group.getName)
+        //      if (PwUuid.Zero == group.getCustomIconUuid) {
         val bm = BitmapFactory.decodeResource(getResources, Database.Icons(group.getIconId.ordinal))
         val bd = new BitmapDrawable(getResources, bm)
         bd.setGravity(Gravity.CENTER)
         val layers = new LayerDrawable(Array(bd, getResources.getDrawable(R.drawable.logo_frame)))
         ab.setIcon(layers)
         ab.setDisplayShowHomeEnabled(true)
-        ab.setDisplayHomeAsUpEnabled(group != root)
-//      }
-      val groups = group.GetGroups(false).asScala.toList
-      val entries = group.GetEntries(false).asScala.toList
+        ab.setDisplayHomeAsUpEnabled(!root.contains(group))
+        //      }
+        val groups = group.GetGroups(false).asScala.toList
+        val entries = group.GetEntries(false).asScala.toList
 
-      val adapter = new GroupAdapter(db, Option(group.getParentGroup), groups, entries)
-      list.setLayoutManager(new LinearLayoutManager(this))
-      list.setAdapter(adapter)
-      val callback = new SimpleCallback(0, ItemTouchHelper.RIGHT) {
-        override def onSwiped(viewHolder: ViewHolder, direction: Int) = {
-          val gh = viewHolder.asInstanceOf[GroupHolder]
-          gh.upper.animate().x(viewHolder.itemView.getRight).alpha(0).start()
-          gh.item.foreach { item =>
-            val pos = viewHolder.getAdapterPosition
-            val (inRecycle, title) = item.fold({ g =>
-              adapter.groups = adapter.groups filterNot (_ == g)
-              val inRecycle = Database.recycleBin.exists(g.IsContainedIn)
-              Database.delete(g)
-              (inRecycle, g.getName)
-            }, { e =>
-              adapter.entries = adapter.entries filterNot (_ == e)
-              val inRecycle = (for {
-                p <- Option(e.getParentGroup)
-                r <- Database.recycleBin
-              } yield {
-                p == r || p.IsContainedIn(r)
-              }) getOrElse false
-              Database.delete(e)
-              (inRecycle, e.getStrings.ReadSafe(PwDefs.TitleField))
-            })
-            DatabaseSaveService.save()
-            adapter.data = adapter.sortedData
-            adapter.notifyItemRemoved(pos)
-            val sb = Snackbar.make(viewHolder.itemView,
-              getString(R.string.delete_entry, title), 5000)
-            if (!inRecycle) sb.setAction(R.string.undo, () => {
-              item.fold({ g =>
-                adapter.groups  = g :: adapter.groups
-                Database.recycleBin.foreach(_.getGroups.Remove(g))
-                group.getGroups.Add(g)
-                g.setParentGroup(group)
-                g.Touch(true, false)
+        val adapter = new GroupAdapter(db, Option(group.getParentGroup), groups, entries)
+        list.setLayoutManager(new LinearLayoutManager(this))
+        list.setAdapter(adapter)
+        val callback = new SimpleCallback(0, ItemTouchHelper.RIGHT) {
+          override def onSwiped(viewHolder: ViewHolder, direction: Int) = {
+            val gh = viewHolder.asInstanceOf[GroupHolder]
+            gh.upper.animate().x(viewHolder.itemView.getRight).alpha(0).start()
+            gh.item.foreach { item =>
+              val pos = viewHolder.getAdapterPosition
+              val (inRecycle, title) = item.fold({ g =>
+                adapter.groups = adapter.groups filterNot (_ == g)
+                val inRecycle = Database.recycleBin.exists(g.IsContainedIn)
+                Database.delete(g)
+                (inRecycle, g.getName)
               }, { e =>
-                adapter.entries = e :: adapter.entries
-                Database.recycleBin.foreach(_.getEntries.Remove(e))
-                group.getEntries.Add(e)
-                e.setParentGroup(group)
-                e.Touch(true, false)
+                adapter.entries = adapter.entries filterNot (_ == e)
+                val inRecycle = (for {
+                  p <- Option(e.getParentGroup)
+                  r <- Database.recycleBin
+                } yield {
+                  p == r || p.IsContainedIn(r)
+                }) getOrElse false
+                Database.delete(e)
+                (inRecycle, e.getStrings.ReadSafe(PwDefs.TitleField))
               })
               DatabaseSaveService.save()
               adapter.data = adapter.sortedData
-              adapter.notifyItemInserted(adapter.data.indexOf(item))
-            })
-            sb.show()
+              adapter.notifyItemRemoved(pos)
+              val sb = Snackbar.make(viewHolder.itemView,
+                getString(R.string.delete_entry, title), 5000)
+              if (!inRecycle) sb.setAction(R.string.undo, () => {
+                item.fold({ g =>
+                  adapter.groups = g :: adapter.groups
+                  Database.recycleBin.foreach(_.getGroups.Remove(g))
+                  group.getGroups.Add(g)
+                  g.setParentGroup(group)
+                  g.Touch(true, false)
+                }, { e =>
+                  adapter.entries = e :: adapter.entries
+                  Database.recycleBin.foreach(_.getEntries.Remove(e))
+                  group.getEntries.Add(e)
+                  e.setParentGroup(group)
+                  e.Touch(true, false)
+                })
+                DatabaseSaveService.save()
+                adapter.data = adapter.sortedData
+                adapter.notifyItemInserted(adapter.data.indexOf(item))
+              })
+              sb.show()
+            }
+          }
+
+          override def onMove(recyclerView: RecyclerView, viewHolder: ViewHolder, target: ViewHolder) =
+            false
+
+          override def onChildDraw(c: Canvas, recyclerView: RecyclerView,
+                                   viewHolder: ViewHolder, dX: Float, dY: Float,
+                                   actionState: Int, isCurrentlyActive: Boolean) = {
+            val width = recyclerView.getWidth
+            val alpha = dX.toFloat / width
+            val upper = viewHolder.asInstanceOf[GroupHolder].upper
+            upper.setTranslationX(dX)
+            upper.setAlpha(1 - alpha)
+          }
+
+          override def getSwipeThreshold(viewHolder: ViewHolder) = 0.5f
+
+          override def getSwipeDirs(recyclerView: RecyclerView, viewHolder: ViewHolder) = {
+            val gh = viewHolder.asInstanceOf[GroupHolder]
+            val isRecycle = (for {
+              i <- gh.item
+              rid <- Database.recycleBinId
+            } yield {
+              i.left.exists(_.getUuid == rid)
+            }) getOrElse false
+            if (gh.isUp || isRecycle) 0 else ItemTouchHelper.RIGHT
           }
         }
-
-        override def onMove(recyclerView: RecyclerView, viewHolder: ViewHolder, target: ViewHolder) =
-          false
-
-        override def onChildDraw(c: Canvas, recyclerView: RecyclerView,
-                                 viewHolder: ViewHolder, dX: Float, dY: Float,
-                                 actionState: Int, isCurrentlyActive: Boolean) = {
-          val width = recyclerView.getWidth
-          val alpha = dX.toFloat / width
-          val upper = viewHolder.asInstanceOf[GroupHolder].upper
-          upper.setTranslationX(dX)
-          upper.setAlpha(1-alpha)
-        }
-
-        override def getSwipeThreshold(viewHolder: ViewHolder) = 0.5f
-
-        override def getSwipeDirs(recyclerView: RecyclerView, viewHolder: ViewHolder) = {
-          val gh = viewHolder.asInstanceOf[GroupHolder]
-          val isRecycle = (for {
-            i <- gh.item
-            rid <- Database.recycleBinId
-          } yield {
-            i.left.exists(_.getUuid == rid)
-          }) getOrElse false
-          if (gh.isUp || isRecycle) 0 else ItemTouchHelper.RIGHT
-        }
+        if (Database.writeSupported && !Database.recycleBinId.contains(group.getUuid))
+          new ItemTouchHelper(callback).attachToRecyclerView(list)
+        list.setNestedScrollingEnabled(true)
       }
-      if (Database.writeSupported && !Database.recycleBinId.contains(group.getUuid))
-        new ItemTouchHelper(callback).attachToRecyclerView(list)
-      list.setNestedScrollingEnabled(true)
     }
     if (ready) database onFailureMain { case e =>
       Toast.makeText(this, "Failed to load database: " + e.getMessage,

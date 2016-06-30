@@ -89,6 +89,10 @@ object KeyManager {
         val ivspec = new IvParameterSpec(iv)
         cipher.init(Cipher.DECRYPT_MODE, k, ivspec)
         cipher.doFinal(encrypted)
+      case _ =>
+        val e = new RuntimeException("match error")
+        Application.logException(data, e)
+        throw e
     }
   }
 
@@ -314,6 +318,7 @@ sealed trait KeyError
 object KeyError {
   case object NeedPin extends Exception("Need PIN") with KeyError
   case class VerifyFailure(error: String) extends KeyError
+  case class AuthFailure(error: String) extends Exception(error) with KeyError
   case object NeedLoad extends Exception("Need to load") with KeyError
   case object NeedClear extends KeyError
   case object NeedSetup extends Exception("Need setup") with KeyError

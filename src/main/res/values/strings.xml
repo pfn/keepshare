@@ -115,6 +115,7 @@
     <string name="create">Create</string>
     <string name="move_to_recycle">It can be found in the recycle bin later if you change your mind</string>
     <string name="delete_permanently">It will be permanently deleted</string>
+    <string name="failed_authentication">Database authentication failed</string>
     <string name="failed_verify">
         Failed to verify encrypted data, run setup!</string>
     <string name="failed_to_open">Failed to open database: </string>
