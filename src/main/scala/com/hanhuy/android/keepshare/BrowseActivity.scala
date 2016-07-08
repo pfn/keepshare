@@ -349,10 +349,10 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
       }
     } onSuccessMain { case db =>
       val root = db.getRootGroup.?
-      val group = for {
+      val group = (for {
         gid <- groupId
         r   <- root
-      } yield r.FindGroup(gid, true).?.getOrElse(r)
+      } yield r.FindGroup(gid, true)).orElse(root)
 
       group foreach { group =>
         val ab = getSupportActionBar
