@@ -9,20 +9,16 @@ import android.view.View
 import com.hanhuy.android.common.{Futures, UiBus}
 import Futures._
 import android.widget.Toast
-import org.acra.ACRA
 
 class PINSetupActivity extends AppCompatActivity with TypedFindView {
 
-  lazy val pinEntry = findView(TR.pin)
-  lazy val ok = findView(TR.pin_ok)
-  lazy val error = findView(TR.pin_error)
-  lazy val back = findView(TR.pin_back)
+  lazy val views: TypedViewHolder.pin_setup = TypedViewHolder.setContentView(this, TR.layout.pin_setup)
   private var pin = Seq.empty[String]
   private var selectedPin = pin
   lazy val settings = Settings(this)
 
   private val clearError: Runnable = () => {
-    error.setVisibility(View.INVISIBLE)
+    views.pin_error.setVisibility(View.INVISIBLE)
   }
 
   private def verifyMatch() {
@@ -59,9 +55,9 @@ class PINSetupActivity extends AppCompatActivity with TypedFindView {
       }
     }
     else {
-      error.setVisibility(View.VISIBLE)
-      error.setText(R.string.try_again)
-      pinEntry.setText("")
+      views.pin_error.setVisibility(View.VISIBLE)
+      views.pin_error.setText(R.string.try_again)
+      views.pin.setText("")
       pin = Seq.empty
       UiBus.handler.removeCallbacks(clearError)
       UiBus.handler.postDelayed(clearError, 1000)
@@ -70,18 +66,18 @@ class PINSetupActivity extends AppCompatActivity with TypedFindView {
 
   private def validatePin() {
     clearError.run()
-    pinEntry.setText(pin mkString "")
-    if (selectedPin.size > 0) {
-      ok.setEnabled(true)
-      error.setVisibility(View.INVISIBLE)
-    } else if (pin.size < 4 && pin.size > 0) {
-      error.setVisibility(View.VISIBLE)
-      error.setText(R.string.pin_at_least_4)
-      ok.setEnabled(false)
+    views.pin.setText(pin mkString "")
+    if (selectedPin.nonEmpty) {
+      views.pin_ok.setEnabled(true)
+      views.pin_error.setVisibility(View.INVISIBLE)
+    } else if (pin.size < 4 && pin.nonEmpty) {
+      views.pin_error.setVisibility(View.VISIBLE)
+      views.pin_error.setText(R.string.pin_at_least_4)
+      views.pin_ok.setEnabled(false)
     } else {
-      error.setVisibility(View.INVISIBLE)
-      if (pin.size > 0)
-        ok.setEnabled(true)
+      views.pin_error.setVisibility(View.INVISIBLE)
+      if (pin.nonEmpty)
+        views.pin_ok.setEnabled(true)
     }
   }
 
@@ -113,14 +109,14 @@ class PINSetupActivity extends AppCompatActivity with TypedFindView {
         case R.id.pin_0    => pin :+= "0"
           validatePin()
         case R.id.pin_ok   =>
-          if (selectedPin.size > 0) {
+          if (selectedPin.nonEmpty) {
             verifyMatch()
           } else {
             selectedPin = pin
             pin = Seq.empty
-            ok.setEnabled(false)
-            findView(TR.pin_prompt).setText(R.string.confirm_pin)
-            pinEntry.setText("")
+            views.pin_ok.setEnabled(false)
+            views.pin_prompt.setText(R.string.confirm_pin)
+            views.pin.setText("")
           }
         case R.id.pin_back =>
           pin = pin.dropRight(1)
@@ -128,11 +124,9 @@ class PINSetupActivity extends AppCompatActivity with TypedFindView {
       }
     }
 
-    Seq(R.id.pin_9, R.id.pin_8, R.id.pin_7,
-      R.id.pin_6, R.id.pin_5, R.id.pin_4,
-      R.id.pin_3, R.id.pin_2, R.id.pin_1,
-      R.id.pin_0, R.id.pin_ok, R.id.pin_back) foreach {
-      findViewById(_).onClick(onClick)
-    }
+    List(views.pin_9, views.pin_8, views.pin_7,
+      views.pin_6, views.pin_5, views.pin_4,
+      views.pin_3, views.pin_2, views.pin_1,
+      views.pin_0, views.pin_ok, views.pin_back).foreach(_.onClick(onClick))
   }
 }
