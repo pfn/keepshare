@@ -84,8 +84,6 @@ object BrowseActivity {
   }
 }
 class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRefreshLayout.OnRefreshListener with ActivityResultManager {
-  lazy val list = findView(TR.recycler)
-  lazy val refresher = findView(TR.refresher)
   private var searchView = Option.empty[SearchView]
   private var isEditing = false
   private var isCreating = false
@@ -94,7 +92,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
     super.onDestroy()
   }
 
-  lazy val editBar = getLayoutInflater.inflate(
+  lazy val editBar: TypedViewHolder.entry_edit_action_bar = TypedViewHolder.inflate(getLayoutInflater,
     TR.layout.entry_edit_action_bar, null, false)
 
   override def onCreateOptionsMenu(menu: Menu) = {
@@ -137,36 +135,37 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
     true
   }
 
+  lazy val views: TypedViewHolder.browse = TypedViewHolder.setContentView(this, TR.layout.browse)
+
   override def onCreate(savedInstanceState: Bundle) = {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.browse)
 
-    val fab2 = findView(TR.fab2)
-    findView(TR.fab_close) onClick0 findView(TR.fab_toolbar).hide()
-    findView(TR.fab_toolbar).button = fab2
-    findView(TR.fab_toolbar).container = findView(TR.container)
+    views.fab_close onClick0 views.fab_toolbar.hide()
+    views.fab_toolbar.button = views.fab2
+    views.fab_toolbar.container = views.container
 
-    findView(TR.create_entry) onClick0 {
+    views.create_entry onClick0 {
       database.onSuccessMain { case db =>
         val root = db.getRootGroup
 
         EntryViewActivity.create(this, groupId map (root.FindGroup(_, true)))
       }
     }
-    findView(TR.create_group) onClick0 creating()
-    findView(TR.group_edit) onClick0 editing(true)
+    views.create_group onClick0 creating()
+    views.group_edit onClick0 editing(true)
 
-    getSupportActionBar.setCustomView(editBar, new ActionBar.LayoutParams(
+    getSupportActionBar.setCustomView(editBar.rootView, new ActionBar.LayoutParams(
       ViewGroup.LayoutParams.MATCH_PARENT,
       ViewGroup.LayoutParams.MATCH_PARENT))
     if (!Database.writeSupported)
-      fab2.setVisibility(View.GONE)
-    refresher.setOnRefreshListener(this)
+      views.fab2.setVisibility(View.GONE)
+    views.refresher.setOnRefreshListener(this)
 
-    editBar.findView(TR.cancel).onClick0 {
+    editBar.cancel.onClick0 {
       updating(false, null)
     }
-    editBar.findView(TR.save).onClick0 {
+    editBar.save.onClick0 {
       Option(getFragmentManager.findFragmentByTag("editor")) foreach {
         case editor: GroupEditFragment =>
           def copyFromModel(e: PwGroup, needMove: Boolean): Unit = {
@@ -209,7 +208,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
           editing(false)
           if (!isCreating)
             navigateTo(groupId)
-          SnackbarSender.show(BrowseActivity.this, list)
+          SnackbarSender.show(BrowseActivity.this, views.recycler)
         }
       }
     })
@@ -227,11 +226,11 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
         sub.unsubscribe()
         Database.close()
         database onSuccessMain { case db =>
-          refresher.setRefreshing(false)
+          views.refresher.setRefreshing(false)
           navigateTo(groupId)
         }
         database onFailureMain { case t =>
-          refresher.setRefreshing(false)
+          views.refresher.setRefreshing(false)
           Toast.makeText(this, "Unable to reload database: " + t.getMessage, Toast.LENGTH_LONG).show()
           Application.logException("onFailureMain", t)
           finish()
@@ -249,13 +248,13 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
       true
     case R.id.empty_recycle_bin =>
       Database.emptyRecycleBin()
-      list.getAdapter.notifyDataSetChanged()
+      views.recycler.getAdapter.notifyDataSetChanged()
       DatabaseSaveService.save()
       true
     case R.id.database_sort =>
       settings.set(Settings.BROWSE_SORT_ALPHA, !item.isChecked)
       item.setChecked(!item.isChecked)
-      Option(list.getAdapter).foreach(_.notifyDataSetChanged())
+      Option(views.recycler.getAdapter).foreach(_.notifyDataSetChanged())
       true
     case R.id.scan_otp =>
       startActivity(new Intent(this, classOf[BarcodeScannerActivity]))
@@ -371,8 +370,8 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
         val entries = group.GetEntries(false).asScala.toList
 
         val adapter = new GroupAdapter(db, Option(group.getParentGroup), groups, entries)
-        list.setLayoutManager(new LinearLayoutManager(this))
-        list.setAdapter(adapter)
+        views.recycler.setLayoutManager(new LinearLayoutManager(this))
+        views.recycler.setAdapter(adapter)
         val callback = new SimpleCallback(0, ItemTouchHelper.RIGHT) {
           override def onSwiped(viewHolder: ViewHolder, direction: Int) = {
             val gh = viewHolder.asInstanceOf[GroupHolder]
@@ -449,8 +448,8 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
           }
         }
         if (Database.writeSupported && !Database.recycleBinId.contains(group.getUuid))
-          new ItemTouchHelper(callback).attachToRecyclerView(list)
-        list.setNestedScrollingEnabled(true)
+          new ItemTouchHelper(callback).attachToRecyclerView(views.recycler)
+        views.recycler.setNestedScrollingEnabled(true)
       }
     }
     if (ready) database onFailureMain { case e =>
@@ -490,7 +489,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
     super.onResume()
     if (!isEditing) {
       handleIntent()
-      SnackbarSender.show(this, list)
+      SnackbarSender.show(this, views.recycler)
     }
   }
 
@@ -502,7 +501,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
     }.onSuccessMain { case group =>
       updating(true, GroupEditFragment.create(group))
       isCreating = true
-      editBar.findView(TR.title).setText("Create group")
+      editBar.title.setText("Create group")
     }
   }
   def editing(b: Boolean): Unit = {
@@ -512,7 +511,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
         Option(root.FindGroup(id, true)) } getOrElse root
     }.onSuccessMain { case group =>
       updating(b, if (b) GroupEditFragment.edit(group) else null)
-      editBar.findView(TR.title).setText("Update group")
+      editBar.title.setText("Update group")
     }
   }
 
@@ -523,11 +522,11 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
     getSupportActionBar.setDisplayShowTitleEnabled(!b)
     getSupportActionBar.setDisplayShowCustomEnabled(b)
     if (b) {
-      editBar.getParent match {
+      editBar.rootView.getParent match {
         case t: Toolbar => t.setContentInsetsAbsolute(0, 0)
         case _ =>
       }
-      findView(TR.fab2).hide()
+      views.fab2.hide()
       if (getFragmentManager.findFragmentByTag("editor") == null)
         getFragmentManager.beginTransaction()
           .add(R.id.content, f, "editor")
@@ -536,7 +535,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
           .commit()
     } else {
       isCreating = false
-      findView(TR.fab2).show()
+      views.fab2.show()
       getFragmentManager.popBackStack()
     }
     isEditing = b
@@ -556,39 +555,36 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
 //    }
   }
 
-  case class GroupHolder(view: ViewGroup, parent: Option[PwGroup], db: PwDatabase) extends RecyclerView.ViewHolder(view) {
+  case class GroupHolder(views: TypedViewHolder.browse_pwgroup_item, parent: Option[PwGroup], db: PwDatabase) extends RecyclerView.ViewHolder(views.rootView) {
     private[this] var _item = Option.empty[Either[PwGroup,PwEntry]]
     private[this] var upItem = false
     def item = _item
     def isUp = upItem
-    lazy val upper = view.getChildAt(1)
-    lazy val name = view.findView(TR.name)
-    lazy val folder_image = view.findView(TR.folder_image)
-    lazy val entry_image = view.findView(TR.entry_image)
+    lazy val upper = views.rootView.getChildAt(1)
 
     def bind(item: Either[PwGroup,PwEntry]): Unit = {
       _item = Some(item)
       upItem = false
-      name.setText(item.fold(_.getName, _.getStrings.ReadSafe(PwDefs.TitleField)))
+      views.name.setText(item.fold(_.getName, _.getStrings.ReadSafe(PwDefs.TitleField)))
 
       item.left foreach { group =>
-        folder_image.setImageResource(if (db.getRecycleBinUuid.Equals(group.getUuid))
+        views.folder_image.setImageResource(if (db.getRecycleBinUuid.Equals(group.getUuid))
           R.drawable.ic_delete_black_24dp else R.drawable.ic_folder_open_black_24dp)
         if (parent exists (_.getUuid.equals(group.getUuid))) {
-          folder_image.setImageResource(R.drawable.ic_expand_less_black_24dp)
+          views.folder_image.setImageResource(R.drawable.ic_expand_less_black_24dp)
           upItem = true
         }
-        folder_image.setVisibility(View.VISIBLE)
+        views.folder_image.setVisibility(View.VISIBLE)
         //        if (PwUuid.Zero == group.getCustomIconUuid)
-        entry_image.setImageResource(Database.Icons(group.getIconId.ordinal))
+        views.entry_image.setImageResource(Database.Icons(group.getIconId.ordinal))
       }
       item.right foreach { entry =>
-        folder_image.setVisibility(View.INVISIBLE)
+        views.folder_image.setVisibility(View.INVISIBLE)
         //        if (PwUuid.Zero == entry.getCustomIconUuid)
-        entry_image.setImageResource(Database.Icons(entry.getIconId.ordinal))
+        views.entry_image.setImageResource(Database.Icons(entry.getIconId.ordinal))
       }
-      view.onClick0 {
-        view.setActivated(true)
+      views.rootView.onClick0 {
+        views.rootView.setActivated(true)
         implicit val c = BrowseActivity.this
         item.left foreach { grp =>
           browse(BrowseActivity.this, grp)
@@ -603,7 +599,6 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
     }
   }
   class GroupAdapter(db: PwDatabase, parent: Option[PwGroup], _groups: List[PwGroup], _entries: List[PwEntry]) extends RecyclerView.Adapter[GroupHolder] {
-    import TypedResource._
     var groups = _groups
     var entries = _entries
     var data = sortedData
@@ -612,7 +607,7 @@ class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRef
 
 
     override def onCreateViewHolder(viewGroup: ViewGroup, i: Int) = {
-      GroupHolder(getLayoutInflater.inflate(TR.layout.browse_pwgroup_item, viewGroup, false), parent, db)
+      GroupHolder(TypedViewHolder.inflate(getLayoutInflater, TR.layout.browse_pwgroup_item, viewGroup, false), parent, db)
     }
 
     override def getItemId(position: Int) =
