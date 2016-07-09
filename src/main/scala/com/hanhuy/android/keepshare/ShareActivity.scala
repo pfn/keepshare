@@ -7,18 +7,17 @@ import com.hanhuy.keepassj.{PwDefs, PwEntry}
 
 import collection.JavaConversions._
 import language.postfixOps
-
 import android.provider.Settings.Secure
-import android.app.{AlertDialog, Activity}
+import android.app.{Activity, AlertDialog}
 import android.os.Bundle
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.content.{ComponentName, Context, Intent}
 import java.net.URI
-import android.widget.{AdapterView, BaseAdapter, Toast}
-import android.view.{ViewGroup, View}
-import android.view.inputmethod.InputMethodManager
 
+import android.widget.{AdapterView, BaseAdapter, RelativeLayout, Toast}
+import android.view.{View, ViewGroup}
+import android.view.inputmethod.InputMethodManager
 import TypedResource._
 import Futures._
 
@@ -153,6 +152,8 @@ class ShareActivity extends Activity with TypedFindView {
   val EXTRA_SCREENSHOT = "share_screenshot"
   lazy val settings = Settings(this)
 
+  lazy val views: TypedViewHolder.share = TypedViewHolder.setContentView(this, TR.layout.share)
+
 
   def init() {
     setContentView(R.layout.share)
@@ -164,9 +165,9 @@ class ShareActivity extends Activity with TypedFindView {
     } yield (u,s,extras)) map { case (u,s,extras) =>
       if (extras.containsKey(EXTRA_SCREENSHOT)) {
         val bitmap: Bitmap = extras.getParcelable("share_screenshot")
-        findView(TR.share_screenshot).setImageDrawable(
+        views.share_screenshot.setImageDrawable(
           new BitmapDrawable(getResources, bitmap))
-      } else findView(TR.share_screenshot).setVisibility(View.GONE)
+      } else views.share_screenshot.setVisibility(View.GONE)
 
       if (u.charAt(0) == '"') {
         val end = u.lastIndexOf('"')
@@ -177,7 +178,7 @@ class ShareActivity extends Activity with TypedFindView {
       } else (u, s)
     } getOrElse ("","")
 
-    findView(TR.cancel) onClick0 {
+    views.cancel.onClick0 {
       ServiceBus.send(ShareActivityCancel)
       finish()
     }
@@ -188,7 +189,7 @@ class ShareActivity extends Activity with TypedFindView {
       return
     }
 
-    findView(TR.subject).setText(subject + " - " + url)
+    views.subject.setText(subject + " - " + url)
 
 
     Future {
@@ -200,9 +201,8 @@ class ShareActivity extends Activity with TypedFindView {
       results foreach { result =>
 
         UiBus.post {
-          findView(TR.flipper).showNext()
-          val list = findView(TR.list)
-          list.setEmptyView(findView(TR.empty))
+          views.flipper.showNext()
+          views.list.setEmptyView(views.empty)
 
             val adapter = new BaseAdapter {
               override def getItemId(i: Int) = i
@@ -210,33 +210,33 @@ class ShareActivity extends Activity with TypedFindView {
               override def getCount = result.size
 
               override def getView(i: Int, view: View, c: ViewGroup) = {
-                val row = Option(view) getOrElse {
-                  getLayoutInflater.inflate(R.layout.pwitem, c, false)
+                val row: TypedViewHolder.pwitem = Option(view.asInstanceOf[RelativeLayout]).map(new TypedViewHolder.pwitem(_)).getOrElse {
+                  TypedViewHolder.inflate(getLayoutInflater, TR.layout.pwitem, c, false)
                 }
-                row.findView(TR.name).setText(
+                row.name.setText(
                   Database.getField(getItem(i), PwDefs.TitleField) orNull)
-                row.findView(TR.username).setText(
+                row.username.setText(
                   Database.getField(getItem(i), PwDefs.UserNameField) orNull)
-                row
+                row.rootView
               }
 
               override def getItem(i: Int) = result(i)
             }
             val onClickHandler = { (_:AdapterView[_], _:View, pos: Int, _: Long) =>
-              findView(TR.continu).setEnabled(true)
-              findView(TR.continu).onClick0 {
+              views.continu.setEnabled(true)
+              views.continu.onClick0 {
                 ShareActivity.selectHandler(this, settings, adapter.getItem(pos))
                 finish()
               }
             }
-            list.onItemClick(onClickHandler)
-            list.setAdapter(adapter)
+            views.list.onItemClick(onClickHandler)
+            views.list.setAdapter(adapter)
             if (adapter.getCount < 2) {
-              findView(TR.select_prompt).setVisibility(View.GONE)
+              views.select_prompt.setVisibility(View.GONE)
               if (adapter.getCount == 1) {
-                list.setItemChecked(0, true)
+                views.list.setItemChecked(0, true)
                 onClickHandler(null, null, 0, 0)
-                findView(TR.continu).setEnabled(true)
+                views.continu.setEnabled(true)
               }
             }
         }
