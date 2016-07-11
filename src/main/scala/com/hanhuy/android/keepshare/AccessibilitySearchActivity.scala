@@ -2,22 +2,20 @@ package com.hanhuy.android.keepshare
 
 import java.net.URI
 
-import android.app.{SearchManager, Activity}
+import android.app.{Activity, SearchManager}
 import android.content.{ComponentName, Intent}
 import android.os.Bundle
 import android.view.inputmethod.InputMethodManager
 import android.view.{View, ViewGroup}
-import android.widget.SearchView.{OnSuggestionListener, OnQueryTextListener}
-import android.widget.{AdapterView, BaseAdapter}
+import android.widget.SearchView.{OnQueryTextListener, OnSuggestionListener}
+import android.widget.{AdapterView, BaseAdapter, RelativeLayout}
 import com.hanhuy.android.common.{Futures, ServiceBus, UiBus}
-
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
 
 import language.postfixOps
-
 import TypedResource._
-import com.hanhuy.keepassj.{PwEntry, PwUuid, PwDefs}
+import com.hanhuy.keepassj.{PwDefs, PwEntry, PwUuid}
 import Futures._
 
 import scala.concurrent.Future
@@ -29,8 +27,9 @@ class AccessibilitySearchActivity extends Activity with TypedFindView {
 
   lazy val settings = Settings(this)
 
+  lazy val views: TypedViewHolder.accessibility_search_activity = TypedViewHolder.setContentView(this, TR.layout.accessibility_search_activity)
+
   def init() {
-    setContentView(R.layout.accessibility_search_activity)
     val extras = getIntent.getExtras
     val (windowId, packageName, url) = {
       (extras.getInt(AccessibilityService.EXTRA_WINDOWID, -1),
@@ -38,17 +37,15 @@ class AccessibilitySearchActivity extends Activity with TypedFindView {
         extras.getString(AccessibilityService.EXTRA_URI))
     }
 
-    findView(TR.cancel) onClick0 {
+    views.cancel onClick0 {
       finish()
     }
 
-    val subject = findView(TR.subject)
-    subject.setText(url)
-    val search = findView(TR.search)
-    search.setSearchableInfo(
+    views.subject.setText(url)
+    views.search.setSearchableInfo(
       this.systemService[SearchManager].getSearchableInfo(
         new ComponentName(this, classOf[SearchableActivity])))
-    search.setOnQueryTextListener(new OnQueryTextListener {
+    views.search.setOnQueryTextListener(new OnQueryTextListener {
       override def onQueryTextSubmit(s: String) = {
         Future {
           Database.search(s)
@@ -63,13 +60,13 @@ class AccessibilitySearchActivity extends Activity with TypedFindView {
         true
       }
       override def onQueryTextChange(s: String) = {
-        subject.setVisibility(View.GONE)
+        views.subject.setVisibility(View.GONE)
         true
       }
     })
-    search.setOnSuggestionListener(new OnSuggestionListener {
+    views.search.setOnSuggestionListener(new OnSuggestionListener {
       override def onSuggestionClick(i: Int) = {
-        val c = search.getSuggestionsAdapter.getCursor
+        val c = views.search.getSuggestionsAdapter.getCursor
         c.move(i)
         val idx = c.getColumnIndex(SearchManager.SUGGEST_COLUMN_INTENT_EXTRA_DATA)
         val uuid = new PwUuid(KeyManager.bytes(c.getString(idx)))
@@ -90,9 +87,8 @@ class AccessibilitySearchActivity extends Activity with TypedFindView {
       results map { result =>
 
         UiBus.post {
-          findView(TR.flipper).showNext()
-          val list = findView(TR.list)
-          list.setEmptyView(findView(TR.empty))
+          views.flipper.showNext()
+          views.list.setEmptyView(views.empty)
           showResults(result, windowId, packageName, url)
         }
       }
@@ -106,30 +102,31 @@ class AccessibilitySearchActivity extends Activity with TypedFindView {
       override def getItem(i: Int) = result(i)
 
       override def getView(i: Int, view: View, c: ViewGroup) = {
-        val row = Option(view) getOrElse getLayoutInflater.inflate(R.layout.pwitem, c, false)
-        row.findView(TR.name).setText(
+        val row: TypedViewHolder.pwitem = Option(view.asInstanceOf[RelativeLayout]).map(new TypedViewHolder.pwitem(_)).getOrElse {
+          TypedViewHolder.inflate(getLayoutInflater, TR.layout.pwitem, c, false)
+        }
+        row.name.setText(
           Database.getField(getItem(i), PwDefs.TitleField) orNull)
-        row.findView(TR.username).setText(
+        row.username.setText(
           Database.getField(getItem(i), PwDefs.UserNameField) orNull)
-        row
+        row.rootView
       }
     }
     val onClickHandler = { (av: AdapterView[_], v: View, pos: Int, id: Long) =>
-      findView(TR.continu).setEnabled(true)
-      findView(TR.continu).onClick0 {
+      views.continu.setEnabled(true)
+      views.continu.onClick0 {
         selectItem(result(pos), windowId, packageName, url)
       }
     }
 
-    val list = findView(TR.list)
-    list.onItemClick(onClickHandler)
-    list.setAdapter(adapter)
+    views.list.onItemClick(onClickHandler)
+    views.list.setAdapter(adapter)
     if (adapter.getCount < 2) {
-      findView(TR.select_prompt).setVisibility(View.GONE)
+      views.select_prompt.setVisibility(View.GONE)
       if (adapter.getCount == 1) {
-        list.setItemChecked(0, true)
+        views.list.setItemChecked(0, true)
         onClickHandler(null, null, 0, 0)
-        findView(TR.continu).setEnabled(true)
+        views.continu.setEnabled(true)
       }
     }
   }
