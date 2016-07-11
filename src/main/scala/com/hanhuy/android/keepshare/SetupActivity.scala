@@ -58,7 +58,7 @@ object SetupActivity {
     intent
   }
 }
-class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.RefOwner with PermissionManager with DialogManager {
+class SetupActivity extends AppCompatActivity with EventBus.RefOwner with PermissionManager with DialogManager {
   val log = Logcat("SetupActivity")
   import KeyManager._
   import RequestCodes._
@@ -66,9 +66,11 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
   private[this] var dbCredentials = DatabaseSetupModel.empty
   lazy val fragment = getFragmentManager.findFragmentById(
     R.id.setup_fragment).asInstanceOf[SetupFragment]
-  lazy val flipper = findView(TR.flipper)
   lazy val settings = Settings(this)
   lazy val keymanager = new KeyManager(this, settings)
+
+  lazy val views: TypedViewHolder.setup = TypedViewHolder.setContentView(this, TR.layout.setup)
+  lazy val flipper = views.rootView
 
   override def onCreateOptionsMenu(menu: Menu) = {
     super.onCreateOptionsMenu(menu)
@@ -97,25 +99,22 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
     setTitle(getTitle + getString(R.string.setup_subtitle))
-    setContentView(R.layout.setup)
-
-    val connect = findView(TR.connect)
     if (settings.get(Settings.FIRST_RUN)) {
       settings.clear()
       KeyManager.clear()
       flipper.setDisplayedChild(1)
     }
     def onNext(): Unit = {
-      findView(TR.progress).setVisibility(View.VISIBLE)
+      views.progress.setVisibility(View.VISIBLE)
       keymanager.fetchCloudKey() onSuccessMain { case _ =>
         settings.set(Settings.FIRST_RUN, false)
         supportInvalidateOptionsMenu()
         flipper.setDisplayedChild(0)
-        findView(TR.progress2).setVisibility(View.GONE)
+        views.progress2.setVisibility(View.GONE)
       }
     }
-    connect onClick0 {
-      connect.setEnabled(false)
+    views.connect onClick0 {
+      views.connect.setEnabled(false)
       onNext()
       // go to next step!
     }
@@ -165,7 +164,7 @@ class SetupActivity extends AppCompatActivity with TypedFindView with EventBus.R
         case _ =>
       }
       keymanager.fetchCloudKey() onSuccessMain { case _ =>
-        findView(TR.progress2).setVisibility(View.GONE)
+        views.progress2.setVisibility(View.GONE)
       }
     }
     if (settings.get(Settings.NEEDS_PIN) && PINHolderService.instance.isEmpty) {
@@ -568,7 +567,6 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
   }
 
   def save(): IO[Unit] = IO {
-//    findView(TR.error_text).setVisibility(View.GONE)
     hideIME()
     saveButton.setEnabled(false)
     val database = model.db.getOrElse("")
