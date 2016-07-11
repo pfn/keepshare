@@ -25,7 +25,7 @@ import scala.util.Try
 /**
   * @author pfnguyen
   */
-class BarcodeScannerActivity extends AppCompatActivity with TypedFindView with PermissionManager {
+class BarcodeScannerActivity extends AppCompatActivity with PermissionManager {
   lazy val views: TypedViewHolder.barcode_scanner = TypedViewHolder.setContentView(this, TR.layout.barcode_scanner)
   lazy val overlay: GraphicOverlay[BarcodeGraphic] = views.graphicOverlay.asInstanceOf[GraphicOverlay[BarcodeGraphic]]
 

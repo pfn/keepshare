@@ -83,7 +83,7 @@ object BrowseActivity {
     }
   }
 }
-class BrowseActivity extends AuthorizedActivity with TypedFindView with SwipeRefreshLayout.OnRefreshListener with ActivityResultManager {
+class BrowseActivity extends AuthorizedActivity with SwipeRefreshLayout.OnRefreshListener with ActivityResultManager {
   private var searchView = Option.empty[SearchView]
   private var isEditing = false
   private var isCreating = false

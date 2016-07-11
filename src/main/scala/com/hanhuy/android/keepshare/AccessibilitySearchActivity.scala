@@ -23,7 +23,7 @@ import scala.concurrent.Future
 /**
  * @author pfnguyen
  */
-class AccessibilitySearchActivity extends Activity with TypedFindView {
+class AccessibilitySearchActivity extends Activity {
 
   lazy val settings = Settings(this)
 

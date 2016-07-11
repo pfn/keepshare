@@ -178,7 +178,7 @@ with EventBus.RefOwner {
   def onKey(p1: Int, p2: Array[Int]) {}
 }
 
-class IMESearchActivity extends Activity with TypedFindView {
+class IMESearchActivity extends Activity {
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
     val views: TypedViewHolder.ime_search_activity = TypedViewHolder.setContentView(this, TR.layout.ime_search_activity)

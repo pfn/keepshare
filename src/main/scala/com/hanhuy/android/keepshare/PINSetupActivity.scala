@@ -10,7 +10,7 @@ import com.hanhuy.android.common.{Futures, UiBus}
 import Futures._
 import android.widget.Toast
 
-class PINSetupActivity extends AppCompatActivity with TypedFindView {
+class PINSetupActivity extends AppCompatActivity {
 
   lazy val views: TypedViewHolder.pin_setup = TypedViewHolder.setContentView(this, TR.layout.pin_setup)
   private var pin = Seq.empty[String]

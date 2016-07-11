@@ -146,8 +146,7 @@ object ShareActivity {
     }
   }
 }
-class ShareActivity extends Activity with TypedFindView {
-  import ShareActivity._
+class ShareActivity extends Activity {
 
   val EXTRA_SCREENSHOT = "share_screenshot"
   lazy val settings = Settings(this)

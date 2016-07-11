@@ -107,7 +107,7 @@ object EntryViewActivity {
                              notes: Option[String] = None,
                              fields: List[(Boolean,String,String)] = Nil)
 }
-class EntryViewActivity extends AuthorizedActivity with TypedFindView {
+class EntryViewActivity extends AuthorizedActivity {
   private var pwentry = Option.empty[PwEntry]
   private var isEditing = false
   private var isCreating = false

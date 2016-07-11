@@ -20,7 +20,7 @@ object PINEntryActivity {
       RequestCodes.REQUEST_PIN)
   }
 }
-class PINEntryActivity extends AppCompatActivity with TypedFindView with DialogManager {
+class PINEntryActivity extends AppCompatActivity with DialogManager {
   lazy val settings = Settings(this)
   lazy val km = new KeyManager(this, settings)
   lazy val vibrator = this.systemService[Vibrator]
