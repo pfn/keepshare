@@ -91,11 +91,12 @@ class EntryEditFragment extends AuthorizedFragment {
   var model: EntryEditModel = EntryEditModel.blank
   var baseModel = Option.empty[EntryEditModel]
 
-  def password = getView.findView(TR.edit_password)
+  def password = getView.getTag(R.layout.entry_edit).asInstanceOf[TypedViewHolder.entry_edit].edit_password
 
   override def onCreateView(inflater: LayoutInflater, container: ViewGroup,
                             savedInstanceState: Bundle) = {
-    val view = inflater.inflate(TR.layout.entry_edit, container, false)
+    val views: TypedViewHolder.entry_edit = TypedViewHolder.inflate(inflater, TR.layout.entry_edit, container, false)
+    views.rootView.setTag(R.layout.entry_edit, views)
 
     val entryId = Option(getArguments) flatMap(a =>
       Option(a.getString(EntryViewActivity.EXTRA_ENTRY_ID)))
@@ -104,35 +105,27 @@ class EntryEditFragment extends AuthorizedFragment {
         .asInstanceOf[EntryCreateData]))
     val groupId = getArguments.? flatMap(_.getString(BrowseActivity.EXTRA_GROUP_ID).?)
 
-    val password = view.findView(TR.edit_password)
-    val fieldlist = view.findView(TR.field_list)
-    val newfield = view.findView(TR.new_field_button)
-    val group = view.findView(TR.edit_group)
-    val title = view.findView(TR.edit_title)
-    val username = view.findView(TR.edit_username)
-    val url = view.findView(TR.edit_url)
-    val notes = view.findView(TR.edit_notes)
-    val iconObservable: Var[Int] = Var(title.icon)
+    val iconObservable: Var[Int] = Var(views.edit_title.icon)
     iconObservable.subscribe { icon =>
       model = model.copy(icon = icon)
-      title.icon = icon
+      views.edit_title.icon = icon
     }
-    group.groupChange.subscribe { g =>
+    views.edit_group.groupChange.subscribe { g =>
       model = model.copy(group = g.getUuid)
     }
-    title.textfield.onTextChanged(s =>
+    views.edit_title.textfield.onTextChanged(s =>
       model = model.copy(title = s.? map (_.toString))
     )
-    username.textfield.onTextChanged(s =>
+    views.edit_username.textfield.onTextChanged(s =>
       model = model.copy(username = s.? map (_.toString))
     )
-    password.textfield.onTextChanged(s =>
+    views.edit_password.textfield.onTextChanged(s =>
       model = model.copy(password = s.? map (_.toString))
     )
-    url.textfield.onTextChanged(s =>
+    views.edit_url.textfield.onTextChanged(s =>
       model = model.copy(url = s.? map (_.toString))
     )
-    notes.textfield.onTextChanged(s =>
+    views.edit_notes.textfield.onTextChanged(s =>
       model = model.copy(notes = s.? map (_.toString))
     )
 
@@ -147,16 +140,16 @@ class EntryEditFragment extends AuthorizedFragment {
 
         if (model == EntryEditModel.blank) {
           iconObservable() = Database.Icons(e.getIconId.ordinal)
-          title.text = s.ReadSafe(PwDefs.TitleField)
-          username.text = s.ReadSafe(PwDefs.UserNameField)
-          password.text = s.ReadSafe(PwDefs.PasswordField)
-          url.text = s.ReadSafe(PwDefs.UrlField)
-          notes.text = s.ReadSafe(PwDefs.NotesField)
+          views.edit_title.text = s.ReadSafe(PwDefs.TitleField)
+          views.edit_username.text = s.ReadSafe(PwDefs.UserNameField)
+          views.edit_password.text = s.ReadSafe(PwDefs.PasswordField)
+          views.edit_url.text = s.ReadSafe(PwDefs.UrlField)
+          views.edit_notes.text = s.ReadSafe(PwDefs.NotesField)
           model = model.copy(fields = s.asScala map { e =>
             (e.getKey,e.getValue)
           } filterNot (f => PwDefs.IsStandardField(f._1)) toMap)
 
-          view.findView(TR.delete).onClick0 {
+          views.delete.onClick0 {
             if (EntryEditFragment.inRecycleBin(e.getParentGroup)) {
               val t = getString(R.string.delete_name, s.ReadSafe(PwDefs.TitleField))
               new AlertDialog.Builder(activity)
@@ -188,16 +181,16 @@ class EntryEditFragment extends AuthorizedFragment {
           model = model.copy(group = e.getParentGroup.getUuid)
           baseModel = Some(model)
         }
-        group.group = e.getParentGroup
+        views.edit_group.group = e.getParentGroup
       }
 
       createData foreach { d =>
         if (model == EntryEditModel.blank) {
-          title.text = d.title.getOrElse("")
-          username.text = d.username.getOrElse("")
-          password.text = d.password.getOrElse("")
-          url.text = d.url.getOrElse("")
-          notes.text = d.notes.getOrElse("")
+          views.edit_title.text = d.title.getOrElse("")
+          views.edit_username.text = d.username.getOrElse("")
+          views.edit_password.text = d.password.getOrElse("")
+          views.edit_url.text = d.url.getOrElse("")
+          views.edit_notes.text = d.notes.getOrElse("")
           model = model.copy(fields = d.fields map { case ((pw, k, v)) =>
               k -> new ProtectedString(pw, v)
           } toMap)
@@ -209,8 +202,8 @@ class EntryEditFragment extends AuthorizedFragment {
           db.getRootGroup.FindGroup(uuid, true)
         } orElse db.getRootGroup.? foreach { grp =>
           iconObservable() = Database.Icons(grp.getIconId.ordinal)
-          group.group = grp
-          view.findView(TR.delete).setVisibility(View.GONE)
+          views.edit_group.group = grp
+          views.delete.setVisibility(View.GONE)
         }
       }
       model.fields foreach { case (k, v) =>
@@ -222,7 +215,7 @@ class EntryEditFragment extends AuthorizedFragment {
         field.textfield.onTextChanged(s =>
           model = model.copy(fields = model.fields.updated(k, new ProtectedString(v.isProtected, s.toString)))
         )
-        fieldlist.addView(field)
+        views.field_list.addView(field)
       }
     }
 
@@ -253,13 +246,13 @@ class EntryEditFragment extends AuthorizedFragment {
       (field map { f =>
         builder.setNeutralButton("Delete", () => {
           model = model.copy(fields = model.fields - f.hint.toString)
-          fieldlist.removeView(f)
+          views.field_list.removeView(f)
           ()
         })
       } getOrElse builder).create().show()
     }
 
-    newfield onClick0 showFieldOptions("Create", "Create new field", None, false) { (n,c) =>
+    views.new_field_button onClick0 showFieldOptions("Create", "Create new field", None, false) { (n,c) =>
       if (n.getText.toString.nonEmpty) {
         model = model.copy(fields = model.fields.updated(
           n.getText.toString, new ProtectedString(c.isChecked, "")))
@@ -271,21 +264,21 @@ class EntryEditFragment extends AuthorizedFragment {
         field.textfield.onTextChanged(s =>
           model = model.copy(fields = model.fields.updated(field.hint.toString, new ProtectedString(c.isChecked, s.toString)))
         )
-        fieldlist.addView(field)
+        views.field_list.addView(field)
         UiBus.post {
-          view.findView(TR.scroll).scrollTo(0, fieldlist.getHeight)
+          views.scroll.scrollTo(0, views.field_list.getHeight)
         }
       }
       ()
     }
 
-    title.iconfield.onClick0 {
-      EntryEditFragment.iconPicker(activity, title.iconfield, iconObservable.update)
+    views.edit_title.iconfield.onClick0 {
+      EntryEditFragment.iconPicker(activity, views.edit_title.iconfield, iconObservable.update)
     }
-    password.iconfield.onClick0 {
+    views.edit_password.iconfield.onClick0 {
       new PasswordGeneratorFragment().show(getFragmentManager, "password-generator")
     }
-    view
+    views.rootView
   }
 }
 

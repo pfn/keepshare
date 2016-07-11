@@ -111,8 +111,8 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
   private var pwentry = Option.empty[PwEntry]
   private var isEditing = false
   private var isCreating = false
-  lazy val editBar = getLayoutInflater.inflate(
-    TR.layout.entry_edit_action_bar, null, false)
+  lazy val editBar: TypedViewHolder.entry_edit_action_bar =
+    TypedViewHolder.inflate(getLayoutInflater, TR.layout.entry_edit_action_bar, null, false)
 
   def confirmPrompt[A](onCancel: => A): Unit = {
     val edited = Option(getFragmentManager.findFragmentByTag("editor")) collect {
@@ -148,13 +148,14 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
 
   lazy val authenticatedPromise = Promise[Unit]()
 
+  lazy val views: TypedViewHolder.entry_view = TypedViewHolder.setContentView(this, TR.layout.entry_view)
+
   override def onCreate(savedInstanceState: Bundle) = {
     if (!BuildConfig.DEBUG) {
       getWindow.setFlags(WindowManager.LayoutParams.FLAG_SECURE,
         WindowManager.LayoutParams.FLAG_SECURE)
     }
     super.onCreate(savedInstanceState)
-    setContentView(R.layout.entry_view)
     for {
       intent <- Option(getIntent)
       entry <- Option(intent.getStringExtra(EXTRA_ENTRY_ID))
@@ -170,15 +171,15 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
       }
     }
     authenticatedPromise.future.onSuccessMain { case _ =>
-      findView(TR.fab).onClick0 {
+      views.fab.onClick0 {
         editing(true)
       }
-      editBar.findView(TR.cancel).onClick0 {
+      editBar.cancel.onClick0 {
         if (isCreating)
           finish()
         editing(false)
       }
-      editBar.findView(TR.save).onClick0 {
+      editBar.save.onClick0 {
         val f = Option(getFragmentManager.findFragmentByTag("editor"))
         f foreach { case editor: EntryEditFragment =>
           def setField(e: PwEntry, field: String, value: Option[String], isPassword: Boolean): Unit = {
@@ -226,7 +227,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
         DatabaseSaveService.save()
       }
 
-      getSupportActionBar.setCustomView(editBar, new ActionBar.LayoutParams(
+      getSupportActionBar.setCustomView(editBar.rootView, new ActionBar.LayoutParams(
         ViewGroup.LayoutParams.MATCH_PARENT,
         ViewGroup.LayoutParams.MATCH_PARENT))
 
@@ -250,12 +251,12 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
   def creating(parent: Option[String], data: Option[EntryCreateData] = None): Unit = {
     updating(true, EntryEditFragment.create(parent, data))
     isCreating = true
-    editBar.findView(TR.title).setText("Create entry")
+    editBar.title.setText("Create entry")
   }
   def editing(b: Boolean): Unit = {
     pwentry foreach { pwe =>
       updating(b, if (b) EntryEditFragment.edit(pwe) else null)
-      editBar.findView(TR.title).setText("Update entry")
+      editBar.title.setText("Update entry")
     }
   }
 
@@ -266,11 +267,11 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
     getSupportActionBar.setDisplayShowTitleEnabled(!b)
     getSupportActionBar.setDisplayShowCustomEnabled(b)
     if (b) {
-      editBar.getParent match {
+      editBar.rootView.getParent match {
         case t: Toolbar => t.setContentInsetsAbsolute(0, 0)
         case _ =>
       }
-      findView(TR.fab).hide()
+      views.fab.hide()
       if (getFragmentManager.findFragmentByTag("editor") == null)
         getFragmentManager.beginTransaction()
           .add(R.id.content, f, "editor")
@@ -279,7 +280,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
           .commit()
     } else {
       isCreating = false
-      findView(TR.fab).show()
+      views.fab.show()
       getFragmentManager.popBackStack()
     }
     isEditing = b
@@ -353,7 +354,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
       ab.setDisplayHomeAsUpEnabled(true)
 //    }
 
-    val fieldlist = findView(TR.field_list)
+    val fieldlist = views.field_list
     fieldlist.removeAllViews()
 
     var first = true
@@ -393,7 +394,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
     }
 
     if (!Database.writeSupported)
-      findView(TR.fab).setVisibility(View.GONE)
+      views.fab.setVisibility(View.GONE)
 
     if (histIdx.isEmpty) {
       val groupfield = new GroupFieldView(this, e.getParentGroup)
@@ -402,7 +403,7 @@ class EntryViewActivity extends AuthorizedActivity with TypedFindView {
       first = false
       fieldlist.addView(groupfield)
     } else {
-      findView(TR.fab).setVisibility(View.GONE)
+      views.fab.setVisibility(View.GONE)
     }
 
     if (Option(strings.Get(PwDefs.NotesField)) exists (_.Length > 0)) {
