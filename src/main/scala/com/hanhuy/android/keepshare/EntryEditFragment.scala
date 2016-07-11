@@ -229,19 +229,18 @@ class EntryEditFragment extends AuthorizedFragment {
     }
 
     def showFieldOptions[A](action: String, msg: String, field: Option[StandardEditView], password: Boolean)(f: (EditText,CheckBox) => A): Unit = {
-      val view = LayoutInflater.from(activity).inflate(
-        TR.layout.edit_field_options, null, false)
-      val checkbox = view.findView(TR.is_password)
-      val name = view.findView(TR.field_name)
+      val view: TypedViewHolder.edit_field_options =
+        TypedViewHolder.inflate(LayoutInflater.from(activity),
+          TR.layout.edit_field_options, null, false)
 
-      field foreach (f => name.setText(f.hint))
-      checkbox.setChecked(password)
+      field foreach (f => view.field_name.setText(f.hint))
+      view.is_password.setChecked(password)
 
       val builder = new AlertDialog.Builder(activity)
-        .setPositiveButton(action, () => { f(name, checkbox); () })
+        .setPositiveButton(action, () => { f(view.field_name, view.is_password); () })
         .setNegativeButton("Cancel", null)
         .setTitle(msg)
-        .setView(view)
+        .setView(view.rootView)
 
       (field map { f =>
         builder.setNeutralButton("Delete", () => {

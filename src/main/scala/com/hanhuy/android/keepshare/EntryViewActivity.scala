@@ -506,6 +506,8 @@ class StandardFieldView(c: Context, attrs: AttributeSet) extends FrameLayout(c, 
     cb
   }
 
+  // this can't be converted into TypedViewHolder: there is no "inheritance"
+  // structure between layout files and their associated view holders
   def inflate() = LayoutInflater.from(c).inflate(R.layout.standard_field, this, true)
 
   inflate()
