@@ -181,16 +181,16 @@ with EventBus.RefOwner {
 class IMESearchActivity extends Activity with TypedFindView {
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
-    setContentView(R.layout.ime_search_activity)
+    val views: TypedViewHolder.ime_search_activity = TypedViewHolder.setContentView(this, TR.layout.ime_search_activity)
     val packageName = getIntent.getStringExtra(PasswordIME.EXTRA_PACKAGE)
     setTitle(getTitle + getString(R.string.ime_search_title))
-    findView(TR.text).setText(
+    views.text.setText(
       getString(R.string.ime_search_prompt, packageName))
-    findView(TR.confirm) onClick0 {
+    views.confirm onClick0 {
       UiBus.send(IMESearchOk)
       finish()
     }
-    findView(TR.cancel) onClick0 { finish() }
+    views.cancel onClick0 { finish() }
   }
 
   override def onStop() {

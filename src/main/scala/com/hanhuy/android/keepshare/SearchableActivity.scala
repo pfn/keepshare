@@ -25,8 +25,7 @@ import scala.util.Try
 class SearchableActivity extends AuthorizedActivity {
   val log = Logcat("SearchableActivity")
 
-  lazy val empty = findViewById(android.R.id.empty).asInstanceOf[TextView]
-  lazy val list = findViewById(android.R.id.list).asInstanceOf[ListView]
+  lazy val views: TypedViewHolder.searchable_activity = TypedViewHolder.setContentView(this, TR.layout.searchable_activity)
 
   private var searchView = Option.empty[SearchView]
   private var queryInput = Option.empty[String]
@@ -38,7 +37,7 @@ class SearchableActivity extends AuthorizedActivity {
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.searchable_activity)
-    list.setEmptyView(empty)
+    views.list.setEmptyView(views.empty)
     getSupportActionBar.setDisplayHomeAsUpEnabled(true)
   }
 
@@ -137,24 +136,26 @@ class SearchableActivity extends AuthorizedActivity {
         override def getItemId(i: Int) = Database.getId(getItem(i))
 
         override def getView(i: Int, view: View, c: ViewGroup) = {
-          val row = Option(view) getOrElse {
-            getLayoutInflater.inflate(R.layout.pwitem, c, false)
+          val row: TypedViewHolder.pwitem = Option(view.asInstanceOf[RelativeLayout]).map(_.getTag(R.layout.pwitem).asInstanceOf[TypedViewHolder.pwitem]).getOrElse {
+            val vh = TypedViewHolder.inflate(getLayoutInflater, TR.layout.pwitem, c, false)
+            vh.rootView.setTag(R.layout.pwitem, vh)
+            vh
           }
 
           if (PwUuid.Zero == getItem(i).getCustomIconUuid)
-            row.findView(TR.entry_image).setImageResource(Database.Icons(getItem(i).getIconId.ordinal))
-          row.findView(TR.name).setText(
+            row.entry_image.setImageResource(Database.Icons(getItem(i).getIconId.ordinal))
+          row.name.setText(
             Database.getField(getItem(i), PwDefs.TitleField) orNull)
-          row.findView(TR.username).setText(
+          row.username.setText(
             Database.getField(getItem(i), PwDefs.UserNameField) orNull)
-          row
+          row.rootView
         }
 
         override def getItem(i: Int) = result(i)
 
       }
-      list.setAdapter(adapter)
-      list.onItemClick { (_,_,pos,_)=>
+      views.list.setAdapter(adapter)
+      views.list.onItemClick { (_,_,pos,_)=>
         EntryViewActivity.show(this, adapter.getItem(pos))
         overridePendingTransition(R.anim.slide_in_right,
           R.anim.slide_out_left)
@@ -162,8 +163,8 @@ class SearchableActivity extends AuthorizedActivity {
       dismissDialog(d)
       if (selected != -1) {
         UiBus.post {
-          list.setItemChecked(selected, true)
-          list.smoothScrollToPosition(selected)
+          views.list.setItemChecked(selected, true)
+          views.list.smoothScrollToPosition(selected)
         }
       }
     }

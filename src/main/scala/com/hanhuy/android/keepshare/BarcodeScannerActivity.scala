@@ -26,9 +26,8 @@ import scala.util.Try
   * @author pfnguyen
   */
 class BarcodeScannerActivity extends AppCompatActivity with TypedFindView with PermissionManager {
-  lazy val text = findView(TR.text)
-  lazy val preview = findView(TR.preview)
-  lazy val overlay: GraphicOverlay[BarcodeGraphic] = findViewById(R.id.graphicOverlay).asInstanceOf[GraphicOverlay[BarcodeGraphic]]
+  lazy val views: TypedViewHolder.barcode_scanner = TypedViewHolder.setContentView(this, TR.layout.barcode_scanner)
+  lazy val overlay: GraphicOverlay[BarcodeGraphic] = views.graphicOverlay.asInstanceOf[GraphicOverlay[BarcodeGraphic]]
 
   var cameraSource = Option.empty[CameraSource]
   var lastBarcode = Option.empty[String]
@@ -38,7 +37,7 @@ class BarcodeScannerActivity extends AppCompatActivity with TypedFindView with P
     setContentView(R.layout.barcode_scanner)
     getSupportActionBar.setDisplayHomeAsUpEnabled(true)
 
-    requestPermission(android.Manifest.permission.CAMERA, R.string.camera_permission, preview) onSuccessMain { case _ =>
+    requestPermission(android.Manifest.permission.CAMERA, R.string.camera_permission, views.preview) onSuccessMain { case _ =>
         createCameraSource()
     }
   }
@@ -92,7 +91,7 @@ class BarcodeScannerActivity extends AppCompatActivity with TypedFindView with P
 
     cameraSource foreach { source =>
       try {
-        preview.start(source, overlay)
+        views.preview.start(source, overlay)
       } catch {
         case e: Exception =>
           Toast.makeText(this, "Failed to start preview: " + e, Toast.LENGTH_LONG).show()
@@ -108,12 +107,12 @@ class BarcodeScannerActivity extends AppCompatActivity with TypedFindView with P
   }
   override def onPause(): Unit = {
     super.onPause()
-    preview.stop()
+    views.preview.stop()
   }
 
   override def onDestroy(): Unit = {
     super.onDestroy()
-    preview.release()
+    views.preview.release()
   }
   class BarcodeTrackerFactory(overlay: GraphicOverlay[BarcodeGraphic]) extends MultiProcessor.Factory[Barcode] {
     override def create(t: Barcode) = {
@@ -135,12 +134,12 @@ class BarcodeScannerActivity extends AppCompatActivity with TypedFindView with P
   def onBarcodeDetected(barcode: Barcode): Unit = {
     if (!lastBarcode.contains(barcode.rawValue)) {
       if (!barcode.rawValue.startsWith("otpauth:")) UiBus.post {
-        text.setText("Invalid code: " + barcode.rawValue)
+        views.text.setText("Invalid code: " + barcode.rawValue)
         UiBus.handler.removeCallbacks(reset)
         UiBus.handler.removeCallbacks(launch)
         UiBus.handler.postDelayed(reset, 5000)
       } else if (barcode.rawValue.startsWith("otpauth:")) UiBus.post {
-        text.setText("Detected " + barcode.rawValue)
+        views.text.setText("Detected " + barcode.rawValue)
         UiBus.handler.removeCallbacks(reset)
         UiBus.handler.removeCallbacks(launch)
         UiBus.handler.postDelayed(launch, 1000)
@@ -150,7 +149,7 @@ class BarcodeScannerActivity extends AppCompatActivity with TypedFindView with P
   }
 
   val reset: Runnable = () => {
-    text.setText(R.string.scanning_for_otp)
+    views.text.setText(R.string.scanning_for_otp)
     lastBarcode = None
   }
   val launch: Runnable = () => {
@@ -167,7 +166,7 @@ class BarcodeScannerActivity extends AppCompatActivity with TypedFindView with P
         finish()
         overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
       case None =>
-        text.setText("Malformed OTP code: " + lastBarcode.getOrElse("null"))
+        views.text.setText("Malformed OTP code: " + lastBarcode.getOrElse("null"))
         UiBus.handler.removeCallbacks(reset)
         UiBus.handler.removeCallbacks(launch)
         UiBus.handler.postDelayed(reset, 5000)
