@@ -33,7 +33,7 @@ class GroupEditFragment extends AuthorizedFragment {
   var baseModel = Option.empty[GroupEditModel]
   override def onCreateView(inflater: LayoutInflater, container: ViewGroup,
                             savedInstanceState: Bundle) = {
-    val view = inflater.inflate(TR.layout.group_edit, container, false)
+    val view: TypedViewHolder.group_edit = TypedViewHolder.inflate(inflater, TR.layout.group_edit, container, false)
 
     val groupId = Option(getArguments) flatMap(a =>
       Option(a.getString(BrowseActivity.EXTRA_GROUP_ID)))
@@ -41,21 +41,18 @@ class GroupEditFragment extends AuthorizedFragment {
     val creating = Option(getArguments) map (
       _.getBoolean(EntryViewActivity.EXTRA_CREATE, false)) exists identity
 
-    val group = view.findView(TR.edit_group)
-    val title = view.findView(TR.edit_title)
-    val notes = view.findView(TR.edit_notes)
-    val iconObservable: Var[Int] = Var(title.icon)
+    val iconObservable: Var[Int] = Var(view.edit_title.icon)
     iconObservable.subscribe { icon =>
       model = model.copy(icon = icon)
-      title.icon = icon
+      view.edit_title.icon = icon
     }
-    group.groupChange.subscribe { g =>
+    view.edit_group.groupChange.subscribe { g =>
       model = model.copy(group = g.getUuid)
     }
-    title.textfield.onTextChanged(s =>
+    view.edit_title.textfield.onTextChanged(s =>
       model = model.copy(title = s.? map (_.toString))
     )
-    notes.textfield.onTextChanged(s =>
+    view.edit_notes.textfield.onTextChanged(s =>
       model = model.copy(notes = s.? map (_.toString))
     )
 
@@ -67,16 +64,16 @@ class GroupEditFragment extends AuthorizedFragment {
     } onSuccessMain { case g =>
       g foreach { grp =>
         if (creating) {
-          group.group = grp
-          view.findView(TR.delete).setVisibility(View.GONE)
+          view.edit_group.group = grp
+          view.delete.setVisibility(View.GONE)
           iconObservable() = Database.Icons(grp.getIconId.ordinal)
         } else {
           if (model == GroupEditModel.blank) {
             iconObservable() = Database.Icons(grp.getIconId.ordinal)
-            title.text = grp.getName
-            notes.text = grp.getNotes
+            view.edit_title.text = grp.getName
+            view.edit_notes.text = grp.getNotes
 
-            view.findView(TR.delete).onClick0 {
+            view.delete.onClick0 {
               if (EntryEditFragment.inRecycleBin(grp.getParentGroup)) {
                 val t = getString(R.string.delete_name, grp.getName)
                 new AlertDialog.Builder(activity)
@@ -108,19 +105,19 @@ class GroupEditFragment extends AuthorizedFragment {
             baseModel = Some(model)
           }
           if (grp.getParentGroup == null) {
-            group.setVisibility(View.GONE)
-            title.first = true
-            view.findView(TR.delete).setVisibility(View.GONE)
+            view.edit_group.setVisibility(View.GONE)
+            view.edit_title.first = true
+            view.delete.setVisibility(View.GONE)
           } else
-            group.group = grp.getParentGroup
+            view.edit_group.group = grp.getParentGroup
         }
       }
     }
 
-    title.iconfield.onClick0 {
-      EntryEditFragment.iconPicker(activity, title.iconfield, iconObservable.update)
+    view.edit_title.iconfield.onClick0 {
+      EntryEditFragment.iconPicker(activity, view.edit_title.iconfield, iconObservable.update)
     }
-    view
+    view.rootView
   }
 }
 
