@@ -27,7 +27,6 @@ import android.view.inputmethod.InputMethodManager
 import android.provider.{DocumentsContract, OpenableColumns}
 import Futures._
 import ManagedResource._
-import org.acra.ACRA
 
 import scala.concurrent.Future
 

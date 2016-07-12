@@ -8,13 +8,12 @@ import android.os.Bundle
 import android.view.inputmethod.InputMethodManager
 import android.view.{View, ViewGroup}
 import android.widget.SearchView.{OnQueryTextListener, OnSuggestionListener}
-import android.widget.{AdapterView, BaseAdapter, RelativeLayout}
+import android.widget.{AdapterView, BaseAdapter}
 import com.hanhuy.android.common.{Futures, ServiceBus, UiBus}
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
 
 import language.postfixOps
-import TypedResource._
 import com.hanhuy.keepassj.{PwDefs, PwEntry, PwUuid}
 import Futures._
 

@@ -23,7 +23,6 @@ import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
 import com.hanhuy.keepassj.spr.{SprEngine, SprCompileFlags, SprContext}
 import scala.collection.JavaConverters._
-import TypedResource._
 
 import scala.concurrent.Promise
 

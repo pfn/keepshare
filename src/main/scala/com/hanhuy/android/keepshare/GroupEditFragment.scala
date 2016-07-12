@@ -6,7 +6,6 @@ import android.view.{LayoutInflater, View, ViewGroup}
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
-import com.hanhuy.android.keepshare.TypedResource._
 import com.hanhuy.keepassj._
 import Futures._
 

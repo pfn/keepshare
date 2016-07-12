@@ -15,10 +15,9 @@ import android.graphics.drawable.BitmapDrawable
 import android.content.{ComponentName, Context, Intent}
 import java.net.URI
 
-import android.widget.{AdapterView, BaseAdapter, RelativeLayout, Toast}
+import android.widget.{AdapterView, BaseAdapter, Toast}
 import android.view.{View, ViewGroup}
 import android.view.inputmethod.InputMethodManager
-import TypedResource._
 import Futures._
 
 import scala.concurrent.Future

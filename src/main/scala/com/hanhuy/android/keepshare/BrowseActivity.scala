@@ -19,7 +19,7 @@ import android.support.v7.widget.{LinearLayoutManager, RecyclerView}
 import android.util.AttributeSet
 import android.view.ViewGroup.LayoutParams
 import android.view.animation.LayoutAnimationController.AnimationParameters
-import android.view.animation.{AccelerateDecelerateInterpolator, LayoutAnimationController}
+import android.view.animation.AccelerateDecelerateInterpolator
 import com.hanhuy.android.conversions._
 import com.hanhuy.android.extensions._
 import com.hanhuy.android.common._
@@ -34,8 +34,6 @@ import Futures._
 import BrowseActivity._
 
 import scala.concurrent.Future
-import TypedResource._
-import org.acra.ACRA
 
 /**
  * @author pfnguyen

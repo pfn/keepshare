@@ -4,8 +4,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.SearchView.OnSuggestionListener
 import com.hanhuy.android.common._
 import com.hanhuy.android.extensions._
-import TypedResource._
-import android.app.{Activity, Dialog, ProgressDialog, SearchManager}
+import android.app.{Activity, ProgressDialog, SearchManager}
 import android.os.Bundle
 import android.content._
 import android.widget._
@@ -15,7 +14,6 @@ import android.provider.BaseColumns
 import android.view.{Menu, MenuItem, View, ViewGroup}
 import com.hanhuy.keepassj.{PwDefs, PwUuid}
 import Futures._
-import org.acra.ACRA
 
 import scala.language.postfixOps
 import scala.concurrent.Await
