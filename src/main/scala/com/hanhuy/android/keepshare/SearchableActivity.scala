@@ -136,9 +136,8 @@ class SearchableActivity extends AuthorizedActivity {
         override def getItemId(i: Int) = Database.getId(getItem(i))
 
         override def getView(i: Int, view: View, c: ViewGroup) = {
-          val row: TypedViewHolder.pwitem = Option(view.asInstanceOf[RelativeLayout]).map(_.getTag(R.layout.pwitem).asInstanceOf[TypedViewHolder.pwitem]).getOrElse {
+          val row: TypedViewHolder.pwitem = Option(view).map(TypedViewHolder.from(_, TR.layout.pwitem)).getOrElse {
             val vh = TypedViewHolder.inflate(getLayoutInflater, TR.layout.pwitem, c, false)
-            vh.rootView.setTag(R.layout.pwitem, vh)
             vh
           }
 

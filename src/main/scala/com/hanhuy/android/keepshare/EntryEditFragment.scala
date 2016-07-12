@@ -91,12 +91,11 @@ class EntryEditFragment extends AuthorizedFragment {
   var model: EntryEditModel = EntryEditModel.blank
   var baseModel = Option.empty[EntryEditModel]
 
-  def password = getView.getTag(R.layout.entry_edit).asInstanceOf[TypedViewHolder.entry_edit].edit_password
+  def password = TypedViewHolder.from(getView, TR.layout.entry_edit).edit_password
 
   override def onCreateView(inflater: LayoutInflater, container: ViewGroup,
                             savedInstanceState: Bundle) = {
     val views: TypedViewHolder.entry_edit = TypedViewHolder.inflate(inflater, TR.layout.entry_edit, container, false)
-    views.rootView.setTag(R.layout.entry_edit, views)
 
     val entryId = Option(getArguments) flatMap(a =>
       Option(a.getString(EntryViewActivity.EXTRA_ENTRY_ID)))

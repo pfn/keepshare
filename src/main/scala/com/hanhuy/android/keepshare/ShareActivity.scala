@@ -209,7 +209,7 @@ class ShareActivity extends Activity {
               override def getCount = result.size
 
               override def getView(i: Int, view: View, c: ViewGroup) = {
-                val row: TypedViewHolder.pwitem = Option(view.asInstanceOf[RelativeLayout]).map(new TypedViewHolder.pwitem(_)).getOrElse {
+                val row: TypedViewHolder.pwitem = Option(view).map(TypedViewHolder.from(_, TR.layout.pwitem)).getOrElse {
                   TypedViewHolder.inflate(getLayoutInflater, TR.layout.pwitem, c, false)
                 }
                 row.name.setText(
