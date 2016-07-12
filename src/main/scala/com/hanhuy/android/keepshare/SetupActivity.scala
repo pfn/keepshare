@@ -69,7 +69,6 @@ class SetupActivity extends AppCompatActivity with EventBus.RefOwner with Permis
   lazy val keymanager = new KeyManager(this, settings)
 
   lazy val views: TypedViewHolder.setup = TypedViewHolder.setContentView(this, TR.layout.setup)
-  lazy val flipper = views.rootView
 
   override def onCreateOptionsMenu(menu: Menu) = {
     super.onCreateOptionsMenu(menu)
@@ -101,14 +100,14 @@ class SetupActivity extends AppCompatActivity with EventBus.RefOwner with Permis
     if (settings.get(Settings.FIRST_RUN)) {
       settings.clear()
       KeyManager.clear()
-      flipper.setDisplayedChild(1)
+      views.flipper.setDisplayedChild(1)
     }
     def onNext(): Unit = {
       views.progress.setVisibility(View.VISIBLE)
       keymanager.fetchCloudKey() onSuccessMain { case _ =>
         settings.set(Settings.FIRST_RUN, false)
         supportInvalidateOptionsMenu()
-        flipper.setDisplayedChild(0)
+        views.flipper.setDisplayedChild(0)
         views.progress2.setVisibility(View.GONE)
       }
     }
@@ -171,7 +170,7 @@ class SetupActivity extends AppCompatActivity with EventBus.RefOwner with Permis
         RequestCodes.REQUEST_PIN_ENTRY)
     }
     requestPermission(android.Manifest.permission.GET_ACCOUNTS,
-      R.string.require_get_accounts, flipper) onFailureMain { case _ => finish() }
+      R.string.require_get_accounts, views.flipper) onFailureMain { case _ => finish() }
 
     if (Option(getIntent).exists(_.getBooleanExtra(EXTRA_FOR_RESULT, false)) && !settings.get(Settings.FIRST_RUN))
       setupDatabase()
@@ -182,7 +181,7 @@ class SetupActivity extends AppCompatActivity with EventBus.RefOwner with Permis
     request match {
       case REQUEST_AUTHORIZATION =>
         if (result == Activity.RESULT_OK) {
-          flipper.setDisplayedChild(0)
+          views.flipper.setDisplayedChild(0)
           data.getStringExtra(EXTRA_STATE) match {
             case STATE_LOAD => KeyManager.clear()
             case STATE_SAVE => Future {
