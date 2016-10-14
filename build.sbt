@@ -37,7 +37,7 @@ libraryDependencies ++= Seq(
   "com.hanhuy.android" %% "scala-conversions" % conversionsVersion,
   "com.hanhuy.android" %% "scala-conversions-design" % conversionsVersion,
   "com.hanhuy.android" %% "scala-common" % "1.3",
-  "com.hanhuy.keepassj" % "keepassj" % "2.32.0" exclude("xpp3", "xpp3"),
+  "com.hanhuy.keepassj" % "keepassj" % "2.34.0" exclude("xpp3", "xpp3"),
   "com.android.support" % "recyclerview-v7" % supportSdkVersion,
   "com.android.support" % "design" % supportSdkVersion,
   "com.android.support" % "appcompat-v7" % supportSdkVersion,
@@ -90,7 +90,6 @@ android.dsl.buildType("test")(
 )
 
 android.dsl.buildType("protify")(protifySettings:_*)
-android.dsl.extendBuildType("protify")(useProguardInDebug := false)
 
 run <<= run in Android
 

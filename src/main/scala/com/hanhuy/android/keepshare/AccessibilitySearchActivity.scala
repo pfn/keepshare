@@ -104,6 +104,7 @@ class AccessibilitySearchActivity extends Activity {
         val row: TypedViewHolder.pwitem = Option(view).map(TypedViewHolder.from(_, TR.layout.pwitem)).getOrElse {
           TypedViewHolder.inflate(getLayoutInflater, TR.layout.pwitem, c, false)
         }
+        row.rootView.setActivated(false)
         row.name.setText(
           Database.getField(getItem(i), PwDefs.TitleField) orNull)
         row.username.setText(
@@ -112,6 +113,7 @@ class AccessibilitySearchActivity extends Activity {
       }
     }
     val onClickHandler = { (av: AdapterView[_], v: View, pos: Int, id: Long) =>
+      v.setActivated(true)
       views.continu.setEnabled(true)
       views.continu.onClick0 {
         selectItem(result(pos), windowId, packageName, url)
