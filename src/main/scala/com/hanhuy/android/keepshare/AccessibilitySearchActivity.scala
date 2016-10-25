@@ -109,11 +109,14 @@ class AccessibilitySearchActivity extends Activity {
           Database.getField(getItem(i), PwDefs.TitleField) orNull)
         row.username.setText(
           Database.getField(getItem(i), PwDefs.UserNameField) orNull)
+        if (getCount == 1)
+          row.rootView.setActivated(true)
         row.rootView
       }
     }
     val onClickHandler = { (av: AdapterView[_], v: View, pos: Int, id: Long) =>
-      v.setActivated(true)
+      if (v != null)
+        v.setActivated(true)
       views.continu.setEnabled(true)
       views.continu.onClick0 {
         selectItem(result(pos), windowId, packageName, url)
@@ -126,7 +129,7 @@ class AccessibilitySearchActivity extends Activity {
       views.select_prompt.setVisibility(View.GONE)
       if (adapter.getCount == 1) {
         views.list.setItemChecked(0, true)
-        onClickHandler(null, null, 0, 0)
+        onClickHandler(views.list, null, 0, 0)
         views.continu.setEnabled(true)
       }
     }
