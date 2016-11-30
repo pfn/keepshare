@@ -9,7 +9,6 @@ import android.os.{Bundle, Vibrator}
 import android.view.{Menu, MenuItem, View}
 import android.content.Intent
 import Futures._
-import org.acra.ACRA
 
 import scala.util.Try
 

@@ -5,29 +5,34 @@ import com.google.android.gms.auth.UserRecoverableAuthException
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.common.api.GoogleApiClient.{ConnectionCallbacks, OnConnectionFailedListener}
-import com.google.android.gms.drive.{DriveContents, DriveFile, MetadataChangeSet, Drive}
-import com.google.android.gms.drive.query.{Query, SearchableField, Filters}
-import com.hanhuy.android.common.{ManagedResource, Futures, Logcat, UiBus}
+import com.google.android.gms.drive.{Drive, DriveContents, DriveFile, MetadataChangeSet}
+import com.google.android.gms.drive.query.{Filters, Query, SearchableField}
+import com.hanhuy.android.common.{Futures, Logcat, ManagedResource, UiBus}
 
 import collection.JavaConversions._
-
-import java.security.{Key, SecureRandom, MessageDigest}
+import java.security.{MessageDigest, SecureRandom}
 import java.nio.ByteBuffer
+
 import android.app.Activity
-import javax.crypto.{SecretKey, Cipher}
-import javax.crypto.spec.{IvParameterSpec, SecretKeySpec}
 import android.content.Context
-import java.io.IOException
+import java.io.{ByteArrayOutputStream, IOException}
+
 import android.widget.Toast
 
-import scala.concurrent.{Future, Await, Promise}
+import scala.concurrent.{Await, Future, Promise}
 import scala.concurrent.duration._
 import scala.util.Try
-
 import Futures._
 import ManagedResource._
+import org.bouncycastle.crypto.BufferedBlockCipher
+import org.bouncycastle.crypto.engines.AESEngine
+import org.bouncycastle.crypto.io.CipherOutputStream
+import org.bouncycastle.crypto.modes.CBCBlockCipher
+import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher
+import org.bouncycastle.crypto.params.{KeyParameter, ParametersWithIV}
 
 object KeyManager {
+  type Key = Array[Byte]
   val VERIFIER = "KeepShare Verifier"
 
   val STATE_SAVE = "save"
@@ -40,7 +45,7 @@ object KeyManager {
   lazy val sha1 = MessageDigest.getInstance("SHA1")
   def sha1(b: Array[Byte]): String = hex(sha1.digest(b))
 
-  private var _cloudFutureKey = Option.empty[Future[SecretKey]]
+  private var _cloudFutureKey = Option.empty[Future[Key]]
 
   def clear() {
     // Should clear be run on session timeout? Otherwise cloud key stays in RAM
@@ -66,34 +71,45 @@ object KeyManager {
   /** @return a hex string iv:encrypted
     */
   def encrypt(k: Key, data: Array[Byte]): String = {
-    val cipher = Cipher.getInstance(CIPHER_ALG)
+    val cipher = blockCipher
     val iv = Array.ofDim[Byte](16)
     random.nextBytes(iv)
-    val ivspec = new IvParameterSpec(iv)
-    cipher.init(Cipher.ENCRYPT_MODE, k, ivspec, random)
-    hex(iv) + ":" + hex(cipher.doFinal(data))
+    cipher.init(true, ivParameter(keyParameter(k), iv))
+    hex(iv) + ":" + hex(processCipher(cipher, data))
   }
 
   def encrypt(k: Key, data: String): String =
     encrypt(k, data.getBytes("utf-8"))
 
+  def aes = new AESEngine
+  def keyParameter(key: Array[Byte]) = new KeyParameter(key)
+  def ivParameter(key: KeyParameter, iv: Array[Byte]) = new ParametersWithIV(key, iv)
+  def blockCipher = new PaddedBufferedBlockCipher(new CBCBlockCipher(aes))
+
   /** @param data iv:encrypted in hex
     * @return a byte array
     */
-  def decrypt(k: Key, data: String): Array[Byte] = {
-    val cipher = Cipher.getInstance(CIPHER_ALG)
+  def decrypt(key: Key, data: String): Array[Byte] = {
     data.split(":") match {
       case Array(ivs, encs) =>
         val iv = bytes(ivs)
         val encrypted = bytes(encs)
-        val ivspec = new IvParameterSpec(iv)
-        cipher.init(Cipher.DECRYPT_MODE, k, ivspec)
-        cipher.doFinal(encrypted)
+        val cipher = blockCipher
+        cipher.init(false, ivParameter(keyParameter(key), iv))
+        processCipher(cipher, encrypted)
       case _ =>
         val e = new RuntimeException("match error")
         Application.logException(data, e)
         throw e
     }
+  }
+
+  def processCipher(c: BufferedBlockCipher, data: Array[Byte]): Array[Byte] = {
+    val bout = new ByteArrayOutputStream
+    val cout = new CipherOutputStream(bout, c)
+    cout.write(data, 0, data.length)
+    cout.close()
+    bout.toByteArray
   }
 
   def decryptToString(k: Key, data: String): String =
@@ -171,7 +187,7 @@ class KeyManager(c: Context, settings: Settings) {
     Await.result(clientPromise.future, Duration.Inf)
   }
 
-  private def _loadKey(): SecretKey = {
+  private def _loadKey(): Key = {
     val appFolder = Drive.DriveApi.getAppFolder(apiClient)
     try {
       val result = appFolder.queryChildren(apiClient,
@@ -207,7 +223,7 @@ class KeyManager(c: Context, settings: Settings) {
           throw KeyError.LoadFailed("cloud key has changed")
         }
         log.v("Loaded cloud key")
-        new SecretKeySpec(buf, ALG)
+        buf
       } getOrElse createKey()
       result.release()
       k
@@ -233,7 +249,7 @@ class KeyManager(c: Context, settings: Settings) {
     }
   }
 
-  def fetchCloudKey(): Future[SecretKey] = {
+  def fetchCloudKey(): Future[Key] = {
     val p = KeyManager._cloudFutureKey getOrElse {
       Future { _loadKey() }
     }
@@ -242,7 +258,7 @@ class KeyManager(c: Context, settings: Settings) {
     p
   }
 
-  def createKey(): SecretKey = {
+  def createKey(): Key = {
     try {
 
       val keybuf = Array.ofDim[Byte](32)
@@ -267,7 +283,7 @@ class KeyManager(c: Context, settings: Settings) {
     }
   }
 
-  def localKey: Future[Either[KeyError,SecretKey]] = {
+  def localKey: Future[Either[KeyError,Key]] = {
     fetchCloudKey() map { ck =>
 
       val k = settings.get(Settings.LOCAL_KEY)
@@ -286,7 +302,7 @@ class KeyManager(c: Context, settings: Settings) {
         val k = encrypt(ck, saved)
 
         settings.set(Settings.LOCAL_KEY, k)
-        Right(new SecretKeySpec(keybuf, ALG))
+        Right(keybuf)
       } else {
         val okey = Try(decrypt(ck, k)).toOption
         val actual = (for {
@@ -297,7 +313,7 @@ class KeyManager(c: Context, settings: Settings) {
           decrypt(s.pinKey, st)
         }) orElse okey
         actual map { a =>
-          Right(new SecretKeySpec(a, ALG))
+          Right(a)
         } getOrElse Left(KeyError.NeedClear)
       }
     }

@@ -33,7 +33,7 @@ class PINSetupActivity extends AppCompatActivity {
         lk1.right foreach { localKey =>
           val pinKey = PINHolderService.keyFor(thePin)
           val newkey = KeyManager.encrypt(key, KeyManager.encrypt(
-            pinKey, localKey.getEncoded))
+            pinKey, localKey))
           settings.set(Settings.LOCAL_KEY, newkey)
           settings.set(Settings.NEEDS_PIN, true)
           settings.set(Settings.PIN_TIMESTAMP, System.currentTimeMillis)

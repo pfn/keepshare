@@ -3,12 +3,13 @@ package com.hanhuy.android.keepshare
 import com.hanhuy.android.common._
 import android.app.{Notification, NotificationManager, PendingIntent, Service}
 import android.content.{BroadcastReceiver, Context, Intent}
-import javax.crypto.spec.{PBEKeySpec, SecretKeySpec}
-import javax.crypto.{SecretKey, SecretKeyFactory}
 
 import android.os.{Handler, SystemClock}
 import android.support.v4.app.NotificationCompat
 import android.widget.RemoteViews
+import org.bouncycastle.crypto.digests.SHA1Digest
+import org.bouncycastle.crypto.generators.PKCS5S2ParametersGenerator
+import org.bouncycastle.crypto.params.KeyParameter
 
 import scala.util.Try
 
@@ -28,13 +29,13 @@ object PINHolderService {
 
   val PIN_VERIFIER = EXTRA_PIN
 
-  def keyFor(pin: String): SecretKey = {
-    val spec = new PBEKeySpec(pin.toCharArray,
-      "com.hanhuy.android.keepshare".getBytes("utf-8"), 1000, 256)
-    val kf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
-    // must convert the KEY or else IV failure on 4.2 and below
-    new SecretKeySpec(kf.generateSecret(spec).getEncoded, KeyManager.ALG)
+  def pbkdf2(pw: String): KeyManager.Key = {
+    val gen = new PKCS5S2ParametersGenerator(new SHA1Digest)
+    gen.init(pw.getBytes("utf-8"), "com.hanhuy.android.keepshare".getBytes("utf-8"), 1000)
+    gen.generateDerivedParameters(256).asInstanceOf[KeyParameter].getKey
   }
+
+  def keyFor(pin: String): KeyManager.Key = pbkdf2(pin)
 
   def start(pin: String): Unit = {
     val intent = new Intent(Application.instance, classOf[PINHolderService])
@@ -76,11 +77,11 @@ class PINHolderService extends Service {
     nm.notify(Notifications.NOTIF_DATABASE_UNLOCKED, notification)
   }
 
-  def pinKey: SecretKey = {
+  def pinKey: KeyManager.Key = {
     ping()
     _key
   }
-  private var _key: SecretKey = _
+  private var _key: KeyManager.Key = _
 
   def onBind(p1: Intent) = null
 
@@ -136,7 +137,7 @@ class PINHolderService extends Service {
     if (ACTION_SAVED_PIN == intent.getAction && BuildConfig.DEBUG) {
       intent.getStringExtra(EXTRA_PIN).? match {
         case Some(key) =>
-          _key = new SecretKeySpec(KeyManager.bytes(key), KeyManager.ALG)
+          _key = KeyManager.bytes(key)
           startup()
         case None =>
           stopSelf(startId)

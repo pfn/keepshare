@@ -86,7 +86,7 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner with D
     super.onSaveInstanceState(outState)
     if (BuildConfig.DEBUG) {
       PINHolderService.instance.foreach { service =>
-        outState.putString(AuthorizedActivity.EXTRA_SAVED_PIN, KeyManager.hex(service.pinKey.getEncoded))
+        outState.putString(AuthorizedActivity.EXTRA_SAVED_PIN, KeyManager.hex(service.pinKey))
       }
     }
   }
