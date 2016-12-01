@@ -26,11 +26,16 @@ class PINSetupActivity extends AppCompatActivity {
       val thePin = pin mkString ""
       PINHolderService.start(thePin)
       val km = new KeyManager(this, settings)
-      val waitforit = for {
-        key <- km.fetchCloudKey()
+      (for {
+        ck1 <- km.fetchCloudKey()
         lk1 <- km.localKey
       } yield {
-        lk1.right foreach { localKey =>
+        val keys = for {
+          lk <- lk1.right
+          ck <- ck1.right
+        } yield (lk, ck)
+
+        keys.right foreach { case (localKey, key) =>
           val pinKey = PINHolderService.keyFor(thePin)
           val newkey = KeyManager.encrypt(key, KeyManager.encrypt(
             pinKey, localKey))
@@ -44,14 +49,12 @@ class PINSetupActivity extends AppCompatActivity {
           setResult(Activity.RESULT_OK)
           finish()
         }
-        lk1.left foreach { ex =>
+        keys.left foreach { ex =>
           throw new IllegalStateException("Local key is not available: " + ex)
         }
-      }
-
-      waitforit.onFailureMain { case e =>
+      }).onFailureMain { case e =>
           Toast.makeText(this, "Failed to save new PIN: " + e.getMessage, Toast.LENGTH_LONG).show()
-        Application.logException("waitforit onFailureMain", e)
+        Application.logException("verifyMatch onFailure", e)
       }
     }
     else {

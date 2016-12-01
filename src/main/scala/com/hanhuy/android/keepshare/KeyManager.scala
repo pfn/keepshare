@@ -21,7 +21,6 @@ import android.widget.Toast
 
 import scala.concurrent.{Await, Future, Promise}
 import scala.concurrent.duration._
-import scala.util.Try
 import Futures._
 import ManagedResource._
 import org.bouncycastle.crypto.BufferedBlockCipher
@@ -45,7 +44,7 @@ object KeyManager {
   lazy val sha1 = MessageDigest.getInstance("SHA1")
   def sha1(b: Array[Byte]): String = hex(sha1.digest(b))
 
-  private var _cloudFutureKey = Option.empty[Future[Key]]
+  private var _cloudFutureKey = Option.empty[Future[Either[KeyError,Key]]]
 
   def clear() {
     // Should clear be run on session timeout? Otherwise cloud key stays in RAM
@@ -89,18 +88,17 @@ object KeyManager {
   /** @param data iv:encrypted in hex
     * @return a byte array
     */
-  def decrypt(key: Key, data: String): Array[Byte] = {
+  def decrypt(key: Key, data: String): Either[String,Array[Byte]] = {
     data.split(":") match {
       case Array(ivs, encs) =>
         val iv = bytes(ivs)
         val encrypted = bytes(encs)
         val cipher = blockCipher
         cipher.init(false, ivParameter(keyParameter(key), iv))
-        processCipher(cipher, encrypted)
+        Right(processCipher(cipher, encrypted))
       case _ =>
-        val e = new RuntimeException("match error")
-        Application.logException(data, e)
-        throw e
+        Application.logException(data, new Exception("bad crypto data"))
+        Left(data)
     }
   }
 
@@ -112,8 +110,8 @@ object KeyManager {
     bout.toByteArray
   }
 
-  def decryptToString(k: Key, data: String): String =
-    new String(decrypt(k, data), "utf-8")
+  def decryptToString(k: Key, data: String): Either[String,String] =
+    decrypt(k, data).right.map(d => new String(d, "utf-8"))
 }
 class KeyManager(c: Context, settings: Settings) {
   import RequestCodes._
@@ -146,10 +144,22 @@ class KeyManager(c: Context, settings: Settings) {
           key, settings.get(Settings.KEYFILE_PATH))
         val verifier = KeyManager.decryptToString(
           key, settings.get(Settings.VERIFY_DATA))
-        if (verifier != KeyManager.VERIFIER)
-          Left(KeyError.VerifyFailure(c.getString(R.string.failed_verify)))
-        else
-          Right((db, pw, keyf))
+
+        (for {
+          v <- verifier.right
+          d <- db.right
+          p <- pw.right
+          k <- keyf.right
+        } yield {
+          v -> (d,p,k)
+        }).left.map { e =>
+          KeyError.DecryptionFailure(e)
+        }.right.flatMap { case (v,r) =>
+          if (v == KeyManager.VERIFIER)
+            Right(r)
+          else
+            Left(KeyError.VerifyFailure(c.getString(R.string.failed_verify)))
+        }
     }
   }
 
@@ -187,7 +197,9 @@ class KeyManager(c: Context, settings: Settings) {
     Await.result(clientPromise.future, Duration.Inf)
   }
 
-  private def _loadKey(): Key = {
+  sealed trait LoadKeyError
+  case object KeyNotAvailable extends LoadKeyError
+  private def _loadKey(): Either[KeyError,Key] = {
     val appFolder = Drive.DriveApi.getAppFolder(apiClient)
     try {
       val result = appFolder.queryChildren(apiClient,
@@ -214,17 +226,19 @@ class KeyManager(c: Context, settings: Settings) {
         b.flip()
         if (b.remaining != 32) {
           log.e("wrong buffer size: " + b.remaining)
-          throw KeyError.LoadFailed("wrong buffer size: " + b.remaining)
+          Left(KeyError.LoadFailed("wrong buffer size: " + b.remaining))
+        } else {
+          b.get(buf)
+          val hash = settings.get(Settings.CLOUD_KEY_HASH)
+          if (hash != null && sha1(buf) != hash) {
+            log.e("cloud key has changed")
+            Left(KeyError.LoadFailed("cloud key has changed"))
+          } else {
+            log.v("Loaded cloud key")
+            Right(buf)
+          }
         }
-        b.get(buf)
-        val hash = settings.get(Settings.CLOUD_KEY_HASH)
-        if (hash != null && sha1(buf) != hash) {
-          log.e("cloud key has changed")
-          throw KeyError.LoadFailed("cloud key has changed")
-        }
-        log.v("Loaded cloud key")
-        buf
-      } getOrElse createKey()
+      } getOrElse createCloudKey()
       result.release()
       k
     } catch {
@@ -236,7 +250,7 @@ class KeyManager(c: Context, settings: Settings) {
             Toast.LENGTH_SHORT).show()
         }
         requestAuthz(e, STATE_LOAD)
-        throw KeyError.LoadFailed("need authz")
+        Left(KeyError.LoadFailed("need authz"))
       case ex: IOException =>
         log.e("IO error loading cloud key", ex)
         UiBus.post {
@@ -249,16 +263,20 @@ class KeyManager(c: Context, settings: Settings) {
     }
   }
 
-  def fetchCloudKey(): Future[Key] = {
+  def fetchCloudKey(): Future[Either[KeyError,Key]] = {
     val p = KeyManager._cloudFutureKey getOrElse {
       Future { _loadKey() }
     }
     KeyManager._cloudFutureKey = Some(p)
+    p.onComplete {
+      case util.Success(Right(_)) =>
+      case util.Success(Left(_)) | util.Failure(_) => KeyManager._cloudFutureKey = None
+    }
 
     p
   }
 
-  def createKey(): Key = {
+  def createCloudKey(): Either[KeyError,Key] = {
     try {
 
       val keybuf = Array.ofDim[Byte](32)
@@ -272,49 +290,49 @@ class KeyManager(c: Context, settings: Settings) {
       for {
         out <- using(contents.getOutputStream)
       } {
-        val written = out.write(keybuf)
+        out.write(keybuf)
       }
       appFolder.createFile(apiClient, metadata, contents)
       _loadKey()
     } catch {
       case e: UserRecoverableAuthException =>
         requestAuthz(e, STATE_SAVE)
-        throw KeyError.CreateFailed("need authz")
+        Left(KeyError.CreateFailed("need authz"))
     }
   }
 
   def localKey: Future[Either[KeyError,Key]] = {
-    fetchCloudKey() map { ck =>
+    fetchCloudKey() map { eck =>
+      eck.right.flatMap { ck =>
+        val k = settings.get(Settings.LOCAL_KEY)
 
-      val k = settings.get(Settings.LOCAL_KEY)
+        val needsPin = settings.get(Settings.NEEDS_PIN)
+        if (needsPin && PINHolderService.instance.isEmpty) {
+          Left(KeyError.NeedPin)
+        } else if (k == null) {
+          val keybuf = Array.ofDim[Byte](32)
+          random.nextBytes(keybuf)
 
-      val needsPin = settings.get(Settings.NEEDS_PIN)
-      if (needsPin && PINHolderService.instance.isEmpty) {
-        Left(KeyError.NeedPin)
-      } else if (k == null) {
-        val keybuf = Array.ofDim[Byte](32)
-        random.nextBytes(keybuf)
+          val saved = PINHolderService.instance map { s =>
+            bytes(encrypt(s.pinKey, keybuf))
+          } getOrElse keybuf
 
-        val saved = PINHolderService.instance map { s =>
-          bytes(encrypt(s.pinKey, keybuf))
-        } getOrElse keybuf
+          val k = encrypt(ck, saved)
 
-        val k = encrypt(ck, saved)
-
-        settings.set(Settings.LOCAL_KEY, k)
-        Right(keybuf)
-      } else {
-        val okey = Try(decrypt(ck, k)).toOption
-        val actual = (for {
-          s <- PINHolderService.instance
-          key <- okey
-        } yield {
-          val st = new String(key, "utf-8")
-          decrypt(s.pinKey, st)
-        }) orElse okey
-        actual map { a =>
-          Right(a)
-        } getOrElse Left(KeyError.NeedClear)
+          settings.set(Settings.LOCAL_KEY, k)
+          Right(keybuf)
+        } else {
+          val okey = decrypt(ck, k).right.toOption
+          val actual = (for {
+            s <- PINHolderService.instance
+            key <- okey
+            st = new String(key, "utf-8")
+            k <- decrypt(s.pinKey, st).right.toOption
+          } yield k) orElse okey
+          actual map { a =>
+            Right(a)
+          } getOrElse Left(KeyError.NeedClear)
+        }
       }
     }
   }
@@ -341,4 +359,5 @@ object KeyError {
   case class LoadFailed(s: String) extends Exception(s) with KeyError
   case class CreateFailed(s: String) extends Exception(s) with KeyError
   case object NotReady extends Exception("Not ready") with KeyError
+  case class DecryptionFailure(s: String) extends KeyError
 }

@@ -68,42 +68,50 @@ class PINEntryActivity extends AppCompatActivity with DialogManager {
       val pinKey = PINHolderService.keyFor(pin)
       val verifier = settings.get(Settings.PIN_VERIFIER)
 
-      cloudKey onSuccessMain { case key =>
-        val decrypted = Try(KeyManager.decryptToString(pinKey,
-          KeyManager.decryptToString(key, verifier))).toOption
+      cloudKey onSuccessMain {
+        case Right(key) =>
+          val decrypted = KeyManager.decryptToString(key, verifier).right.flatMap(d => KeyManager.decryptToString(pinKey,
+            d)).right.toOption
 
-        if (decrypted contains PINHolderService.PIN_VERIFIER) {
-          settings.set(Settings.PIN_FAIL_COUNT, 0)
-          PINHolderService.start(pin)
-          setResult(Activity.RESULT_OK)
-          fpm.registerPin(pin)
-          finish()
-        } else {
-          views.pin_error.setVisibility(View.VISIBLE)
-          views.pin_error.setText(R.string.try_again)
-          views.pin.setText("")
-          pin = ""
-          UiBus.handler.removeCallbacks(clearError)
-          UiBus.handler.postDelayed(clearError, 1000)
-          if (verifyCount > 2) {
-            settings.set(Settings.PIN_FAIL_COUNT, settings.get(Settings.PIN_FAIL_COUNT) + 1)
-            settings.set(Settings.PIN_FAIL_TIME, System.currentTimeMillis)
-            views.pin_error.setText(R.string.no_more_tries)
-            setResult(Activity.RESULT_CANCELED)
+          if (decrypted contains PINHolderService.PIN_VERIFIER) {
+            settings.set(Settings.PIN_FAIL_COUNT, 0)
+            PINHolderService.start(pin)
+            setResult(Activity.RESULT_OK)
+            fpm.registerPin(pin)
             finish()
+          } else {
+            views.pin_error.setVisibility(View.VISIBLE)
+            views.pin_error.setText(R.string.try_again)
+            views.pin.setText("")
+            pin = ""
+            UiBus.handler.removeCallbacks(clearError)
+            UiBus.handler.postDelayed(clearError, 1000)
+            if (verifyCount > 2) {
+              settings.set(Settings.PIN_FAIL_COUNT, settings.get(Settings.PIN_FAIL_COUNT) + 1)
+              settings.set(Settings.PIN_FAIL_TIME, System.currentTimeMillis)
+              views.pin_error.setText(R.string.no_more_tries)
+              setResult(Activity.RESULT_CANCELED)
+              finish()
+            }
           }
-        }
+        case Left(e) =>
+          views.pin_error.setVisibility(View.VISIBLE)
+          views.pin_error.setText(R.string.key_changed_clear_data)
+          Application.logException("cloudKey left", e match {
+            case ex: Exception => ex
+            case _ => new Exception("KeyError: " + e)
+          })
       }
       cloudKey.onFailureMain { case e =>
         views.pin_error.setVisibility(View.VISIBLE)
         views.pin_error.setText(R.string.key_changed_clear_data)
-        Application.logException("cloudKey onFailureMain", e)
+        Application.logException("cloudKey onFailure", e)
       }
 
       if (!cloudKey.isCompleted) {
         val d = showingDialog(ProgressDialog.show(this, getString(R.string.loading_key),
           getString(R.string.fetching_key), true, false))
-        cloudKey onSuccessMain { case _ =>
+        cloudKey onCompleteMain { case _ =>
           dismissDialog(d)
         }
       }

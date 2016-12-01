@@ -161,7 +161,7 @@ class SetupActivity extends AppCompatActivity with EventBus.RefOwner with Permis
           }
         case _ =>
       }
-      keymanager.fetchCloudKey() onSuccessMain { case _ =>
+      keymanager.fetchCloudKey() onCompleteMain { case _ =>
         views.progress2.setVisibility(View.GONE)
       }
     }
@@ -184,9 +184,7 @@ class SetupActivity extends AppCompatActivity with EventBus.RefOwner with Permis
           views.flipper.setDisplayedChild(0)
           data.getStringExtra(EXTRA_STATE) match {
             case STATE_LOAD => KeyManager.clear()
-            case STATE_SAVE => Future {
-              keymanager.createKey()
-            }
+            case STATE_SAVE => keymanager.fetchCloudKey()
             case _ =>
           }
         } else finish()

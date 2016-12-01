@@ -45,12 +45,13 @@ case class FingerprintManager(context: Context, settings: Settings) {
 
   @TargetApi(23)
   def registerPin(pin: String): Unit = {
-    fpm.foreach { m =>
+    fpm.foreach { _ =>
       import Futures._
       if (settings.get(Settings.FINGERPRINT_TIMESTAMP) < settings.get(Settings.PIN_TIMESTAMP)) Future {
 
         val ks = KeyStore.getInstance(AKS)
         ks.load(null)
+        util.Try(ks.deleteEntry(KEY_NAME))
         import KeyProperties._
         val kg = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_RSA, AKS)
         kg.initialize(
@@ -90,9 +91,9 @@ case class FingerprintManager(context: Context, settings: Settings) {
         case Some(m) if hasFingerprints =>
           val ks = KeyStore.getInstance(AKS)
           ks.load(null)
-          val pk = ks.getKey(KEY_NAME, null)
           val cipher = Cipher.getInstance(CIPHER_ALG)
           try {
+            val pk = ks.getKey(KEY_NAME, null)
             cipher.init(Cipher.DECRYPT_MODE, pk)
             val co = new CryptoObject(cipher)
             m.authenticate(co, cancelToken, 0, new AuthenticationCallback {
