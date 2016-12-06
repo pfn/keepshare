@@ -214,6 +214,7 @@ class PINEntryActivity extends AppCompatActivity with DialogManager {
         .setMessage(R.string.confirm_clear_data)
         .setPositiveButton(android.R.string.yes, { () =>
           settings.clear()
+          KeyManager.resetHardwareKey()
           KeyManager.clear()
           finish()
         })

@@ -23,12 +23,15 @@ import scala.concurrent.{Await, Future, Promise}
 import scala.concurrent.duration._
 import Futures._
 import ManagedResource._
+import android.annotation.TargetApi
 import org.bouncycastle.crypto.BufferedBlockCipher
 import org.bouncycastle.crypto.engines.AESEngine
 import org.bouncycastle.crypto.io.CipherOutputStream
 import org.bouncycastle.crypto.modes.CBCBlockCipher
 import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher
 import org.bouncycastle.crypto.params.{KeyParameter, ParametersWithIV}
+
+import scala.util.Try
 
 object KeyManager {
   type Key = Array[Byte]
@@ -40,6 +43,8 @@ object KeyManager {
   val EXTRA_STATE = "com.hanhuy.android.keepshare.extra.STATE"
 
   val KEY_FILE = "keepshare.key"
+
+  val HARDWARE_KEY_NAME = "keepshare-hardware-key"
 
   lazy val sha1 = MessageDigest.getInstance("SHA1")
   def sha1(b: Array[Byte]): String = hex(sha1.digest(b))
@@ -112,6 +117,47 @@ object KeyManager {
 
   def decryptToString(k: Key, data: String): Either[String,String] =
     decrypt(k, data).right.map(d => new String(d, "utf-8"))
+
+  @TargetApi(23)
+  def initHardwareKey(): Boolean = {
+    if (iota.v(23)) {
+      val ks = java.security.KeyStore.getInstance(FingerprintManager.AKS)
+      ks.load(null)
+      val created = Try(ks.getKey(HARDWARE_KEY_NAME, null)).toOption.exists(_ != null)
+      if (!created) {
+        import android.security.keystore.KeyProperties._
+        val kg = javax.crypto.KeyGenerator.getInstance(KEY_ALGORITHM_AES, FingerprintManager.AKS)
+        kg.init(
+          new android.security.keystore.KeyGenParameterSpec.Builder(HARDWARE_KEY_NAME, PURPOSE_DECRYPT | PURPOSE_ENCRYPT)
+            .setBlockModes(BLOCK_MODE_CBC)
+            .setEncryptionPaddings(ENCRYPTION_PADDING_PKCS7)
+            .build()
+        )
+        // side-effects yolo..., this generates in the keystore
+        kg.generateKey()
+      }
+    }
+    hasHardwareKey
+  }
+
+  @TargetApi(23)
+  def resetHardwareKey(): Unit = {
+    if (iota.v(23)) {
+      val ks = java.security.KeyStore.getInstance(FingerprintManager.AKS)
+      ks.load(null)
+      Try(ks.deleteEntry(HARDWARE_KEY_NAME))
+    }
+  }
+
+  @TargetApi(23)
+  def hasHardwareKey: Boolean = if (iota.v(23)) {
+    val ks = java.security.KeyStore.getInstance(FingerprintManager.AKS)
+    ks.load(null)
+    val key = ks.getKey(HARDWARE_KEY_NAME, null).asInstanceOf[javax.crypto.SecretKey]
+    val kf = javax.crypto.SecretKeyFactory.getInstance(key.getAlgorithm, FingerprintManager.AKS)
+    val info = kf.getKeySpec(key, classOf[android.security.keystore.KeyInfo]).asInstanceOf[android.security.keystore.KeyInfo]
+    info.isInsideSecureHardware
+  } else false
 }
 class KeyManager(c: Context, settings: Settings) {
   import RequestCodes._
@@ -197,8 +243,6 @@ class KeyManager(c: Context, settings: Settings) {
     Await.result(clientPromise.future, Duration.Inf)
   }
 
-  sealed trait LoadKeyError
-  case object KeyNotAvailable extends LoadKeyError
   private def _loadKey(): Either[KeyError,Key] = {
     val appFolder = Drive.DriveApi.getAppFolder(apiClient)
     try {

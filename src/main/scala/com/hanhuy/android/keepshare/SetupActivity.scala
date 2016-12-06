@@ -84,6 +84,7 @@ class SetupActivity extends AppCompatActivity with EventBus.RefOwner with Permis
           .setMessage(R.string.confirm_clear_data)
           .setPositiveButton(android.R.string.yes, { () =>
             settings.clear()
+            KeyManager.resetHardwareKey()
             KeyManager.clear()
             finish()
           })
@@ -97,18 +98,41 @@ class SetupActivity extends AppCompatActivity with EventBus.RefOwner with Permis
   override def onCreate(savedInstanceState: Bundle) {
     super.onCreate(savedInstanceState)
     setTitle(getTitle + getString(R.string.setup_subtitle))
+    KeyManager.initHardwareKey()
     if (settings.get(Settings.FIRST_RUN)) {
       settings.clear()
       KeyManager.clear()
+      if (KeyManager.hasHardwareKey) {
+        views.hardware_keys.setVisibility(View.VISIBLE)
+      }
       views.flipper.setDisplayedChild(1)
     }
+
     def onNext(): Unit = {
-      views.progress.setVisibility(View.VISIBLE)
-      keymanager.fetchCloudKey() onSuccessMain { case _ =>
+      if (views.hardware_keys.isChecked) {
         settings.set(Settings.FIRST_RUN, false)
         supportInvalidateOptionsMenu()
         views.flipper.setDisplayedChild(0)
-        views.progress2.setVisibility(View.GONE)
+        fragment.hk.setChecked(true)
+        settings.set(Settings.HARDWARE_KEY_ENABLE, true)
+      } else {
+        settings.set(Settings.HARDWARE_KEY_ENABLE, false)
+        views.progress.setVisibility(View.VISIBLE)
+        fragment.hk.setChecked(false)
+        val f = keymanager.fetchCloudKey()
+
+        f onSuccessMain { case _ =>
+          settings.set(Settings.FIRST_RUN, false)
+          supportInvalidateOptionsMenu()
+          views.flipper.setDisplayedChild(0)
+          views.progress2.setVisibility(View.GONE)
+        }
+
+        f onFailureMain { case e =>
+          views.connect.setEnabled(true)
+          Toast.makeText(this, "Failed to connect to Google Drive: " + e.getMessage, Toast.LENGTH_LONG).show()
+          Application.logException("onNext fetchCloudKey: " + e.getMessage, e)
+        }
       }
     }
     views.connect onClick0 {
@@ -251,6 +275,7 @@ class SetupFragment extends android.preference.PreferenceFragment {
   lazy val ptimeout = findPreference("pin_timeout").asInstanceOf[ListPreference]
   lazy val pwoverride = findPreference("password_override").asInstanceOf[CheckBoxPreference]
   lazy val fp = findPreference("fingerprint_enable").asInstanceOf[CheckBoxPreference]
+  lazy val hk = findPreference("hardware_key_enable").asInstanceOf[CheckBoxPreference]
   lazy val fpm = FingerprintManager(getActivity, settings)
   lazy val pin = findPreference("database_pin")
   lazy val secopts = findPreference("security_options").asInstanceOf[PreferenceGroup]
@@ -297,6 +322,9 @@ class SetupFragment extends android.preference.PreferenceFragment {
     addPreferencesFromResource(R.xml.setup)
     if (fpm.fpm.isEmpty)
       secopts.removePreference(fp)
+
+    if (!KeyManager.hasHardwareKey)
+      secopts.removePreference(hk)
   }
 
   override def onStart() = {

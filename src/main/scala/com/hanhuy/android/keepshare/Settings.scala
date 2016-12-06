@@ -34,6 +34,20 @@ case class BooleanSetting(key: String, default: Boolean) extends Setting[Boolean
   def set(p: SharedPreferences, value: Boolean): Unit = p.edit().putBoolean(key, value).apply()
 }
 
+// mostly to cover `null` values from `StringSetting`s
+case class OptionalSetting[A](setting: Setting[A]) extends Setting[Option[A]] {
+  override type T = Option[A]
+  override def get(c: Context, p: SharedPreferences) = Option(setting.get(c, p))
+  override def set(p: SharedPreferences, value: Option[A]) = {
+    if (value.isEmpty) p.edit().remove(setting.key).apply()
+    value.foreach { v =>
+      setting.set(p, v)
+    }
+  }
+  override def key = setting.key
+  override def default = None
+}
+
 object Settings {
   val KEYBOARD_TIMEOUT = IntSetting("timeout", 60)
   val PIN_TIMEOUT = IntSetting("pin_timeout", 1)
@@ -54,6 +68,7 @@ object Settings {
   val FINGERPRINT_TIMESTAMP = LongSetting("fingerprint_timestamp", 0l)
   val FINGERPRINT_PIN = StringSetting("fingerprint_pin")
   val FINGERPRINT_ENABLE = BooleanSetting("fingerprint_enable", true)
+  val HARDWARE_KEY_ENABLE = BooleanSetting("hardware_key_enable", false)
   val PIN_FAIL_COUNT = IntSetting("pin_fail_count", 0)
   val PIN_FAIL_TIME = LongSetting("pin_fail_time", 0)
 

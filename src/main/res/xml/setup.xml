@@ -43,6 +43,12 @@
             android:enabled="@bool/v23plus"
             android:defaultValue="true"/>
         <CheckBoxPreference
+            android:key="hardware_key_enable"
+            android:title="Hardware Key"
+            android:summary="Use secure encryption key (off-line mode)"
+            android:enabled="@bool/v23plus"
+            android:defaultValue="false"/>
+        <CheckBoxPreference
                 android:key="password_override"
                 android:title="Input override"
                 android:dependency="keyboard_enable"
