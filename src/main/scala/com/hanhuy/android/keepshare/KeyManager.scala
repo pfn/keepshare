@@ -70,7 +70,7 @@ object KeyManager {
 
   val random = new SecureRandom
   val ALG = "AES"
-  val CIPHER_ALG = ALG + "/CBC/PKCS5Padding"
+  val CIPHER_ALG = ALG + "/CBC/PKCS7Padding"
 
   /** @return a hex string iv:encrypted
     */
@@ -131,6 +131,7 @@ object KeyManager {
           new android.security.keystore.KeyGenParameterSpec.Builder(HARDWARE_KEY_NAME, PURPOSE_DECRYPT | PURPOSE_ENCRYPT)
             .setBlockModes(BLOCK_MODE_CBC)
             .setEncryptionPaddings(ENCRYPTION_PADDING_PKCS7)
+            .setRandomizedEncryptionRequired(false) // supply our own IVs
             .build()
         )
         // side-effects yolo..., this generates in the keystore
@@ -307,7 +308,95 @@ class KeyManager(c: Context, settings: Settings) {
     }
   }
 
-  def fetchCloudKey(): Future[Either[KeyError,Key]] = {
+  def init(): Future[Either[KeyError,this.type]] = {
+    if (settings.get(Settings.HARDWARE_KEY_ENABLE)) {
+      Future.successful(Right(this))
+    } else
+      fetchCloudKey().map { e =>
+        e.right.map(_ => this)
+      }
+  }
+
+  def protectLocalKey(): Future[Either[KeyError,String]] = {
+    val needsPin = settings.get(Settings.NEEDS_PIN)
+    if (needsPin && PINHolderService.instance.isEmpty) Future.successful(Left(KeyError.NeedPin))
+    else localKey.flatMap {
+      case Left(l) => Future.successful(Left(l))
+      case Right(r) =>
+        val saved: Either[String,Array[Byte]] = PINHolderService.instance map { s =>
+          Left(encrypt(s.pinKey, r))
+        } getOrElse Right(r)
+
+        _localKey = None
+        saved.fold(encryptWithExternalKey, encryptWithExternalKey)
+    }
+  }
+  def decryptWithExternalKeyToString(data: String): Future[Either[String,String]] =
+    decryptWithExternalKey(data).map(d => d.right.map(new String(_, "utf-8")))
+  def decryptWithExternalKey(data: String): Future[Either[String,Array[Byte]]] = {
+    data.split(":") match {
+      case Array(ivs, encs) =>
+        if (settings.get(Settings.HARDWARE_KEY_ENABLE)) {
+          import javax.crypto.Cipher
+          import javax.crypto.spec.IvParameterSpec
+          val cipher = Cipher.getInstance(CIPHER_ALG)
+          val ivspec = new IvParameterSpec(bytes(ivs))
+
+          val ks = java.security.KeyStore.getInstance(FingerprintManager.AKS)
+          ks.load(null)
+          val key = ks.getKey(HARDWARE_KEY_NAME, null)
+          cipher.init(Cipher.DECRYPT_MODE, key, ivspec)
+          Future.successful(Right(cipher.doFinal(bytes(encs))))
+        } else {
+          fetchCloudKey().map(k => k.right.flatMap(key => KeyManager.decrypt(key, data)).left.map(e => "Key error: " + e))
+        }
+      case _ =>
+        Application.logException(data, new Exception("bad crypto data"))
+        Future.successful(Left(data))
+    }
+  }
+  def encryptWithExternalKey(data: Array[Byte]): Future[Either[KeyError,String]] = {
+    val iv = Array.ofDim[Byte](16)
+    random.nextBytes(iv)
+    if (settings.get(Settings.HARDWARE_KEY_ENABLE)) {
+      import javax.crypto.Cipher
+      import javax.crypto.spec.IvParameterSpec
+      val cipher = Cipher.getInstance(CIPHER_ALG)
+      val ivspec = new IvParameterSpec(iv)
+      val ks = java.security.KeyStore.getInstance(FingerprintManager.AKS)
+      ks.load(null)
+      val key = ks.getKey(HARDWARE_KEY_NAME, null)
+      cipher.init(Cipher.ENCRYPT_MODE, key, ivspec)
+      Future.successful(Right(hex(iv) + ":" + hex(cipher.doFinal(data))))
+    } else {
+      fetchCloudKey().map(_.right.map { k =>
+        val cipher = blockCipher
+        cipher.init(true, ivParameter(keyParameter(k), iv))
+        hex(iv) + ":" + hex(processCipher(cipher, data))
+      })
+    }
+  }
+
+  def encryptWithExternalKey(data: String): Future[Either[KeyError,String]] =
+    encryptWithExternalKey(data.getBytes("utf-8"))
+  def decryptWithLocalKeyToString(data: String): Future[Either[String,String]] =
+    decryptWithLocalKey(data).map(d => d.right.map(new String(_, "utf-8")))
+  def decryptWithLocalKey(data: String): Future[Either[String,Array[Byte]]] = {
+    localKey.map(k => k.right.flatMap(key => KeyManager.decrypt(key, data)).left.map(e => "Key error: " + e))
+  }
+  def encryptWithLocalKey(data: Array[Byte]): Future[Either[KeyError,String]] = {
+    localKey.map(_.right.map { k =>
+      val cipher = blockCipher
+      val iv = Array.ofDim[Byte](16)
+      random.nextBytes(iv)
+      cipher.init(true, ivParameter(keyParameter(k), iv))
+      hex(iv) + ":" + hex(processCipher(cipher, data))
+    })
+  }
+
+  def encryptWithLocalKey(data: String): Future[Either[KeyError,String]] = encryptWithLocalKey(data.getBytes("utf-8"))
+
+  private def fetchCloudKey(): Future[Either[KeyError,Key]] = {
     val p = KeyManager._cloudFutureKey getOrElse {
       Future { _loadKey() }
     }
@@ -320,7 +409,7 @@ class KeyManager(c: Context, settings: Settings) {
     p
   }
 
-  def createCloudKey(): Either[KeyError,Key] = {
+  private def createCloudKey(): Either[KeyError,Key] = {
     try {
 
       val keybuf = Array.ofDim[Byte](32)
@@ -345,40 +434,47 @@ class KeyManager(c: Context, settings: Settings) {
     }
   }
 
-  def localKey: Future[Either[KeyError,Key]] = {
-    fetchCloudKey() map { eck =>
-      eck.right.flatMap { ck =>
-        val k = settings.get(Settings.LOCAL_KEY)
+  private var _localKey = Option.empty[Future[Either[KeyError,Key]]]
 
-        val needsPin = settings.get(Settings.NEEDS_PIN)
-        if (needsPin && PINHolderService.instance.isEmpty) {
-          Left(KeyError.NeedPin)
-        } else if (k == null) {
-          val keybuf = Array.ofDim[Byte](32)
-          random.nextBytes(keybuf)
+  private def localKey: Future[Either[KeyError,Key]] = _localKey.getOrElse {
+    val k = settings.get(Settings.LOCAL_KEY)
 
-          val saved = PINHolderService.instance map { s =>
-            bytes(encrypt(s.pinKey, keybuf))
-          } getOrElse keybuf
+    val needsPin = settings.get(Settings.NEEDS_PIN)
+    val f = if (needsPin && PINHolderService.instance.isEmpty) {
+      Future.successful(Left(KeyError.NeedPin))
+    } else if (k == null) {
+      // create key
+      val keybuf = Array.ofDim[Byte](32)
+      random.nextBytes(keybuf)
 
-          val k = encrypt(ck, saved)
+      val saved: Either[String,Array[Byte]] = PINHolderService.instance map { s =>
+        Left(encrypt(s.pinKey, keybuf))
+      } getOrElse Right(keybuf)
 
+      val f = saved.fold(encryptWithExternalKey, encryptWithExternalKey)
+      f.map { e =>
+        e.right.map { k =>
           settings.set(Settings.LOCAL_KEY, k)
-          Right(keybuf)
-        } else {
-          val okey = decrypt(ck, k).right.toOption
-          val actual = (for {
-            s <- PINHolderService.instance
-            key <- okey
-            st = new String(key, "utf-8")
-            k <- decrypt(s.pinKey, st).right.toOption
-          } yield k) orElse okey
-          actual map { a =>
-            Right(a)
-          } getOrElse Left(KeyError.NeedClear)
+          keybuf
         }
       }
+    } else {
+      decryptWithExternalKey(k).map { ed =>
+        val okey = ed.right.toOption
+        val actual = (for {
+          s <- PINHolderService.instance if settings.get(Settings.NEEDS_PIN)
+          key <- okey
+          st = new String(key, "utf-8")
+          k <- decrypt(s.pinKey, st).right.toOption
+        } yield k) orElse okey
+        actual map { a =>
+          Right(a)
+        } getOrElse Left(KeyError.NeedClear)
+      }
     }
+
+    _localKey = Some(f)
+    f
   }
 
   private def requestAuthz(e: UserRecoverableAuthException, state: String) {

@@ -45,8 +45,9 @@
         <CheckBoxPreference
             android:key="hardware_key_enable"
             android:title="Hardware Key"
-            android:summary="Use secure encryption key (off-line mode)"
+            android:summary="Use secure encryption key (off-line mode). Cannot be changed after setup."
             android:enabled="@bool/v23plus"
+            android:persistent="false"
             android:defaultValue="false"/>
         <CheckBoxPreference
                 android:key="password_override"

@@ -61,19 +61,22 @@ class PINEntryActivity extends AppCompatActivity with DialogManager {
       }
     }
 
-    val cloudKey = km.fetchCloudKey()
+    val kminit = km.init()
     var verifyCount = 0
     def verifyPin() {
       verifyCount += 1
       val pinKey = PINHolderService.keyFor(pin)
       val verifier = settings.get(Settings.PIN_VERIFIER)
 
-      cloudKey onSuccessMain {
-        case Right(key) =>
-          val decrypted = KeyManager.decryptToString(key, verifier).right.flatMap(d => KeyManager.decryptToString(pinKey,
-            d)).right.toOption
+      val x = for {
+        ekm <- kminit
+        decrypted <- km.decryptWithExternalKeyToString(verifier) if ekm.isRight
+      } yield decrypted.right.flatMap(d => Try(KeyManager.decryptToString(pinKey, d)).recover { case _ => Right("") }.toOption.getOrElse(Right("")))
 
-          if (decrypted contains PINHolderService.PIN_VERIFIER) {
+      x.onSuccessMain {
+        case Right(decrypted) =>
+
+          if (decrypted == PINHolderService.PIN_VERIFIER) {
             settings.set(Settings.PIN_FAIL_COUNT, 0)
             PINHolderService.start(pin)
             setResult(Activity.RESULT_OK)
@@ -97,21 +100,18 @@ class PINEntryActivity extends AppCompatActivity with DialogManager {
         case Left(e) =>
           views.pin_error.setVisibility(View.VISIBLE)
           views.pin_error.setText(R.string.key_changed_clear_data)
-          Application.logException("cloudKey left", e match {
-            case ex: Exception => ex
-            case _ => new Exception("KeyError: " + e)
-          })
+          Application.logException("cloudKey left", new Exception("KeyError: " + e))
       }
-      cloudKey.onFailureMain { case e =>
+      x.onFailureMain { case e =>
         views.pin_error.setVisibility(View.VISIBLE)
         views.pin_error.setText(R.string.key_changed_clear_data)
-        Application.logException("cloudKey onFailure", e)
+        Application.logException("decryption failure", e)
       }
 
-      if (!cloudKey.isCompleted) {
+      if (!kminit.isCompleted) {
         val d = showingDialog(ProgressDialog.show(this, getString(R.string.loading_key),
           getString(R.string.fetching_key), true, false))
-        cloudKey onCompleteMain { case _ =>
+        kminit onCompleteMain { case _ =>
           dismissDialog(d)
         }
       }

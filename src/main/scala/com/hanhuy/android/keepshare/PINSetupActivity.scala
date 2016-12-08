@@ -26,26 +26,23 @@ class PINSetupActivity extends AppCompatActivity {
       val thePin = pin mkString ""
       PINHolderService.start(thePin)
       val km = new KeyManager(this, settings)
+      val pinKey = PINHolderService.keyFor(thePin)
       (for {
-        ck1 <- km.fetchCloudKey()
-        lk1 <- km.localKey
+        ck1 <- km.init()
+        prt <- km.protectLocalKey()
+        evr <- km.encryptWithExternalKey(KeyManager.encrypt(pinKey, PINHolderService.PIN_VERIFIER))
       } yield {
         val keys = for {
-          lk <- lk1.right
-          ck <- ck1.right
-        } yield (lk, ck)
+          plk <- prt.right
+          verifier <- evr.right
+        } yield (plk,verifier)
 
-        keys.right foreach { case (localKey, key) =>
-          val pinKey = PINHolderService.keyFor(thePin)
-          val newkey = KeyManager.encrypt(key, KeyManager.encrypt(
-            pinKey, localKey))
+        keys.right foreach { case (newkey,verifier) =>
           settings.set(Settings.LOCAL_KEY, newkey)
           settings.set(Settings.NEEDS_PIN, true)
           settings.set(Settings.PIN_TIMESTAMP, System.currentTimeMillis)
           FingerprintManager(this, settings).registerPin(thePin)
-          settings.set(Settings.PIN_VERIFIER,
-            KeyManager.encrypt(key, KeyManager.encrypt(pinKey,
-              PINHolderService.PIN_VERIFIER)))
+          settings.set(Settings.PIN_VERIFIER, verifier)
           setResult(Activity.RESULT_OK)
           finish()
         }

@@ -166,7 +166,7 @@
         You must complete your configuration before setting a PIN</string>
     <string name="verify_pin">Verify your PIN</string>
     <string name="fetching_key">Retrieving key from Google Drive</string>
-    <string name="key_changed_clear_data">Key data in Google Drive has changed, clear data and try again</string>
+    <string name="key_changed_clear_data">Secure key data has changed, clear data and try again</string>
     <string name="ime_search_title">: No password entries loaded</string>
     <string name="ime_search_prompt">Would you like to search for \'%s\'?</string>
     <string name="keyboard_not_enabled_title">

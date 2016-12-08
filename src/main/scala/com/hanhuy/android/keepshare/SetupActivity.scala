@@ -42,6 +42,9 @@ object RequestCodes {
   val REQUEST_SETUP_PIN      = 8
   val REQUEST_PIN_ENTRY      = 9
   val SETUP_DATABASE         = 10
+  val REQUEST_SETUP_ACTIVITY = 11 // mostly ignores except for a finish intent
+
+  val RESULT_FINISH = -1337
 
   val EXTRA_FOR_RESULT = "com.hanhuy.android.keepshare.extra.FOR_RESULT"
 
@@ -86,6 +89,7 @@ class SetupActivity extends AppCompatActivity with EventBus.RefOwner with Permis
             settings.clear()
             KeyManager.resetHardwareKey()
             KeyManager.clear()
+            setResult(RequestCodes.RESULT_FINISH)
             finish()
           })
           .setNegativeButton(android.R.string.no, null)
@@ -116,22 +120,28 @@ class SetupActivity extends AppCompatActivity with EventBus.RefOwner with Permis
         fragment.hk.setChecked(true)
         settings.set(Settings.HARDWARE_KEY_ENABLE, true)
       } else {
-        settings.set(Settings.HARDWARE_KEY_ENABLE, false)
-        views.progress.setVisibility(View.VISIBLE)
-        fragment.hk.setChecked(false)
-        val f = keymanager.fetchCloudKey()
+        val rp = requestPermission(android.Manifest.permission.GET_ACCOUNTS,
+          R.string.require_get_accounts, views.flipper)
+        rp onFailureMain { case _ => finish() }
+        rp onSuccessMain { case _ =>
 
-        f onSuccessMain { case _ =>
-          settings.set(Settings.FIRST_RUN, false)
-          supportInvalidateOptionsMenu()
-          views.flipper.setDisplayedChild(0)
-          views.progress2.setVisibility(View.GONE)
-        }
+          settings.set(Settings.HARDWARE_KEY_ENABLE, false)
+          views.progress.setVisibility(View.VISIBLE)
+          fragment.hk.setChecked(false)
+          val f = keymanager.init()
 
-        f onFailureMain { case e =>
-          views.connect.setEnabled(true)
-          Toast.makeText(this, "Failed to connect to Google Drive: " + e.getMessage, Toast.LENGTH_LONG).show()
-          Application.logException("onNext fetchCloudKey: " + e.getMessage, e)
+          f onSuccessMain { case _ =>
+            settings.set(Settings.FIRST_RUN, false)
+            supportInvalidateOptionsMenu()
+            views.flipper.setDisplayedChild(0)
+            views.progress2.setVisibility(View.GONE)
+          }
+
+          f onFailureMain { case e =>
+            views.connect.setEnabled(true)
+            Toast.makeText(this, "Failed to setup secret key: " + e.getMessage, Toast.LENGTH_LONG).show()
+            Application.logException("onNext keymanager.init: " + e.getMessage, e)
+          }
         }
       }
     }
@@ -185,7 +195,7 @@ class SetupActivity extends AppCompatActivity with EventBus.RefOwner with Permis
           }
         case _ =>
       }
-      keymanager.fetchCloudKey() onCompleteMain { case _ =>
+      keymanager.init() onCompleteMain { case _ =>
         views.progress2.setVisibility(View.GONE)
       }
     }
@@ -193,9 +203,6 @@ class SetupActivity extends AppCompatActivity with EventBus.RefOwner with Permis
       startActivityForResult(new Intent(this, classOf[PINEntryActivity]),
         RequestCodes.REQUEST_PIN_ENTRY)
     }
-    requestPermission(android.Manifest.permission.GET_ACCOUNTS,
-      R.string.require_get_accounts, views.flipper) onFailureMain { case _ => finish() }
-
     if (Option(getIntent).exists(_.getBooleanExtra(EXTRA_FOR_RESULT, false)) && !settings.get(Settings.FIRST_RUN))
       setupDatabase()
   }
@@ -208,7 +215,7 @@ class SetupActivity extends AppCompatActivity with EventBus.RefOwner with Permis
           views.flipper.setDisplayedChild(0)
           data.getStringExtra(EXTRA_STATE) match {
             case STATE_LOAD => KeyManager.clear()
-            case STATE_SAVE => keymanager.fetchCloudKey()
+            case STATE_SAVE => keymanager.init()
             case _ =>
           }
         } else finish()
@@ -234,22 +241,34 @@ class SetupActivity extends AppCompatActivity with EventBus.RefOwner with Permis
           fragment.databaseReady(dbCredentials.ready)
 
           if (dbCredentials.ready) {
-            keymanager.localKey onSuccessMain {
-              case Left(error) =>
+            for {
+              encdb <- keymanager.encryptWithLocalKey(dbCredentials.db.getOrElse(""))
+              encpw <- keymanager.encryptWithLocalKey(dbCredentials.password.getOrElse(""))
+              enckeyf <- keymanager.encryptWithLocalKey(dbCredentials.keyfile.getOrElse(""))
+              verifier <- keymanager.encryptWithLocalKey(KeyManager.VERIFIER)
+            } yield {
+              val r = for {
+                db <- encdb.right
+                pw <- encpw.right
+                keyf <- enckeyf.right
+                ver <- verifier.right
+              } yield {
+                settings.set(Settings.VERIFY_DATA, ver)
+                settings.set(Settings.PASSWORD, pw)
+                settings.set(Settings.KEYFILE_PATH, keyf)
+                settings.set(Settings.DATABASE_FILE, db)
+                setResult(Activity.RESULT_OK)
+              }
+
+              r.left.foreach { error =>
                 Toast.makeText(
                   this, error.toString, Toast.LENGTH_SHORT).show()
+                Application.logException("Setup failure: " + error.toString, error match {
+                  case e: Exception => e
+                  case _ => new Exception(error.toString)
+                })
                 finish()
-              case Right(k) =>
-                val encdb = KeyManager.encrypt(k, dbCredentials.db.getOrElse(""))
-                val encpw = KeyManager.encrypt(k, dbCredentials.password.getOrElse(""))
-                val enckeyf = KeyManager.encrypt(k, dbCredentials.keyfile.getOrElse(""))
-                val verifier = KeyManager.encrypt(k, KeyManager.VERIFIER)
-
-                settings.set(Settings.VERIFY_DATA, verifier)
-                settings.set(Settings.PASSWORD, encpw)
-                settings.set(Settings.KEYFILE_PATH, enckeyf)
-                settings.set(Settings.DATABASE_FILE, encdb)
-                setResult(Activity.RESULT_OK)
+              }
             }
           }
         }
@@ -267,6 +286,7 @@ class SetupActivity extends AppCompatActivity with EventBus.RefOwner with Permis
 }
 
 class SetupFragment extends android.preference.PreferenceFragment {
+  val log = Logcat("SetupFragment")
   lazy val settings = Settings(getActivity)
   lazy val dbs = findPreference("database_info")//.asInstanceOf[DatabasePreference]
   lazy val kt = findPreference("keyboard_enable").asInstanceOf[CheckBoxPreference]
@@ -280,6 +300,7 @@ class SetupFragment extends android.preference.PreferenceFragment {
   lazy val pin = findPreference("database_pin")
   lazy val secopts = findPreference("security_options").asInstanceOf[PreferenceGroup]
   private var _onPrefChange = Option.empty[(Preference, Any) => Any]
+
 
   def databaseReady(ready: Boolean): Unit = {
     if (ready)
@@ -367,6 +388,76 @@ class SetupFragment extends android.preference.PreferenceFragment {
       ktimeout.setSummary(v.toString)
       settings.set(Settings.KEYBOARD_TIMEOUT, v.toString.toInt)
       true
+    }
+
+    hk.setChecked(settings.get(Settings.HARDWARE_KEY_ENABLE))
+    hk.onPreferenceChange { (_, value) =>
+
+      /*
+      val enablehk = value.asInstanceOf[Boolean]
+
+      hk.setEnabled(false)
+      if (enablehk != settings.get(Settings.HARDWARE_KEY_ENABLE)) {
+        // ugh, this whole thing is loaded with yuck
+        val setup = getActivity.asInstanceOf[SetupActivity]
+        val wp = if (enablehk) Future.successful(())
+        else setup.requestPermission(android.Manifest.permission.GET_ACCOUNTS,
+          R.string.require_get_accounts, setup.views.flipper)
+        val km = setup.keymanager
+        val pinVerifier = settings.get(Settings.PIN_VERIFIER)
+
+        val pv = if (pinVerifier != "") {
+          km.decryptWithExternalKeyToString(pinVerifier).flatMap {
+            case Right(v) => Future.successful(Right(Some(v)))
+            case Left(l) => Future.successful(Left(l))
+          }
+        } else {
+          Future.successful(Right(None))
+        }
+        wp.onFailureMain { case _ =>
+          hk.setChecked(true)
+          hk.setEnabled(true)
+        }
+        val f = for {
+          verifier <- pv
+          _ <- wp
+          _ <- Future(settings.set(Settings.HARDWARE_KEY_ENABLE, enablehk))
+          prt <- km.protectLocalKey()
+        } yield {
+          val r = for {
+            lk <- prt.right
+            vo <- verifier.right
+          } yield {
+            vo.map(km.encryptWithExternalKey).map(_.onCompleteMain { x =>
+              x.foreach { newverifier =>
+                newverifier.right.foreach { nv =>
+                  settings.set(Settings.PIN_VERIFIER, nv)
+                  hk.setChecked(enablehk)
+                }
+              }
+              settings.set(Settings.LOCAL_KEY, lk)
+              hk.setEnabled(true)
+            })
+            if (vo.isEmpty) UiBus.run {
+              hk.setEnabled(true)
+              hk.setChecked(enablehk)
+            }
+          }
+          r.left.foreach { l =>
+            Application.logException("hk switch error: " + l, new Exception("switching fail"))
+            log.e("Failed to switch: " + l)
+            Toast.makeText(setup, "Failed to switch key mode: " + l, Toast.LENGTH_LONG).show()
+          }
+        }
+        f.onFailureMain { case e =>
+          Toast.makeText(setup, "Failed to switch key mode: " + e, Toast.LENGTH_LONG).show()
+          log.e("Failed to switch", e)
+          Application.logException("hk switch exception", e)
+        }
+
+      }
+      */
+      false
     }
   }
 
@@ -613,15 +704,9 @@ class DatabaseSetupActivity extends AppCompatActivity with DialogManager with Pe
       } else {
         progressBar.setVisibility(View.VISIBLE)
         val f = Database.open(database, Option(password),
-          Option(keyfile) filterNot (_.isEmpty)) flatMap {
-          _ => keymanager.localKey  }
+          Option(keyfile) filterNot (_.isEmpty))
 
-        f onSuccessMain {
-          case Left(error) =>
-            Toast.makeText(
-              this, error.toString, Toast.LENGTH_SHORT).show()
-            finish()
-          case Right(k) =>
+        f onSuccessMain { case _ =>
             val intent = Option(getIntent) getOrElse new Intent
             intent.putExtra(EXTRA_DATABASE, model.db.orNull)
             intent.putExtra(EXTRA_PASSWORD, model.password.orNull)

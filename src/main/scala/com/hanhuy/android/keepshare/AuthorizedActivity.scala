@@ -93,6 +93,8 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner with D
 
   override def onActivityResult(requestCode: Int, resultCode: Int, data: Intent) = {
     val success = requestCode match {
+      case RequestCodes.REQUEST_SETUP_ACTIVITY =>
+        resultCode != RequestCodes.RESULT_FINISH
       case RequestCodes.REQUEST_SIGN_IN =>
         recreate()
         false
@@ -134,7 +136,7 @@ class AuthorizedActivity extends AppCompatActivity with EventBus.RefOwner with D
   }
   override def onOptionsItemSelected(item: MenuItem) = item.getItemId match {
     case R.id.menu_setup =>
-      startActivity(new Intent(this, classOf[SetupActivity]))
+      startActivityForResult(new Intent(this, classOf[SetupActivity]), RequestCodes.REQUEST_SETUP_ACTIVITY)
       true
     case R.id.menu_setup_pin =>
       if (km.ready) {
