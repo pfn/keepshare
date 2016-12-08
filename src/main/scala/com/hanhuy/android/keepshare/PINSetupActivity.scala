@@ -33,11 +33,11 @@ class PINSetupActivity extends AppCompatActivity {
         evr <- km.encryptWithExternalKey(KeyManager.encrypt(pinKey, PINHolderService.PIN_VERIFIER))
       } yield {
         val keys = for {
-          plk <- prt.right
-          verifier <- evr.right
+          plk <- prt
+          verifier <- evr
         } yield (plk,verifier)
 
-        keys.right foreach { case (newkey,verifier) =>
+        keys.foreach { case (newkey,verifier) =>
           settings.set(Settings.LOCAL_KEY, newkey)
           settings.set(Settings.NEEDS_PIN, true)
           settings.set(Settings.PIN_TIMESTAMP, System.currentTimeMillis)

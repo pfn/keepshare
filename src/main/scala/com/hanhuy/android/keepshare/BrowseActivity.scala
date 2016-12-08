@@ -565,7 +565,7 @@ class BrowseActivity extends AuthorizedActivity with SwipeRefreshLayout.OnRefres
       upItem = false
       views.name.setText(item.fold(_.getName, _.getStrings.ReadSafe(PwDefs.TitleField)))
 
-      item.left foreach { group =>
+      item.left.foreach { group =>
         views.folder_image.setImageResource(if (db.getRecycleBinUuid.Equals(group.getUuid))
           R.drawable.ic_delete_black_24dp else R.drawable.ic_folder_open_black_24dp)
         if (parent exists (_.getUuid.equals(group.getUuid))) {
@@ -576,7 +576,7 @@ class BrowseActivity extends AuthorizedActivity with SwipeRefreshLayout.OnRefres
         //        if (PwUuid.Zero == group.getCustomIconUuid)
         views.entry_image.setImageResource(Database.Icons(group.getIconId.ordinal))
       }
-      item.right foreach { entry =>
+      item.foreach { entry =>
         views.folder_image.setVisibility(View.INVISIBLE)
         //        if (PwUuid.Zero == entry.getCustomIconUuid)
         views.entry_image.setImageResource(Database.Icons(entry.getIconId.ordinal))
@@ -584,11 +584,11 @@ class BrowseActivity extends AuthorizedActivity with SwipeRefreshLayout.OnRefres
       views.rootView.onClick0 {
         views.rootView.setActivated(true)
         implicit val c = BrowseActivity.this
-        item.left foreach { grp =>
+        item.left.foreach { grp =>
           browse(BrowseActivity.this, grp)
           overridePendingTransition(0, 0)
         }
-        item.right foreach { entry =>
+        item.foreach { entry =>
           EntryViewActivity.show(BrowseActivity.this, entry)
           overridePendingTransition(R.anim.slide_in_right,
             R.anim.slide_out_left)

@@ -34,6 +34,7 @@ import org.bouncycastle.crypto.params.{KeyParameter, ParametersWithIV}
 import scala.util.Try
 
 object KeyManager {
+
   type Key = Array[Byte]
   val VERIFIER = "KeepShare Verifier"
 
@@ -116,7 +117,7 @@ object KeyManager {
   }
 
   def decryptToString(k: Key, data: String): Either[String,String] =
-    decrypt(k, data).right.map(d => new String(d, "utf-8"))
+    decrypt(k, data).map(d => new String(d, "utf-8"))
 
   @TargetApi(23)
   def initHardwareKey(): Boolean = {
@@ -193,15 +194,15 @@ class KeyManager(c: Context, settings: Settings) {
           key, settings.get(Settings.VERIFY_DATA))
 
         (for {
-          v <- verifier.right
-          d <- db.right
-          p <- pw.right
-          k <- keyf.right
+          v <- verifier
+          d <- db
+          p <- pw
+          k <- keyf
         } yield {
           v -> (d,p,k)
         }).left.map { e =>
           KeyError.DecryptionFailure(e)
-        }.right.flatMap { case (v,r) =>
+        }.flatMap { case (v,r) =>
           if (v == KeyManager.VERIFIER)
             Right(r)
           else
@@ -313,7 +314,7 @@ class KeyManager(c: Context, settings: Settings) {
       Future.successful(Right(this))
     } else
       fetchCloudKey().map { e =>
-        e.right.map(_ => this)
+        e.map(_ => this)
       }
   }
 
@@ -332,7 +333,7 @@ class KeyManager(c: Context, settings: Settings) {
     }
   }
   def decryptWithExternalKeyToString(data: String): Future[Either[String,String]] =
-    decryptWithExternalKey(data).map(d => d.right.map(new String(_, "utf-8")))
+    decryptWithExternalKey(data).map(d => d.map(new String(_, "utf-8")))
   def decryptWithExternalKey(data: String): Future[Either[String,Array[Byte]]] = {
     data.split(":") match {
       case Array(ivs, encs) =>
@@ -348,7 +349,7 @@ class KeyManager(c: Context, settings: Settings) {
           cipher.init(Cipher.DECRYPT_MODE, key, ivspec)
           Future.successful(Right(cipher.doFinal(bytes(encs))))
         } else {
-          fetchCloudKey().map(k => k.right.flatMap(key => KeyManager.decrypt(key, data)).left.map(e => "Key error: " + e))
+          fetchCloudKey().map(k => k.flatMap(key => KeyManager.decrypt(key, data)).left.map(e => "Key error: " + e))
         }
       case _ =>
         Application.logException(data, new Exception("bad crypto data"))
@@ -369,7 +370,7 @@ class KeyManager(c: Context, settings: Settings) {
       cipher.init(Cipher.ENCRYPT_MODE, key, ivspec)
       Future.successful(Right(hex(iv) + ":" + hex(cipher.doFinal(data))))
     } else {
-      fetchCloudKey().map(_.right.map { k =>
+      fetchCloudKey().map(_.map { k =>
         val cipher = blockCipher
         cipher.init(true, ivParameter(keyParameter(k), iv))
         hex(iv) + ":" + hex(processCipher(cipher, data))
@@ -380,12 +381,12 @@ class KeyManager(c: Context, settings: Settings) {
   def encryptWithExternalKey(data: String): Future[Either[KeyError,String]] =
     encryptWithExternalKey(data.getBytes("utf-8"))
   def decryptWithLocalKeyToString(data: String): Future[Either[String,String]] =
-    decryptWithLocalKey(data).map(d => d.right.map(new String(_, "utf-8")))
+    decryptWithLocalKey(data).map(d => d.map(new String(_, "utf-8")))
   def decryptWithLocalKey(data: String): Future[Either[String,Array[Byte]]] = {
-    localKey.map(k => k.right.flatMap(key => KeyManager.decrypt(key, data)).left.map(e => "Key error: " + e))
+    localKey.map(k => k.flatMap(key => KeyManager.decrypt(key, data)).left.map(e => "Key error: " + e))
   }
   def encryptWithLocalKey(data: Array[Byte]): Future[Either[KeyError,String]] = {
-    localKey.map(_.right.map { k =>
+    localKey.map(_.map { k =>
       val cipher = blockCipher
       val iv = Array.ofDim[Byte](16)
       random.nextBytes(iv)
@@ -453,19 +454,19 @@ class KeyManager(c: Context, settings: Settings) {
 
       val f = saved.fold(encryptWithExternalKey, encryptWithExternalKey)
       f.map { e =>
-        e.right.map { k =>
+        e.map { k =>
           settings.set(Settings.LOCAL_KEY, k)
           keybuf
         }
       }
     } else {
       decryptWithExternalKey(k).map { ed =>
-        val okey = ed.right.toOption
+        val okey = ed.toOption
         val actual = (for {
           s <- PINHolderService.instance if settings.get(Settings.NEEDS_PIN)
           key <- okey
           st = new String(key, "utf-8")
-          k <- decrypt(s.pinKey, st).right.toOption
+          k <- decrypt(s.pinKey, st).toOption
         } yield k) orElse okey
         actual map { a =>
           Right(a)

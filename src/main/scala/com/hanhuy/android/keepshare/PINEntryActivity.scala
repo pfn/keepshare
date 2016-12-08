@@ -71,7 +71,7 @@ class PINEntryActivity extends AppCompatActivity with DialogManager {
       val x = for {
         ekm <- kminit
         decrypted <- km.decryptWithExternalKeyToString(verifier) if ekm.isRight
-      } yield decrypted.right.flatMap(d => Try(KeyManager.decryptToString(pinKey, d)).recover { case _ => Right("") }.toOption.getOrElse(Right("")))
+      } yield decrypted.flatMap(d => Try(KeyManager.decryptToString(pinKey, d)).recover { case _ => Right("") }.toOption.getOrElse(Right("")))
 
       x.onSuccessMain {
         case Right(decrypted) =>
@@ -102,6 +102,7 @@ class PINEntryActivity extends AppCompatActivity with DialogManager {
           views.pin_error.setText(R.string.key_changed_clear_data)
           Application.logException("cloudKey left", new Exception("KeyError: " + e))
       }
+
       x.onFailureMain { case e =>
         views.pin_error.setVisibility(View.VISIBLE)
         views.pin_error.setText(R.string.key_changed_clear_data)

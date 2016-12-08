@@ -248,10 +248,10 @@ class SetupActivity extends AppCompatActivity with EventBus.RefOwner with Permis
               verifier <- keymanager.encryptWithLocalKey(KeyManager.VERIFIER)
             } yield {
               val r = for {
-                db <- encdb.right
-                pw <- encpw.right
-                keyf <- enckeyf.right
-                ver <- verifier.right
+                db <- encdb
+                pw <- encpw
+                keyf <- enckeyf
+                ver <- verifier
               } yield {
                 settings.set(Settings.VERIFY_DATA, ver)
                 settings.set(Settings.PASSWORD, pw)
@@ -425,12 +425,12 @@ class SetupFragment extends android.preference.PreferenceFragment {
           prt <- km.protectLocalKey()
         } yield {
           val r = for {
-            lk <- prt.right
-            vo <- verifier.right
+            lk <- prt
+            vo <- verifier
           } yield {
             vo.map(km.encryptWithExternalKey).map(_.onCompleteMain { x =>
               x.foreach { newverifier =>
-                newverifier.right.foreach { nv =>
+                newverifier.foreach { nv =>
                   settings.set(Settings.PIN_VERIFIER, nv)
                   hk.setChecked(enablehk)
                 }
