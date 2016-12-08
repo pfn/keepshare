@@ -3,6 +3,8 @@ package com.hanhuy.android
 import android.text.TextWatcher
 import android.widget.EditText
 
+import scala.concurrent.Future
+
 /**
   * @author pfnguyen
   */
@@ -19,13 +21,18 @@ package object keepshare {
     def flatMap[A,B >: L](f: R => Either[B,A]): Either[B,A] = either.right.flatMap(f)
     def map[A](f: R => A): Either[L,A] = either.right.map(f)
     def toOption: Option[R] = either.right.toOption
-    def flip = LeftBiasEither(either)
   }
-  case class LeftBiasEither[L,R](either: Either[L,R]) extends AnyVal {
-    def foreach[U](f: L => U): Unit = either.left.foreach(f)
-    def flatMap[A >: R, B](f: L => Either[B,A]): Either[B,A] = either.left.flatMap(f)
-    def map[A](f: L => A): Either[A,R] = either.left.map(f)
-    def toOption: Option[L] = either.left.toOption
-    def flip = new RightBiasEither(either)
+
+  implicit val futureMonad = new Monad[concurrent.Future] {
+    import com.hanhuy.android.common.Futures.AsyncThread
+    override def bind[A, B](fa: Future[A])(f: (A) => Future[B]) = fa.flatMap(f)
+    override def point[A](a: A) = Future(a)
+    override def map[A, T](a: Future[T])(f: (T) => A) = a.map(f)
+  }
+
+  type FutureEitherT[L,R] = EitherT[concurrent.Future, L, R]
+  type FutureEither[L,R] = Future[Either[L,R]]
+  object FutureEitherT {
+    def apply[L,R](etf: FutureEither[L, R]) = EitherT(etf)
   }
 }

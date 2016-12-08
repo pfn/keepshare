@@ -241,26 +241,21 @@ class SetupActivity extends AppCompatActivity with EventBus.RefOwner with Permis
           fragment.databaseReady(dbCredentials.ready)
 
           if (dbCredentials.ready) {
-            for {
-              encdb <- keymanager.encryptWithLocalKey(dbCredentials.db.getOrElse(""))
-              encpw <- keymanager.encryptWithLocalKey(dbCredentials.password.getOrElse(""))
-              enckeyf <- keymanager.encryptWithLocalKey(dbCredentials.keyfile.getOrElse(""))
-              verifier <- keymanager.encryptWithLocalKey(KeyManager.VERIFIER)
+            val r = for {
+              encdb    <- FutureEitherT(keymanager.encryptWithLocalKey(dbCredentials.db.getOrElse("")))
+              encpw    <- FutureEitherT(keymanager.encryptWithLocalKey(dbCredentials.password.getOrElse("")))
+              enckeyf  <- FutureEitherT(keymanager.encryptWithLocalKey(dbCredentials.keyfile.getOrElse("")))
+              verifier <- FutureEitherT(keymanager.encryptWithLocalKey(KeyManager.VERIFIER))
             } yield {
-              val r = for {
-                db <- encdb
-                pw <- encpw
-                keyf <- enckeyf
-                ver <- verifier
-              } yield {
-                settings.set(Settings.VERIFY_DATA, ver)
-                settings.set(Settings.PASSWORD, pw)
-                settings.set(Settings.KEYFILE_PATH, keyf)
-                settings.set(Settings.DATABASE_FILE, db)
-                setResult(Activity.RESULT_OK)
-              }
+              settings.set(Settings.VERIFY_DATA, verifier)
+              settings.set(Settings.PASSWORD, encpw)
+              settings.set(Settings.KEYFILE_PATH, enckeyf)
+              settings.set(Settings.DATABASE_FILE, encdb)
+              setResult(Activity.RESULT_OK)
+            }
 
-              r.left.foreach { error =>
+            r.swap.foreach { error =>
+              UiBus.run {
                 Toast.makeText(
                   this, error.toString, Toast.LENGTH_SHORT).show()
                 Application.logException("Setup failure: " + error.toString, error match {
@@ -393,7 +388,6 @@ class SetupFragment extends android.preference.PreferenceFragment {
     hk.setChecked(settings.get(Settings.HARDWARE_KEY_ENABLE))
     hk.onPreferenceChange { (_, value) =>
 
-      /*
       val enablehk = value.asInstanceOf[Boolean]
 
       hk.setEnabled(false)
@@ -456,7 +450,6 @@ class SetupFragment extends android.preference.PreferenceFragment {
         }
 
       }
-      */
       false
     }
   }
