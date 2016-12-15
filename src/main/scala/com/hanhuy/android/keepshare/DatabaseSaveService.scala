@@ -6,6 +6,7 @@ import android.app.{Notification, Service}
 import android.content.Intent
 import android.support.v4.app.NotificationCompat
 import com.hanhuy.android.common.Futures
+import com.hanhuy.android.common.Logcat
 import com.hanhuy.keepassj.PwDatabase
 
 import scala.concurrent.Future
@@ -24,6 +25,7 @@ object DatabaseSaveService {
 
 class DatabaseSaveService extends Service {
   import DatabaseSaveService._
+  val log = Logcat("DatabaseSaveService")
 
   def onBind(p1: Intent) = null
 
@@ -68,6 +70,9 @@ class DatabaseSaveService extends Service {
     case util.Failure(ex) =>
       stopForeground(true)
       stopSelf()
-      Toast.makeText(this, "Failed to save database: " + ex.getMessage, Toast.LENGTH_LONG).show()
+      log.e("Failed to save database: " + ex.getMessage, ex)
+      Future.main {
+        Toast.makeText(this, "Failed to save database: " + ex.getMessage, Toast.LENGTH_LONG).show()
+      }
   }
 }

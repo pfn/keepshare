@@ -325,7 +325,8 @@ class KeyManager(c: Context, settings: Settings) {
       case Left(l) => Future.successful(Left(l))
       case Right(r) =>
         val saved: Either[String,Array[Byte]] = PINHolderService.instance map { s =>
-          Left(encrypt(s.pinKey, r))
+          if (needsPin) Left(encrypt(s.pinKey, r))
+          else Right(r)
         } getOrElse Right(r)
 
         _localKey = None
@@ -449,7 +450,8 @@ class KeyManager(c: Context, settings: Settings) {
       random.nextBytes(keybuf)
 
       val saved: Either[String,Array[Byte]] = PINHolderService.instance map { s =>
-        Left(encrypt(s.pinKey, keybuf))
+        if (needsPin) Left(encrypt(s.pinKey, keybuf))
+        else Right(keybuf)
       } getOrElse Right(keybuf)
 
       val f = saved.fold(encryptWithExternalKey, encryptWithExternalKey)
