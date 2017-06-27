@@ -1,0 +1,196 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appname">KeepShare</string>
+    <string name="search_suggest_intent_data">content://com.hanhuy.android.keepshare/entry</string>
+    <string name="search_suggest_authority">com.hanhuy.android.keepshare</string>
+    <string name="setup_header">
+        Gib die Informationen zum Entsperren deiner KeePass-Datenbank an, um zu beginnen</string>
+    <string name="setup_instructions">Um
+        mit der Verwendung von <i>KeepShare</i> zu beginnen, gib die Pfade
+        zu deiner KeePass-Datenbank und -Schlüsseldatei an, sofern
+        vorhanden. Du wirst außerdem dein Datenbank-Passwort speichern
+        müssen. Alle Informationen werden mit Hilfe zweier geheimer
+        Schlüssel <b>sicher verschlüsselt</b>, einer aufbewahrt in der
+        Cloud unter Verwendung deines <i>Google Drive</i>-Speichers und
+        ein weiterer lokal gespeichert. Dein Passwort ist niemals
+        zugänglich, ohne dass beide Schlüssel vorhanden sind. Ein Hacker,
+        der deinen Google Drive-Schlüssel stiehlt, wird nicht in der Lage
+        sein auf dein Passwort zuzugreifen, das auf dem Gerät gespeichert
+        ist und jemandem, der die Daten deines Gerätes stehlen kann, wird
+        es unmöglich sein dein Master-Passwort ohne den in Google Drive         gespeicherten geheimen Schlüssel zu entschlüsseln.
+    </string>
+    <string name="connect_instructions">Beginne damit
+        <i>KeepShare</i> mit
+        <i>Google Drive</i> zu verbinden, indem du auf den
+        <b>Verbinden</b>-Knopf drückst. Das wird deinen geheimen Schlüssel         in der Cloud vorbereiten, wenn er nicht bereits erstellt wurde. Du         wirst aufgefordert werden, die Erlaubnis zum Speichern privater
+        Anwendungsdaten zu erteilen.
+    </string>
+    <string name="overview"><i>KeepShare</i> ist eine einfache
+        Möglichkeit, deine Passwörter unmittelbar verfügbar zu machen,
+        egal welche Anwendung du verwendest. Fordere Zugang zu Passwörtern
+        an, indem du aus der aktuell laufenden Anwendung heraus
+        <b>Teilen</b> mit <i>KeepShare</i> auswählst. Eine
+        Benachrichtigung oder ein Dialog wird erscheinen, der dir erlaubt
+        Benutzernamen und Passwörter zu wählen und ihre Freigabe über die
+        Zwischenablage zu gestatten.
+    </string>
+    <string name="request_again">Erneut anfordern</string>
+    <string name="fingerprint_unrecognized">Fingerabdruck wurde nicht erkannt</string>
+    <string name="fingerprint_accepted">Fingerabdruck akzeptiert</string>
+    <string name="add_permission">Berechtigung hinzufügen</string>
+    <string name="camera_permission">Kamera-Zugriff wird zum Einlesen von Barcodes benötigt</string>
+    <string name="scanning_for_otp">Suche nach OTP Einrichtungs-Codes…</string>
+    <string name="require_external_storage">Speicher-Zugriff wird zum Bearbeiten deiner KeePass-Datenbank benötigt</string>
+    <string name="require_get_accounts">Kontakte-Zugriff wird zum Ermitteln deiner Google ID benötigt, um die Datenbank zu schützen</string>
+    <string name="require_get_accounts">Contacts access is required to discover your Google ID for database protection</string>
+    <string name="form_fill_notif_text">Tippe um nach Passwörtern zu suchen für: %s</string>
+    <string name="form_fill_notif_title">%s: Suche nach Passwörtern zum Einfügen</string>
+    <string name="pin_holder_notif_text">Tippe um Datenbank zu sperren</string>
+    <string name="pin_holder_notif_title">%s: Datenbank geöffnet</string>
+    <string name="toast_unable_load_key">Kann Schlüssel von Google Drive nicht laden, neuer Versuch: %s</string>
+    <string name="clear_user_data">Nutzer-Daten löschen</string>
+    <string name="filename_hint">Dateiname…</string>
+    <string name="browse">Durchsuchen</string>
+    <string name="confirm_password">Passwort bestätigen</string>
+    <string name="confirm_password_match">Stimmt nicht überein</string>
+    <string name="database_password">Datenbank-Passwort</string>
+    <string name="password">Passwort</string>
+    <string name="passwords">Passwörter</string>
+    <string name="password_min_length">Muss mindestens 8 Zeichen lang sein</string>
+    <string name="password_reminder_note">
+        Dieser Eintrag soll dich an das für diese Datenbank bei ihrer Erstellung gewählte Passwort erinnern. Du kannst
+        diesen Eintrag jederzeit löschen, wenn er nicht länger gebraucht wird. Alle Änderungen an diesem Eintrag werden
+        den Rest der Datenbank nicht beeinflussen.
+    </string>    
+    <string name="minimum_length">Passwort-Länge: %d</string>
+    <string name="minimum_uppercase">Großbuchstaben mindestens: %d</string>
+    <string name="minimum_numbers">Ziffern mindestens: %d</string>
+    <string name="minimum_symbols">Sonderzeichen mindestens: %d</string>
+    <string name="lowercase_enable">Kleinbuchstaben (a-z)</string>
+    <string name="uppercase_enable">Großbuchstaben (A-Z)</string>
+    <string name="numbers_enable">Ziffern (0–9)</string>
+    <string name="symbols_enable">Sonderzeichen (!@#$%^&amp;*+=?/\)</string>
+    <string name="generate_password">Passwort generieren</string>
+    <string name="password_hint">Datenbank-Passwort…</string>
+    <string name="copied_to_clipboard">In Zwischenablage kopiert</string>
+    <string name="unable_to_generate_password">GENERIERUNG NICHT MÖGLICH</string>
+    <string name="key_file">Schlüssel-Datei</string>
+    <string name="connect">Verbinden</string>
+    <string name="database">Datenbank</string>
+    <string name="save">Speichern</string>
+    <string name="settings_saved">Datenbank-Einrichtung abgeschlossen!</string>
+    <string name="keepass_no_respond">KeePass-Anbieter reagierte nicht</string>
+    <string name="keyfile_no_exist">Schlüssel-Datei existiert nicht!</string>
+    <string name="password_no_blank">Passwort kann nicht leer bleiben</string>
+    <string name="database_new_file">KeepShare Datenbank.kdbx</string>
+    <string name="database_no_exist">Datenbank-Datei existiert nicht!</string>
+    <string name="database_no_blank">Datenbank kann nicht leer bleiben</string>
+    <string name="decrypt_saved_failed">Entschlüsseln gespeicherter Daten fehlgeschlagen :-(</string>
+    <string name="android_saf_required">
+        Anwendung Android Storage Access Framework Documents wird benötigt</string>
+    <string name="must_install_explorer">
+        Du musst zum Durchsuchen einen Dateimanager installieren</string>
+    <string name="setup_subtitle">: Einstellungen</string>
+    <string name="setup_pin_subtitle">: PIN einrichten</string>
+    <string name="enter_pin_subtitle">: PIN eingeben</string>
+    <string name="ready_to_use">Fertig zur Verwendung!</string>
+    <string name="keepassdroid_not_installed">KeePassDroid ist nicht installiert</string>
+    <string name="loading">Lade…</string>
+    <string name="saving">Speichere…</string>
+    <string name="loading_key">Lade Schlüssel…</string>
+    <string name="loading_database">Lese Datenbank…</string>
+    <string name="saving_database">Speichere Datenbank…</string>
+    <string name="please_wait">Bitte warten</string>
+    <string name="screenshot">Bildschirmfoto</string>
+    <string name="not_a_url">Keine URL</string>
+    <string name="clear">Löschen</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="discard_confirm">Bist du sicher, dass du diese Änderungen verwerfen willst?</string>
+    <string name="discard">Verwerfen</string>
+    <string name="keep_editing">Weiter bearbeiten</string>
+    <string name="continu">Fortfahren</string>
+    <string name="copy_username">Benutzername</string>
+    <string name="copy_password">Passwort</string>
+    <string name="delete_name">Lösche %s?</string>
+    <string name="delete_entry">%s gelöscht</string>
+    <string name="undo">Rückgängig</string>
+    <string name="create_database">Neue Datenbank erstellen</string>
+    <string name="create">Erstellen</string>
+    <string name="move_to_recycle">Du kannst es später im Papierkorb finden, wenn du deine Meinung änderst</string>
+    <string name="delete_permanently">Es wird dauerhaft gelöscht</string>
+    <string name="failed_verify">
+        Konnte verschlüsselte Daten nicht verifizieren, starte Einrichtung!</string>
+    <string name="failed_to_open">Konnte Datenbank nicht öffnen: </string>
+    <string name="credentials_available">
+        Anmeldedaten für Eingabe verfügbar</string>
+    <string name="invalid_token">KeepShare ungültig</string>
+    <string name="keyboard_timeout">Tastatur Timeout (s)</string>
+    <string name="service_timeout">PIN-Entsperrung Timeout (min)</string>
+    <string name="select_entry_prompt">Wähle einen Eintrag um fortzufahren:</string>
+    <string name="copied_username">Benutzername in Zwischenablage kopiert!</string>
+    <string name="copied_password">Passwort in Zwischenablage kopiert!</string>
+    <string name="no_passwords_selected">Keine Passwörter ausgewählt</string>
+    <string name="no_password_input">
+        Kann Passwort nicht in Nicht-Passwort-Eingabefeld einfügen</string>
+    <string name="no_password_input_override">
+        Kann Passwort nicht in Nicht-Passwort-Eingabefeld einfügen; lange drücken um aufzuheben
+    </string>
+    <string name="override_password_input">Passwort-Eingabe aufheben</string>
+    <string name="off">Aus</string>
+    <string name="on">An</string>
+    <string name="keyboard_status">Benutzerdefinierte Tastatur aktivieren</string>
+    <string name="enable_password_override">Aufhebung für Nicht-Passwort-Eingabefelder aktivieren
+    </string>
+    <string name="enter_username">Benutzername eingeben</string>
+    <string name="enter_password">Passwort eingeben</string>
+    <string name="search_usernames_passwords">Suche Benutzernamen und Passwörter
+    </string>
+    <string name="no_search_results">Keine Suchergebnisse</string>
+    <string name="searching">Suche…</string>
+    <string name="running_search">Führe deine Suche aus</string>
+    <string name="no_search_query">Keine Suchanfrage</string>
+    <string name="setup">Einstellungen</string>
+    <string name="setup_pin">PIN einrichten</string>
+    <string name="setup_pin_summary">Entsperre KeepShare mit einer PIN für mehr Sicherheit</string>
+    <string name="change_pin">PIN ändern</string>
+    <string name="pin_at_least_4">PIN muss mindestens 4 Zeichen haben</string>
+    <string name="select_pin">PIN wählen</string>
+    <string name="confirm_pin">Gewählte PIN bestätigen</string>
+    <string name="try_again">Neuer Versuch</string>
+    <string name="no_more_tries">Wiedersehen</string>
+    <string name="pin_unlock_required">: PIN-Entsperrung nötig</string>
+    <string name="has_not_configured">Ist nicht bereit, tippe um einzurichten</string>
+    <string name="has_been_configured">Ist konfiguriert und bereit</string>
+    <string name="confirm_clear_data">
+        Bist du sicher, du willst deine Konfiguration löschen?</string>
+    <string name="setup_required_for_pin">
+        Du musst deine Konfiguration fertig stellen vor dem Einrichten einer PIN</string>
+    <string name="verify_pin">Verifiziere deine PIN</string>
+    <string name="fetching_key">Rufe Schlüssel ab von Google Drive</string>
+    <string name="key_changed_clear_data">Schlüssel-Daten in Google Drive verändert, lösche Daten und versuche es erneut</string>
+    <string name="ime_search_title">: Keine Passwort-Einträge geladen</string>
+    <string name="ime_search_prompt">Möchtest du suchen nach \'%s\'?</string>
+    <string name="keyboard_not_enabled_title">
+        KeepShare-Tastatur ist nicht aktiviert</string>
+    <string name="keyboard_not_enabled_prompt">
+        Möchtest du KeepShare\'s Tastatur jetzt aktivieren?</string>
+    <string name="no_logins_found">Keine Logins gefunden</string>
+    <string name="accessibility_service_label">KeepShare Formular-Ausfüller</string>
+    <string name="accessibility_service_description">
+        Formular-Ausfülldienst für Benutzername und Passwort. Zieht
+        automatisch Daten aus deiner KeepPass-Datenbank um Anmeldedaten-
+        Formulare auszufüllen.
+    </string>
+    <string-array name="keyboard_timeouts">
+        <item>60</item>
+        <item>45</item>
+        <item>30</item>
+        <item>15</item>
+    </string-array>
+    <string-array name="pin_timeouts">
+        <item>60</item>
+        <item>15</item>
+        <item>5</item>
+        <item>1</item>
+    </string-array>
+</resources>
